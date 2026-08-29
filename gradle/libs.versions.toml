@@ -26,6 +26,11 @@ ktxCore = "1.16.0"
 ktxRuntime = "2.10.3"
 desugar = "2.1.5"
 
+# Solana wallet integration (android only)
+solanaMwa = "2.0.8"
+solanaWeb3 = "0.3.0"
+androidxActivity = "1.9.3"
+
 
 [libraries]
 #note - thanks to the subproject problem Studio won't properly recognize what is used or not:
@@ -73,6 +78,10 @@ jna-platform = { group = "net.java.dev.jna", name = "jna-platform", version.ref 
 android-ktx-core = { group = "androidx.core", name = "core-ktx", version.ref = "ktxCore" }
 android-desugar = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "desugar" }
 android-ktx-runtime = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "ktxRuntime" }
+
+solana-mwa-clientlib = { group = "com.solanamobile", name = "mobile-wallet-adapter-clientlib-ktx", version.ref = "solanaMwa" }
+solana-web3 = { group = "com.solanamobile", name = "web3-solana", version.ref = "solanaWeb3" }
+androidx-activity = { group = "androidx.activity", name = "activity-ktx", version.ref = "androidxActivity" }
 
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 mockito = { group = "org.mockito", name = "mockito-core", version.ref = "mockito" }

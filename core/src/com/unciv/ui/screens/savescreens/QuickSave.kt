@@ -22,7 +22,7 @@ object QuickSave {
         val files = UncivGame.Current.files
         val toast = ToastPopup("Quicksaving...", screen)
         Concurrency.runOnNonDaemonThreadPool("QuickSaveGame") {
-            files.saveGame(gameInfo, "QuickSave") {
+            files.saveGame(gameInfo, "QuickSave", recordOnChain = true) {
                 launchOnGLThread {
                     toast.close()
                     if (it != null)

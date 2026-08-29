@@ -12,6 +12,21 @@
     <uses-feature android:glEsVersion="0x00020000" android:required="false" />
 
     <!--
+        Package visibility (Android 11+ / API 30+) for Solana Mobile Wallet Adapter: without this,
+        the implicit intent MWA uses to find/launch an installed wallet app (Phantom, Solflare,
+        etc) may silently fail to resolve any wallet even when one is installed.
+        Verified against the MWA 2.0 spec (solana-mobile.github.io/mobile-wallet-adapter/spec):
+        the local-association intent is "solana-wallet:/v1/associate/local?..." - scheme
+        "solana-wallet" is correct and sufficient here, no per-wallet <package> entries needed.
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="solana-wallet" />
+        </intent>
+    </queries>
+
+    <!--
         Known Lint warnings:
             UnusedAttribute: Since we're targeting a range of API levels, it's OK that e.g. appCategory will be ignored by OLD devices
             IconDensities: See https://developer.android.com/training/tv/start/start#banner for the banner attribute, where they recommend supplying only one density.
@@ -80,6 +95,23 @@
         </activity>
 
         <receiver android:name=".CopyToClipboardReceiver"  android:exported="false" />
+
+        <!-- Transparent bridge Activity to host Mobile Wallet Adapter transact() calls, which
+             require a ComponentActivity - see WalletBridgeActivity.kt for why.
+             screenOrientation/configChanges match AndroidLauncher's: without this, this activity
+             (and the wallet app's own approval UI on top of it) follows the device's sensor
+             orientation while AndroidLauncher underneath is locked to landscape - the resulting
+             orientation mismatch/config change destroys and recreates this activity mid-flight,
+             cancelling its lifecycleScope (and with it the in-progress transact() call) before the
+             wallet app can respond. Confirmed via logcat: a "config changes=... land" transition
+             lines up exactly with a JobCancellationException from AndroidWalletService. -->
+        <activity
+            android:name="com.unciv.app.WalletBridgeActivity"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:excludeFromRecents="true"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize"
+            android:screenOrientation="userLandscape"
+            android:exported="false" />
     </application>
 
 </manifest>

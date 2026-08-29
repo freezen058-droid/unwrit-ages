@@ -41,6 +41,10 @@ class GameSettings {
     /** How fast the map pans using keyboard or with [mapAutoScroll] and mouse */
     var mapPanningSpeed = 6f
 
+    //// Wallet / on-chain
+    /** If true and a wallet is connected, save games get their hash recorded on-chain as a Memo transaction */
+    var recordSavesOnChain = false
+
     //// Graphics
     var tileSet: String = Constants.defaultTileset
     var unitSet: String? = Constants.defaultUnitset

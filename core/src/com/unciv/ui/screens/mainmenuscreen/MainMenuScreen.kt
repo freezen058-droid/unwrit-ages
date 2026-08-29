@@ -229,19 +229,10 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
         civilopediaButton.setPosition(buttonsPosFromEdge, buttonsPosFromEdge)
         stage.addActor(civilopediaButton)
 
+        // Upstream Unciv's Discord/GitHub community buttons removed here - those point to the
+        // Unciv project's own community, not this fork's. Attribution is still preserved in
+        // Options > About and NOTICE.md/LICENSE, just not as a main-menu button.
         val rightSideButtons = Table().apply { defaults().space(10f) }
-        val discordButton = ImageGetter.getImage("OtherIcons/Discord")
-            .surroundWithCircle(buttonsSize, color = skinStrings.skinConfig.baseColor)
-            .surroundWithThinCircle(Color.WHITE)
-            .onActivation { Gdx.net.openURI("https://discord.gg/bjrB4Xw") }
-        rightSideButtons.add(discordButton)
-
-        val githubButton = ImageGetter.getImage("OtherIcons/Github")
-            .surroundWithCircle(buttonsSize, color = skinStrings.skinConfig.baseColor)
-            .surroundWithThinCircle(Color.WHITE)
-            .onActivation { Gdx.net.openURI(Constants.uncivRepoURL) }
-        rightSideButtons.add(githubButton)
-
         rightSideButtons.pack()
         rightSideButtons.setPosition(stage.width - buttonsPosFromEdge, buttonsPosFromEdge, Align.bottomRight)
         stage.addActor(rightSideButtons)

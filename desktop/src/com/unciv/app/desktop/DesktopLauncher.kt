@@ -9,6 +9,7 @@ import com.unciv.UncivGame
 import com.unciv.app.desktop.DesktopScreenMode.Companion.getMaximumWindowBounds
 import com.unciv.json.json
 import com.unciv.logic.files.SETTINGS_FILE_NAME
+import com.unciv.logic.chain.ChainWallet
 import com.unciv.logic.files.UncivFiles
 import com.unciv.models.metadata.GameSettings
 import com.unciv.models.metadata.GameSettings.ScreenSize
@@ -100,6 +101,9 @@ internal object DesktopLauncher {
         // Setup Desktop saver-loader
         UncivFiles.saverLoader = if (LinuxX11SaverLoader.isRequired()) LinuxX11SaverLoader() else DesktopSaverLoader()
         UncivFiles.preferExternalStorage = false
+
+        // Setup Desktop wallet service (no-op for now, see DesktopWalletService)
+        ChainWallet.service = DesktopWalletService()
 
         // Solves a rendering problem in specific GPUs and drivers.
         // For more info see https://github.com/yairm210/Unciv/pull/3202 and https://github.com/LWJGL/lwjgl/issues/119

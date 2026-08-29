@@ -89,6 +89,18 @@ allprojects {
     version = appVersion
 
     repositories {
+        // Locally-patched com.solanamobile:mobile-wallet-adapter-clientlib-ktx:2.0.8 - the
+        // upstream 2.0.8 AAR declares the same Android namespace as
+        // com.solanamobile:mobile-wallet-adapter-clientlib:2.0.8 (its own transitive dependency),
+        // which newer AGP rejects as a manifest merger error ("Namespace ... is used in multiple
+        // modules and/or libraries"). Fixed upstream (github.com/solana-mobile/mobile-wallet-adapter
+        // PR #1531/#1502, renaming the ktx artifact's namespace to
+        // com.solana.mobilewalletadapter.clientlib.ktx) but not yet published to Maven Central as
+        // of 2026-08-29. This repo serves a locally rebuilt AAR with only that one-line
+        // AndroidManifest.xml `package` attribute changed (same classes.jar, same POM/transitive
+        // deps) - see android/local-maven-repo. Safe to delete this entry and the folder once
+        // upstream publishes a fixed release and the version in gradle/libs.versions.toml is bumped.
+        maven { url = uri("$rootDir/android/local-maven-repo") }
         // Chinese mirrors for quicker loading for chinese devs - uncomment if you're chinese
         // maven{ url = uri("https://maven.aliyun.com/repository/central") }
         // maven{ url = uri("https://maven.aliyun.com/repository/google") }
@@ -155,6 +167,11 @@ private fun getSdkPath(): String? {
 if (getSdkPath() != null) {
     project(":android") {
         apply(plugin = "com.android.application")
+        // Needed for the @Serializable JSON-RPC request/response classes in
+        // AndroidWalletService.kt (Solana RPC blockhash fetch) - without this, kotlinx.serialization
+        // fails at runtime with "Serializer for class 'X' is not found" even though the class is
+        // annotated, because no compile-time serializer codegen happens for this module.
+        apply(plugin = "org.jetbrains.kotlin.plugin.serialization")
 
         val natives by configurations.creating
 

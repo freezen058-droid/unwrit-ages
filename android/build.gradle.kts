@@ -27,14 +27,18 @@ android {
         resources.excludes += "DebugProbesKt.bin"
     }
     defaultConfig {
-        namespace = BuildConfig.identifier
-        applicationId = BuildConfig.identifier
-        minSdk = 21
+        namespace = BuildConfig.namespace
+        applicationId = BuildConfig.applicationId
+        // Bumped from upstream Unciv's minSdk 21: com.solanamobile:mobile-wallet-adapter-clientlib-ktx:2.0.8
+        // requires minSdk 24. Any device that can run a Solana wallet app (Phantom/Solflare etc, both
+        // also minSdk 24+) is already well above API 21-23, so this doesn't meaningfully narrow this
+        // fork's real-world install base.
+        minSdk = 24
         targetSdk = 36
         versionCode = BuildConfig.appCodeNumber
         versionName = BuildConfig.appVersion
 
-        base.archivesName.set("Unciv")
+        base.archivesName.set(BuildConfig.appName)
     }
 
     // Had to add this crap for Travis to build, it wanted to sign the app
@@ -141,7 +145,7 @@ tasks.register<Exec>("run") {
     val path = getSdkPath()
     val adb = "$path/platform-tools/adb"
 
-    commandLine(adb, "shell", "am", "start", "-n", "com.unciv.app/AndroidLauncher")
+    commandLine(adb, "shell", "am", "start", "-n", "${BuildConfig.applicationId}/com.unciv.app.AndroidLauncher")
 }
 
 dependencies {
@@ -152,4 +156,23 @@ dependencies {
     // If you want to upgrade this, check it's working by building an apk,
     //   or by running `./gradlew :android:assembleRelease` which does that
     coreLibraryDesugaring(libs.android.desugar)
+
+    // Solana Mobile Wallet Adapter - wallet connect/sign for AndroidWalletService.
+    // web3-solana pulls in the ktor client bits it needs for RPC (KtorNetworkDriver); core
+    // already exposes the ktor-client bundle as `api` so this should resolve transitively too.
+    // NOT YET VERIFIED (blocked on Maven Central 403s from this environment, confirm on first
+    // real `./gradlew` sync):
+    //  - web3-core (upstream of web3-solana) pins ktor = "3.3.0" in its own version catalog,
+    //    vs. this repo's ktor = "3.2.3" (gradle/libs.versions.toml). Likely fine - Ktor client
+    //    APIs used here (ktor-client-core/cio) are stable across 3.x minors - but Gradle's
+    //    resolved version could end up either one; watch for a resolution/runtime mismatch.
+    //  - solanaWeb3 = "0.3.0": couldn't confirm this exact version exists / is the intended
+    //    "latest stable" via Maven Central metadata (403s). A "0.3.2-beta6" also exists upstream;
+    //    if 0.3.0 fails to resolve, that's the next thing to try.
+    implementation(libs.solana.mwa.clientlib)
+    implementation(libs.solana.web3)
+    // Explicit dep for androidx.activity.ComponentActivity used by AndroidWalletService /
+    // ActivityResultSender - likely already pulled in transitively by the MWA clientlib, but
+    // declared explicitly so compilation doesn't depend on that assumption.
+    implementation(libs.androidx.activity)
 }

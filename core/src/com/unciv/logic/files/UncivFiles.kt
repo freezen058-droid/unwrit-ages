@@ -11,6 +11,7 @@ import com.unciv.UncivGame
 import com.unciv.json.fromJsonFile
 import com.unciv.json.json
 import com.unciv.logic.BackwardCompatibility.migrateCivID
+import com.unciv.logic.chain.ChainWallet
 import com.unciv.logic.GameInfo
 import com.unciv.logic.GameInfoPreview
 import com.unciv.logic.UncivShowableException
@@ -164,24 +165,47 @@ class UncivFiles(
         if (ex != null) throw ex
     }
 
-    fun saveGame(game: GameInfo, gameName: String, saveCompletionCallback: (Exception?) -> Unit = ::rethrowIfNotNull): FileHandle {
+    fun saveGame(game: GameInfo, gameName: String, recordOnChain: Boolean = false, saveCompletionCallback: (Exception?) -> Unit = ::rethrowIfNotNull): FileHandle {
         val file = getSave(gameName)
-        saveGame(game, file, saveCompletionCallback)
+        saveGame(game, file, recordOnChain, saveCompletionCallback = saveCompletionCallback)
         return file
     }
 
     /**
      * Only use this with a [FileHandle] obtained by one of the methods of this class!
+     *
+     * @param recordOnChain Only ever set true from an explicit, player-initiated save (e.g. the
+     * Save Game screen's Save button) - never from autosaves. Autosaves can fire every turn, and
+     * this triggers a wallet-signed on-chain transaction per call, which would interrupt the
+     * player with a signing prompt (and, once fees are added, charge them) every single turn.
      */
-    fun saveGame(game: GameInfo, file: FileHandle, saveCompletionCallback: (Exception?) -> Unit = ::rethrowIfNotNull) {
+    fun saveGame(game: GameInfo, file: FileHandle, recordOnChain: Boolean = false, saveCompletionCallback: (Exception?) -> Unit = ::rethrowIfNotNull) {
         try {
             debug("Saving GameInfo %s to %s", game.gameId, file.path())
             game.version = CompatibilityVersion.CURRENT_COMPATIBILITY_VERSION
             FileConversions.writeJson(file, game, saveZipped)
+            if (recordOnChain) recordSaveHashOnChainIfEnabled(game)
             saveCompletionCallback(null)
         } catch (ex: Exception) {
             saveCompletionCallback(ex)
         }
+    }
+
+    /**
+     * Fire-and-forget: if the user opted in (settings.recordSavesOnChain) and a wallet is
+     * connected, submit a hash of this save as an on-chain Memo transaction. Never blocks or
+     * fails the actual save - errors are only logged.
+     */
+    private fun recordSaveHashOnChainIfEnabled(game: GameInfo) {
+        if (!UncivGame.Current.settings.recordSavesOnChain) return
+        if (!ChainWallet.isConnected) return
+        val hash = ChainWallet.sha256Hex(json().toJson(game))
+        ChainWallet.service.recordSaveHash(
+            gameId = game.gameId,
+            hashHex = hash,
+            onSuccess = { tx -> debug("Recorded save %s hash on-chain, tx %s", game.gameId, tx) },
+            onError = { ex -> debug("Failed to record save %s hash on-chain: %s", game.gameId, ex.message) }
+        )
     }
 
     /**

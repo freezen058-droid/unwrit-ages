@@ -133,7 +133,7 @@ class SaveGameScreen(private val gameInfo: GameInfo) : LoadOrSaveScreen("Current
         rightSideButton.setText(savingText.tr())
         errorLabel.isVisible = false
         Concurrency.runOnNonDaemonThreadPool("SaveGame") {
-            game.files.saveGame(gameInfo, saveGameFile) { exception ->
+            game.files.saveGame(gameInfo, saveGameFile, recordOnChain = true) { exception ->
                 launchOnGLThread {
                     if (exception != null) {
                         handleException(exception, "Could not save game!", game.files.getSave(gameNameTextField.text))

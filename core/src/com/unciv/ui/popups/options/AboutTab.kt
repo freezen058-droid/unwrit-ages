@@ -20,15 +20,13 @@ internal class AboutTab(
 
         private fun renderTo(table: Table) {
             table.pad(20f)
-            // The changelog has no patches, and anchors per release tag omit the dots
-            val versionAnchor = Regex("""\.|-patch\d+$""").replace(UncivGame.VERSION.text, "")
             val lines = sequence {
                 yield(FormattedLine(extraImage = "banner", imageSize = 240f, centered = true))
                 yield(FormattedLine())
-                yield(FormattedLine("{Version}: ${UncivGame.VERSION.toNiceString()}", link = "${Constants.uncivRepoURL}blob/master/changelog.md#$versionAnchor"))
-                yield(FormattedLine("See online Readme", link = "${Constants.uncivRepoURL}blob/master/README.md#unciv---foss-civ-v-for-androiddesktop"))
+                yield(FormattedLine("{Version}: ${UncivGame.VERSION.toNiceString()}"))
                 yield(FormattedLine("Visit repository", link = Constants.uncivRepoURL))
-                yield(FormattedLine("Visit the wiki", link = Constants.wikiURL))
+                yield(FormattedLine())
+                yield(FormattedLine("CivilWars is a fork of Unciv by Yair Morgenstern and contributors, licensed under MPL-2.0."))
             }
             MarkupRenderer.renderTo(table, lines.asIterable())
         }
