@@ -1,7 +1,6 @@
 package com.unciv.ui.popups.options
 
 import com.badlogic.gdx.scenes.scene2d.ui.Table
-import com.unciv.Constants
 import com.unciv.UncivGame
 import com.unciv.ui.screens.civilopediascreen.FormattedLine
 import com.unciv.ui.screens.civilopediascreen.MarkupRenderer
@@ -24,7 +23,7 @@ internal class AboutTab(
                 yield(FormattedLine(extraImage = "banner", imageSize = 240f, centered = true))
                 yield(FormattedLine())
                 yield(FormattedLine("{Version}: ${UncivGame.VERSION.toNiceString()}"))
-                yield(FormattedLine("Visit repository", link = Constants.uncivRepoURL))
+                yield(FormattedLine("Visit repository", link = "https://github.com/freezen058-droid/Wars"))
                 yield(FormattedLine())
                 yield(FormattedLine("CivilWars is a fork of Unciv by Yair Morgenstern and contributors, licensed under MPL-2.0."))
             }

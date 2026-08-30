@@ -184,7 +184,7 @@ class UncivFiles(
             debug("Saving GameInfo %s to %s", game.gameId, file.path())
             game.version = CompatibilityVersion.CURRENT_COMPATIBILITY_VERSION
             FileConversions.writeJson(file, game, saveZipped)
-            if (recordOnChain) recordSaveHashOnChainIfEnabled(game)
+            if (recordOnChain) recordSaveHashOnChainIfEnabled(game, file.nameWithoutExtension())
             saveCompletionCallback(null)
         } catch (ex: Exception) {
             saveCompletionCallback(ex)
@@ -193,15 +193,17 @@ class UncivFiles(
 
     /**
      * Fire-and-forget: if the user opted in (settings.recordSavesOnChain) and a wallet is
-     * connected, submit a hash of this save as an on-chain Memo transaction. Never blocks or
-     * fails the actual save - errors are only logged.
+     * connected, submit a hash of this save as an on-chain Memo transaction, tagged with the
+     * player-chosen save name so it's identifiable on-chain (not just an opaque gameId/hash).
+     * Never blocks or fails the actual save - errors are only logged.
      */
-    private fun recordSaveHashOnChainIfEnabled(game: GameInfo) {
+    private fun recordSaveHashOnChainIfEnabled(game: GameInfo, saveName: String) {
         if (!UncivGame.Current.settings.recordSavesOnChain) return
         if (!ChainWallet.isConnected) return
         val hash = ChainWallet.sha256Hex(json().toJson(game))
         ChainWallet.service.recordSaveHash(
             gameId = game.gameId,
+            saveName = saveName,
             hashHex = hash,
             onSuccess = { tx -> debug("Recorded save %s hash on-chain, tx %s", game.gameId, tx) },
             onError = { ex -> debug("Failed to record save %s hash on-chain: %s", game.gameId, ex.message) }

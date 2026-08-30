@@ -21,6 +21,7 @@ class DesktopWalletService : PlatformWalletService {
 
     override fun recordSaveHash(
         gameId: String,
+        saveName: String,
         hashHex: String,
         onSuccess: (txSignature: String) -> Unit,
         onError: (Exception) -> Unit

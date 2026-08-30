@@ -4,7 +4,7 @@
   {
     "name": "Introduction",
     "steps": [
-      "Welcome to Unciv!\nBecause this is a complex game, there are basic tasks to help familiarize you with the game.\nThese are completely optional, and you're welcome to explore the game on your own!"
+      "Welcome!\nThis is a complex game, so watch the top of your screen after you close this - a small glowing hint will appear there telling you what to do next (found your city, pick a tile to work, choose what to research, etc). Click it, do what it says, and a new one will appear once you're done. Follow it step by step and you'll learn the game's core loops without needing to read a manual.\nThese hints are completely optional, and you're welcome to explore the game on your own instead!"
     ],
     "uniques": ["Will not be displayed in Civilopedia"]
   },
@@ -13,9 +13,9 @@
   {
       "name": "New Game",
       "civilopediaText": [
-          {"text": "Welcome to Unciv!"},
+          {"text": "Welcome!"},
           {},
-          {"text": "Because this is a complex game, there are some tutorials to help familiarize you with it. These can be disabled in the Options -> Display menu, but please hang on if you're new here!"},
+          {"text": "Because this is a complex game, there are some tutorials to help familiarize you with it, and a small floating hint appears near the top of the screen telling you what to try next as you play. These can be disabled in the Options -> Display menu, but please hang on if you're new here!"},
           {"separator": true },
           {"text": "Your first mission is to found your capital city. This is actually an important task because your capital city will probably be your most prosperous. Many game bonuses apply only to your capital city, and it will be the center of your empire."},
           {},
@@ -246,14 +246,6 @@
         "If you want to disable the 'Next unit' feature entirely, you can toggle it in Options -> Gameplay -> Check for idle units.",
         "If you'd rather 'Next unit' cycle the units and not mark them as Done, you can change it in the Options -> Gameplay menu.",
         "You can also cycle through the idle units using the left and right triangles on the Unit Table in the lower left of the screen. Or by default using the Cycle button next to the 'Next Unit' button."
-    ]
-  },
-  {
-    "name": "Contact Me",
-    "steps": [
-      "Hi there! If you've played this far, you've probably seen that the game is currently incomplete.\n Unciv is meant to be open-source and free, forever.\n That means no ads or any other nonsense.",
-      "What motivates me to keep working on it, \n  besides the fact I think it's amazingly cool that I can,\n  is the support from the players - you guys are the best!",
-      "Every rating and review that I get puts a smile on my face =)\n  So contact me! Send me an email, review, Github issue\n  or mail pigeon, and let's figure out how to make the game \n  even more awesome!\n(Contact info is in the Play Store)"
     ]
   },
   {

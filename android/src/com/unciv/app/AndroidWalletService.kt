@@ -9,6 +9,9 @@ import com.solana.mobilewalletadapter.clientlib.ConnectionIdentity
 import com.solana.mobilewalletadapter.clientlib.MobileWalletAdapter
 import com.solana.mobilewalletadapter.clientlib.TransactionResult
 import com.solana.mobilewalletadapter.clientlib.successPayload
+import com.solana.programs.AssociatedTokenProgram
+import com.solana.programs.TokenProgram
+import com.solana.publickey.ProgramDerivedAddress
 import com.solana.publickey.SolanaPublicKey
 import com.solana.transaction.AccountMeta
 import com.solana.transaction.Message
@@ -55,6 +58,17 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
         private const val RPC_ENDPOINT = "https://api.devnet.solana.com"
         private const val MEMO_PROGRAM_ID = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"
         private const val BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+
+        // SKR save-recording fee. Mint address confirmed 2026-08-30 against multiple independent
+        // sources (Coinbase's official announcement, Solscan, solanamobile.com, OKX, Jupiter) - do
+        // not change this without re-verifying via an on-chain explorer, a wrong mint address here
+        // would silently send a worthless/wrong token instead of real SKR.
+        private const val SKR_MINT = "SKRbvo6Gf7GondiT3BbTfuRDPqLWei4j2Qy2NPGZhW3"
+        // SKR has 6 decimals (confirmed via Jupiter token API 2026-08-30) - 1 SKR = 1_000_000 base units.
+        private const val SKR_DECIMALS: Byte = 6
+        private const val SKR_FEE_AMOUNT = 1_000_000L // 1 SKR per recorded save
+        // Project treasury wallet, provided directly by the project owner - not a personal wallet.
+        private const val TREASURY_ADDRESS = "4FHEBH1tspMLq2oeUMSp88JmkbVyzdG6veVh5FzMJ1v2"
         /** Safety cap for [withWakeLock] - well above any realistic user-response time, just to
          * guarantee the wake lock can never be held indefinitely if something else goes wrong. */
         private const val WAKE_LOCK_TIMEOUT_MS = 3 * 60 * 1000L
@@ -147,6 +161,39 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
         }.body()
         return response.result?.value?.blockhash
             ?: throw IllegalStateException("Failed to fetch a recent blockhash: ${response.error?.message}")
+    }
+
+    @Serializable
+    private data class AccountInfoRpcResponse(val result: AccountInfoResult? = null, val error: RpcError? = null)
+    @Serializable
+    private data class AccountInfoResult(val value: kotlinx.serialization.json.JsonElement? = null)
+
+    /**
+     * True if [address] already exists on-chain (getAccountInfo's "value" is non-null when the
+     * account exists, null when it doesn't) - used to decide whether the treasury's SKR token
+     * account still needs to be created. AssociatedTokenProgram in the pinned web3-solana:0.3.0
+     * only exposes a non-idempotent createAssociatedTokenAccount (verified via javap against the
+     * actual jar 2026-08-30 - no createIdempotent in this version despite it existing on the
+     * library's main branch), so this explicit existence check replaces what createIdempotent
+     * would otherwise have handled for free.
+     */
+    private suspend fun accountExists(address: SolanaPublicKey): Boolean {
+        val requestBody = kotlinx.serialization.json.buildJsonObject {
+            put("jsonrpc", kotlinx.serialization.json.JsonPrimitive("2.0"))
+            put("id", kotlinx.serialization.json.JsonPrimitive(1))
+            put("method", kotlinx.serialization.json.JsonPrimitive("getAccountInfo"))
+            put("params", kotlinx.serialization.json.buildJsonArray {
+                add(kotlinx.serialization.json.JsonPrimitive(address.base58()))
+                add(kotlinx.serialization.json.buildJsonObject {
+                    put("encoding", kotlinx.serialization.json.JsonPrimitive("base64"))
+                })
+            })
+        }
+        val response: AccountInfoRpcResponse = httpClient.post(RPC_ENDPOINT) {
+            contentType(ContentType.Application.Json)
+            setBody(requestBody)
+        }.body()
+        return response.result?.value != null
     }
 
     private val walletAdapter: MobileWalletAdapter by lazy {
@@ -271,6 +318,7 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
 
     override fun recordSaveHash(
         gameId: String,
+        saveName: String,
         hashHex: String,
         onSuccess: (txSignature: String) -> Unit,
         onError: (Exception) -> Unit
@@ -284,8 +332,11 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
         Concurrency.run("WalletRecordSaveHash") {
             try {
                 // Keep the memo short and well within Solana's ~1232 byte tx size limit -
-                // gameId is a UUID (36 chars) and hashHex a SHA-256 hex digest (64 chars).
-                val memoText = "unciv-save:$gameId:$hashHex"
+                // gameId is a UUID (36 chars), hashHex a SHA-256 hex digest (64 chars), saveName
+                // capped so a long player-chosen name can't blow the budget, and any ':' in the
+                // name is stripped so it can't be confused with our own field delimiter.
+                val safeSaveName = saveName.replace(":", "").take(64)
+                val memoText = "unciv-save:$gameId:$safeSaveName:$hashHex"
 
                 val blockhash = fetchLatestBlockhash()
 
@@ -298,7 +349,57 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
                     listOf(AccountMeta(ownerKey, isSigner = true, isWritable = true)),
                     memoText.encodeToByteArray()
                 )
-                val message = Message.Builder()
+
+                // SKR fee: player pays SKR_FEE_AMOUNT (raw units, SKR_DECIMALS decimals) to the
+                // project treasury as part of the same signed transaction. Associated Token
+                // Account addresses are PDAs derived from [owner, TOKEN_PROGRAM_ID, mint] under
+                // the Associated Token Program - verified against solana-program.com's ATA docs
+                // 2026-08-30, do not change the seed order.
+                val skrMint = SolanaPublicKey.from(SKR_MINT)
+                val treasuryKey = SolanaPublicKey.from(TREASURY_ADDRESS)
+
+                suspend fun deriveAta(owner: SolanaPublicKey): SolanaPublicKey {
+                    val pda = ProgramDerivedAddress.find(
+                        listOf(owner.bytes, TokenProgram.PROGRAM_ID.bytes, skrMint.bytes),
+                        AssociatedTokenProgram.PROGRAM_ID
+                    ).getOrThrow()
+                    return SolanaPublicKey(pda.bytes)
+                }
+
+                val playerSkrAta = deriveAta(ownerKey)
+                val treasurySkrAta = deriveAta(treasuryKey)
+
+                // web3-solana:0.3.0 (the version this project is pinned to - verified via javap
+                // against the actual jar, not just docs) has no idempotent "create if missing"
+                // helper, only a plain createAssociatedTokenAccount that errors if the account
+                // already exists. So: check first, only add the create instruction the very first
+                // time anyone ever pays the fee. Player is the fee-payer for this one-time setup,
+                // same as they're the fee-payer for the transaction itself.
+                val messageBuilder = Message.Builder()
+                if (!accountExists(treasurySkrAta)) {
+                    messageBuilder.addInstruction(
+                        AssociatedTokenProgram.createAssociatedTokenAccount(
+                            mint = skrMint,
+                            associatedAccount = treasurySkrAta,
+                            owner = treasuryKey,
+                            payer = ownerKey
+                        )
+                    )
+                }
+
+                // transferChecked (not plain transfer) so the mint+decimals are validated by the
+                // token program itself, not just trusted from our own PDA derivation.
+                val feeTransferInstruction = TokenProgram.transferChecked(
+                    from = playerSkrAta,
+                    to = treasurySkrAta,
+                    amount = SKR_FEE_AMOUNT,
+                    decimals = SKR_DECIMALS,
+                    owner = ownerKey,
+                    mint = skrMint
+                )
+
+                val message = messageBuilder
+                    .addInstruction(feeTransferInstruction)
                     .addInstruction(memoInstruction)
                     .setRecentBlockhash(blockhash)
                     .build()

@@ -25,10 +25,12 @@ interface PlatformWalletService {
      * Submits [hashHex] (a hex-encoded hash of a save file) as a Memo-program transaction signed
      * by the connected wallet, so the existence of that exact save at that point in time can be
      * verified on-chain later. Does not upload the save itself - saves stay in normal local/cloud
-     * storage, this is a lightweight proof-of-existence only.
+     * storage, this is a lightweight proof-of-existence only. [saveName] is the player-chosen save
+     * name (not just [gameId], an opaque UUID) so the on-chain record is human-identifiable.
      */
     fun recordSaveHash(
         gameId: String,
+        saveName: String,
         hashHex: String,
         onSuccess: (txSignature: String) -> Unit,
         onError: (Exception) -> Unit = {}
@@ -44,6 +46,7 @@ interface PlatformWalletService {
             override fun disconnect() {}
             override fun recordSaveHash(
                 gameId: String,
+                saveName: String,
                 hashHex: String,
                 onSuccess: (txSignature: String) -> Unit,
                 onError: (Exception) -> Unit
