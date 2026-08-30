@@ -44,6 +44,7 @@ import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.images.padTopDescent
 import com.unciv.ui.popups.Popup
 import com.unciv.ui.popups.ToastPopup
+import com.unciv.ui.popups.WalletPopup
 import com.unciv.ui.popups.closeAllPopups
 import com.unciv.ui.popups.hasOpenPopups
 import com.unciv.ui.popups.options.AboutTab
@@ -53,8 +54,6 @@ import com.unciv.ui.screens.basescreen.RecreateOnResize
 import com.unciv.ui.screens.mainmenuscreen.EasterEggRulesets.modifyForEasterEgg
 import com.unciv.ui.screens.mapeditorscreen.EditorMapHolder
 import com.unciv.ui.screens.mapeditorscreen.MapEditorScreen
-import com.unciv.ui.screens.modmanager.ModManagementScreen
-import com.unciv.ui.screens.multiplayerscreens.MultiplayerScreen
 import com.unciv.ui.screens.newgamescreen.NewGameScreen
 import com.unciv.ui.screens.savescreens.LoadGameScreen
 import com.unciv.ui.screens.savescreens.QuickSave
@@ -174,23 +173,16 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
         }
         column1.add(loadGameTable).row()
 
-        val multiplayerTable = getMenuButton("Multiplayer", "OtherIcons/Multiplayer", KeyboardBinding.Multiplayer) {
-            InputDisabling.disableInput()
-            game.pushScreen(MultiplayerScreen())
-        }
-        column2.add(multiplayerTable).row()
-
         val mapEditorScreenTable = getMenuButton("Map editor", "OtherIcons/MapEditor", KeyboardBinding.MapEditor) {
             InputDisabling.disableInput()
             game.pushScreen(MapEditorScreen())
         }
         column2.add(mapEditorScreenTable).row()
 
-        val modsTable = getMenuButton("Mods", "OtherIcons/Mods", KeyboardBinding.ModManager) {
-            InputDisabling.disableInput()
-            game.pushScreen(ModManagementScreen())
+        val walletTable = getMenuButton("Wallet", "OtherIcons/Settings", KeyboardBinding.None) {
+            WalletPopup(stage, game.settings).open(true)
         }
-        column2.add(modsTable).row()
+        column2.add(walletTable).row()
 
         val optionsTable = getMenuButton("Options", "OtherIcons/Options", KeyboardBinding.MainMenuOptions)
             { openOptionsPopup() }

@@ -68,7 +68,6 @@ internal class AdvancedTab(
 ): OptionsPopupTab(optionsPopup) {
     override fun lateInitialize() {
         addAutosaveField()
-        addSelectBox("Turns between autosaves", settings::turnsBetweenAutosaves, listOf(1,2,5,10,20,50,100,1000))
 
         addSeparator()
 

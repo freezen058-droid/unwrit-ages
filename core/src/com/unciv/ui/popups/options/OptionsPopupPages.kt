@@ -12,7 +12,6 @@ enum class OptionsPopupPages(
     internal val iconPath: String,
     internal val getContent: OptionsPopup.() -> OptionsPopupTab
 ) {
-    Wallet("Wallet", "OtherIcons/Settings", { WalletTab(this) }),
     Display("Display", "UnitPromotionIcons/Scouting", { DisplayTab(this) }),
     Gameplay("Gameplay", "OtherIcons/Options", { GameplayTab(this) }),
     Automation("Automation", "OtherIcons/NationSwap", { AutomationTab(this) }),

@@ -8,6 +8,7 @@ import com.badlogic.gdx.utils.Align
 import com.unciv.Constants
 import com.unciv.UncivGame
 import com.unciv.logic.GameInfo
+import com.unciv.logic.chain.ChainWallet
 import com.unciv.view.GameView
 import com.unciv.logic.UncivShowableException
 import com.unciv.logic.civilization.Civilization
@@ -33,6 +34,7 @@ import com.unciv.ui.components.input.KeyboardPanningListener
 import com.unciv.ui.components.input.onClick
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.popups.AuthPopup
+import com.unciv.ui.popups.ConfirmPopup
 import com.unciv.ui.popups.Popup
 import com.unciv.ui.popups.ToastPopup
 import com.unciv.ui.popups.hasOpenPopups
@@ -843,7 +845,31 @@ class WorldScreen(
             // only enable the user to next turn once we've saved the current one
             waitingForAutosave = false
             shouldUpdate = true
+            Concurrency.runOnGLThread { maybeOfferAutosaveOnChainRecording() }
         }
+    }
+
+    /** Autosaves never get their hash recorded on-chain by themselves (see [UncivGame.files]'s
+     *  `saveGame` docs) - but if the player opted in via the Wallet popup's Auto-Save tab, ask
+     *  them each time whether to also do a one-off manual-style save+record for 1 SKR. Never
+     *  charges without this explicit per-occurrence confirmation. */
+    private fun maybeOfferAutosaveOnChainRecording() {
+        if (!game.settings.remindRecordOnChainOnAutosave) return
+        if (ChainWallet.service.connectedAddress == null) return
+        if (hasOpenPopups()) return
+
+        ConfirmPopup(
+            this,
+            "Record this turn's progress on-chain for 1 SKR?",
+            "Record",
+            isConfirmPositive = true
+        ) {
+            UncivGame.Current.files.saveGame(gameInfo, "Turn ${gameInfo.turns}", recordOnChain = true) { exception ->
+                if (exception != null) Concurrency.runOnGLThread {
+                    ToastPopup(exception.message ?: "Failed to record on-chain", this@WorldScreen)
+                }
+            }
+        }.open()
     }
 }
 

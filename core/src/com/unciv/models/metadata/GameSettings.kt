@@ -44,6 +44,9 @@ class GameSettings {
     //// Wallet / on-chain
     /** If true and a wallet is connected, save games get their hash recorded on-chain as a Memo transaction */
     var recordSavesOnChain = false
+    /** If true and a wallet is connected, every [turnsBetweenAutosaves] turns the player is asked
+     *  (never charged silently) whether to also record that point on-chain for 1 SKR. */
+    var remindRecordOnChainOnAutosave = false
 
     //// Graphics
     var tileSet: String = Constants.defaultTileset
