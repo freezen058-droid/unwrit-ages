@@ -4,9 +4,14 @@ import com.badlogic.gdx.graphics.Color
 import com.unciv.Constants
 
 class SkinConfig(initialCapacity: Int) {
-    var baseColor: Color = Color(0x004085bf)
-    var clearColor: Color = Color(0x000033ff)
-    var defaultVariantTint: Color? = null
+    // CivilWars reskin: warm maroon/gold palette matching the store icon/marketing art, replacing
+    // upstream Unciv's blue default - so the actual in-game UI doesn't look jarringly different
+    // from what the icon/screenshots promise. No jsons/Skins/*.json exists in this project to
+    // override these (verified - SkinCache.loadSkinConfigs finds none), so these Kotlin defaults
+    // are what actually renders; if a Skins.json is ever added later it would take precedence.
+    var baseColor: Color = Color(0x8a2332e6.toInt())
+    var clearColor: Color = Color(0x1a0a10ff.toInt())
+    var defaultVariantTint: Color? = Color(0xf3d27aff.toInt())
     var fallbackSkin: String? = Constants.defaultFallbackSkin
     var skinVariants: HashMap<String, SkinElement> = HashMap(initialCapacity)
 
