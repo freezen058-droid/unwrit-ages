@@ -9,9 +9,12 @@ class SkinConfig(initialCapacity: Int) {
     // from what the icon/screenshots promise. No jsons/Skins/*.json exists in this project to
     // override these (verified - SkinCache.loadSkinConfigs finds none), so these Kotlin defaults
     // are what actually renders; if a Skins.json is ever added later it would take precedence.
+    // defaultVariantTint MUST stay null: SkinStrings.getUiBackground() falls back to it before the
+    // per-call tintColor argument, so a non-null value here forces every UI element in the game to
+    // the same flat color, stomping the baseColor/clearColor variety each screen asks for.
     var baseColor: Color = Color(0x8a2332e6.toInt())
     var clearColor: Color = Color(0x1a0a10ff.toInt())
-    var defaultVariantTint: Color? = Color(0xf3d27aff.toInt())
+    var defaultVariantTint: Color? = null
     var fallbackSkin: String? = Constants.defaultFallbackSkin
     var skinVariants: HashMap<String, SkinElement> = HashMap(initialCapacity)
 
