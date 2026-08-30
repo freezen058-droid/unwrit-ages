@@ -5,6 +5,13 @@
 *.ear
 hs_err_pid*
 
+## Signing keystores - NEVER commit these, losing/leaking them is catastrophic
+## (a leaked keystore lets anyone publish fake updates to the real app; a lost
+## one means the app can never be updated again under the same store listing)
+*.keystore
+*.jks
+!android/debug.keystore
+
 ## Robovm
 /ios/robovm-build/
 
