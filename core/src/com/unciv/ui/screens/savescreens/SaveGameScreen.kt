@@ -131,6 +131,13 @@ class SaveGameScreen(private val gameInfo: GameInfo) : LoadOrSaveScreen("Current
 
     private fun saveGame(saveGameFile: FileHandle) {
         rightSideButton.setText(savingText.tr())
+        // Disable while saving, mirroring addSaveToCustomLocation() below - a security audit
+        // found this button had no such guard, so a double-tap (or holding Enter, since this
+        // button's key shortcut stayed active) could fire two independent saveGame() calls before
+        // the first completed. With recordOnChain=true, each independently opens its own wallet
+        // signing round-trip - i.e. a real double-tap could charge the SKR save fee twice for what
+        // the player perceives as one save.
+        rightSideButton.disable()
         errorLabel.isVisible = false
         Concurrency.runOnNonDaemonThreadPool("SaveGame") {
             game.files.saveGame(gameInfo, saveGameFile, recordOnChain = true) { exception ->
@@ -138,6 +145,7 @@ class SaveGameScreen(private val gameInfo: GameInfo) : LoadOrSaveScreen("Current
                     if (exception != null) {
                         handleException(exception, "Could not save game!", game.files.getSave(gameNameTextField.text))
                         rightSideButton.setText(saveButtonText.tr())
+                        rightSideButton.enable()
                     }
                     else UncivGame.Current.popScreen()
                 }

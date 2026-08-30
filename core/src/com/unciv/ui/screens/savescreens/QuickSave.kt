@@ -10,19 +10,30 @@ import com.unciv.ui.screens.worldscreen.WorldScreen
 import com.unciv.utils.Concurrency
 import com.unciv.utils.Log
 import com.unciv.utils.launchOnGLThread
+import java.util.concurrent.atomic.AtomicBoolean
 
 
 //todo reduce code duplication
 
 object QuickSave {
+    // Unlike the Save Game screen's button, quicksave is bound to a bare keyboard shortcut with
+    // no widget to disable - a security audit found repeated/held key presses could fire this
+    // multiple times before a slow save (the docs elsewhere note a large game's save can take "up
+    // to a few seconds") completes. With recordOnChain=true each overlapping call independently
+    // opens its own wallet signing round-trip, so a repeated key press could charge the SKR save
+    // fee more than once for what the player perceives as one quicksave.
+    private val isSaving = AtomicBoolean(false)
+
     fun save(gameInfo: GameInfo, screen: WorldScreen) {
         // See #10353 - we don't support locally saving an online multiplayer game
         if (gameInfo.gameParameters.isOnlineMultiplayer) return
+        if (!isSaving.compareAndSet(false, true)) return
 
         val files = UncivGame.Current.files
         val toast = ToastPopup("Quicksaving...", screen)
         Concurrency.runOnNonDaemonThreadPool("QuickSaveGame") {
             files.saveGame(gameInfo, "QuickSave", recordOnChain = true) {
+                isSaving.set(false)
                 launchOnGLThread {
                     toast.close()
                     if (it != null)

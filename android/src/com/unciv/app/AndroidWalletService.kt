@@ -7,6 +7,8 @@ import android.os.PowerManager
 import com.solana.mobilewalletadapter.clientlib.ActivityResultSender
 import com.solana.mobilewalletadapter.clientlib.ConnectionIdentity
 import com.solana.mobilewalletadapter.clientlib.MobileWalletAdapter
+import com.solana.mobilewalletadapter.clientlib.RpcCluster
+import com.solana.mobilewalletadapter.clientlib.Solana
 import com.solana.mobilewalletadapter.clientlib.TransactionResult
 import com.solana.mobilewalletadapter.clientlib.successPayload
 import com.solana.programs.AssociatedTokenProgram
@@ -53,9 +55,16 @@ import kotlinx.serialization.json.Json
 class AndroidWalletService(private val activity: Activity) : PlatformWalletService {
 
     companion object {
-        // TODO: switch to "https://api.mainnet-beta.solana.com" (or a paid RPC provider - the
-        // public mainnet endpoint rate-limits aggressively) once this fork is out of testing.
-        private const val RPC_ENDPOINT = "https://api.devnet.solana.com"
+        // TODO mainnet cutover: this is NOT just a matter of changing RPC_ENDPOINT. A security
+        // audit found that MobileWalletAdapter's own `blockchain`/`rpcCluster` fields are a
+        // SEPARATE setting from RPC_ENDPOINT (they control which cluster the wallet app itself
+        // authorizes/signs against) and default to devnet regardless of what RPC_ENDPOINT points
+        // at - see the `walletAdapter` property below, which sets both together from IS_MAINNET
+        // specifically so they can never drift apart. Flip IS_MAINNET, not just RPC_ENDPOINT, and
+        // switch to a paid RPC provider (Helius/QuickNode/Triton/etc) - the public mainnet endpoint
+        // rate-limits aggressively and isn't meant for production traffic.
+        private const val IS_MAINNET = false
+        private val RPC_ENDPOINT = if (IS_MAINNET) "https://api.mainnet-beta.solana.com" else "https://api.devnet.solana.com"
         private const val MEMO_PROGRAM_ID = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"
         private const val BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 
@@ -203,10 +212,17 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
                 // wallets show this URI (and can verify it via .well-known/assetlinks-adjacent
                 // checks) to the user during the auth prompt.
                 identityUri = Uri.parse("https://civilwars.app"),
-                iconUri = Uri.parse("favicon.ico"),
+                // Must be an absolute URI, not a bare relative path - a security audit found the
+                // previous "favicon.ico" would show as a broken icon in the wallet's approval UI.
+                iconUri = Uri.parse("https://civilwars.app/favicon.ico"),
                 identityName = "CivilWars"
             )
-        )
+        ).apply {
+            // Tied to IS_MAINNET (see its comment above) so this can never drift out of sync with
+            // RPC_ENDPOINT - both must flip together for a mainnet cutover to actually work.
+            blockchain = if (IS_MAINNET) Solana.Mainnet else Solana.Devnet
+            rpcCluster = if (IS_MAINNET) RpcCluster.MainnetBeta else RpcCluster.Devnet
+        }
     }
 
     private val memoProgramId = SolanaPublicKey.from(MEMO_PROGRAM_ID)
@@ -229,13 +245,19 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
      */
     private suspend fun <T> withBridge(block: suspend (ActivityResultSender) -> T): T {
         val deferred = CompletableDeferred<T>()
-        WalletBridgeActivity.start(activity) { sender ->
+        val started = WalletBridgeActivity.start(activity) { sender ->
             try {
                 deferred.complete(block(sender))
             } catch (ex: Exception) {
                 deferred.completeExceptionally(ex)
             }
         }
+        // A security audit found that ignoring this return value let a second concurrent call
+        // (e.g. a double-tapped Save button) silently clobber a first one still in flight - that
+        // first call's deferred then never completed, hanging forever with its wake lock held
+        // until the OS's own ~3 minute timeout, with no error ever surfaced to the player. Failing
+        // fast here instead turns that into an immediate, clear error.
+        if (!started) throw IllegalStateException("Another wallet operation is already in progress - please wait for it to finish")
         return deferred.await()
     }
 
@@ -346,7 +368,11 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
 
                 val memoInstruction = TransactionInstruction(
                     memoProgramId,
-                    listOf(AccountMeta(ownerKey, isSigner = true, isWritable = true)),
+                    // isWritable = false: the Memo program never touches account data, only reads
+                    // the signer to attribute the memo - a security audit flagged the previous
+                    // isWritable=true as unnecessarily broad (harmless here, but no reason to ask
+                    // for write access this instruction never uses).
+                    listOf(AccountMeta(ownerKey, isSigner = true, isWritable = false)),
                     memoText.encodeToByteArray()
                 )
 
