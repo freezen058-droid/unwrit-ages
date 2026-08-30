@@ -56,8 +56,13 @@ open class Portrait(val type: Type, val imageName: String, val size: Float, val 
     val pathIcon = "${type.directory}Icons/$imageName"
     val pathIconFallback by lazy { "${type.directory}Icons/Fallback" }
 
-    open fun getDefaultInnerBackgroundTint(): Color { return Color.WHITE.cpy() }
-    open fun getDefaultOuterBackgroundTint(): Color { return Color.BLACK.cpy() }
+    // CivilWars reskin: subclasses that carry functional color-coding (era, resource type,
+    // improvement yield, nation colors, promotion tier, "unavailable" warning red) already
+    // override these, so changing the fallback here only affects portraits that never had a
+    // themed color to begin with (Unit, Building, Religion, UnitAction, and any ring side a
+    // subclass didn't explicitly override).
+    open fun getDefaultInnerBackgroundTint(): Color { return Color(0xf3d27aff.toInt()) }
+    open fun getDefaultOuterBackgroundTint(): Color { return Color(0x8a2332ff.toInt()) }
     open fun getDefaultImageTint(): Color { return Color.WHITE.cpy() }
     open fun getDefaultImage(): Image {
         return when {
