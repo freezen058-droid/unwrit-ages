@@ -51,6 +51,26 @@ android {
             keyPassword = "android"
             storePassword = "android"
         }
+        // Release signing reads from local.properties (already gitignored, same file as
+        // sdk.dir - see getLocalProperty() below) so the actual keystore path/passwords never
+        // need to be typed into any tracked file or committed anywhere. Add these 4 lines to
+        // local.properties to enable `./gradlew :android:assembleRelease`/`bundleRelease`:
+        //   RELEASE_STORE_FILE=android/civilwars-release.keystore
+        //   RELEASE_STORE_PASSWORD=...
+        //   RELEASE_KEY_ALIAS=civilwars
+        //   RELEASE_KEY_PASSWORD=...
+        // If these aren't set, assembleRelease will fail with a clear "keystore not found"-style
+        // error rather than silently signing with the debug key - debug builds are unaffected
+        // either way, they don't reference this config.
+        create("release") {
+            val storeFilePath = getLocalProperty("RELEASE_STORE_FILE")
+            if (storeFilePath != null) {
+                storeFile = rootProject.file(storeFilePath)
+                storePassword = getLocalProperty("RELEASE_STORE_PASSWORD")
+                keyAlias = getLocalProperty("RELEASE_KEY_ALIAS")
+                keyPassword = getLocalProperty("RELEASE_KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
@@ -62,6 +82,7 @@ android {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             isDebuggable = false
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 
@@ -125,16 +146,16 @@ tasks.whenTaskAdded {
     }
 }
 
-private fun getSdkPath(): String? {
+private fun getLocalProperty(key: String): String? {
     val localProperties = project.file("../local.properties")
-    return if (localProperties.exists()) {
-        val properties = Properties()
-        localProperties.inputStream().use { properties.load(it) }
+    if (!localProperties.exists()) return null
+    val properties = Properties()
+    localProperties.inputStream().use { properties.load(it) }
+    return properties.getProperty(key)
+}
 
-        properties.getProperty("sdk.dir") ?: System.getenv("ANDROID_HOME")
-    } else {
-        System.getenv("ANDROID_HOME")
-    }
+private fun getSdkPath(): String? {
+    return getLocalProperty("sdk.dir") ?: System.getenv("ANDROID_HOME")
 }
 
 tasks.register<Exec>("run") {
