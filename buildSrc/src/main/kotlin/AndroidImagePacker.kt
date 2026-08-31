@@ -79,7 +79,10 @@ object AndroidImagePacker {
 
     // Scan multiple image folders and generate an atlas for each - if outdated
     private fun packImagesPerMod(input: String, output: String, defaultSettings: TexturePacker.Settings) {
-        if (!File("$input${File.separator}Images").exists()) return  // So we don't run this from within a fat JAR
+        // Guards against running from within a fat JAR (no Image* source folders present there).
+        // CivilWars renamed every folder to "Images.<Category>" (no bare "Images" folder exists),
+        // so check for any folder matching that pattern instead of the exact upstream name.
+        if (imageFolders(input).none()) return
         val atlasList = mutableListOf<String>()
         for ((file, packFileName) in imageFolders(input)) {
             atlasList += packFileName

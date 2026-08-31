@@ -200,3 +200,6 @@ detekt/reports.html
 /buildSrc/.kotlin/errors/*
 /buildSrc/.kotlin/sessions/*
 /.claude/
+
+# Local-only reversibility copies before a bulk art recolor/reskin pass - not shipped
+/_original_backups/
