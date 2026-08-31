@@ -53,7 +53,6 @@ import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.screens.basescreen.RecreateOnResize
 import com.unciv.ui.screens.mainmenuscreen.EasterEggRulesets.modifyForEasterEgg
 import com.unciv.ui.screens.mapeditorscreen.EditorMapHolder
-import com.unciv.ui.screens.mapeditorscreen.MapEditorScreen
 import com.unciv.ui.screens.newgamescreen.NewGameScreen
 import com.unciv.ui.screens.savescreens.LoadGameScreen
 import com.unciv.ui.screens.savescreens.QuickSave
@@ -172,12 +171,6 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
             game.pushScreen(LoadGameScreen())
         }
         column1.add(loadGameTable).row()
-
-        val mapEditorScreenTable = getMenuButton("Map editor", "OtherIcons/MapEditor", KeyboardBinding.MapEditor) {
-            InputDisabling.disableInput()
-            game.pushScreen(MapEditorScreen())
-        }
-        column2.add(mapEditorScreenTable).row()
 
         val walletTable = getMenuButton("Wallet", "OtherIcons/Settings", KeyboardBinding.None) {
             WalletPopup(stage, game.settings).open(true)
