@@ -203,3 +203,21 @@ detekt/reports.html
 
 # Local-only reversibility copies before a bulk art recolor/reskin pass - not shipped
 /_original_backups/
+
+# AI icon regeneration pipeline. 38k generated candidate images live under /pic - they
+# are the working material of the art project, not game assets, and the finished ones
+# are already integrated into android/Images.*. Keep the tooling and the round log,
+# which are small text files, and leave the images out of the repo.
+/pic/*
+!/pic/batch_review/
+/pic/batch_review/*
+!/pic/batch_review/_sd/
+!/pic/batch_review/*.md
+!/pic/batch_review/review.html
+/pic/batch_review/_sd/*
+!/pic/batch_review/_sd/*.py
+!/pic/batch_review/_sd/*.md
+!/pic/batch_review/_sd/regress_ledger.json
+
+# Loose reference images dropped in while working - never shipped
+/anotherref/
