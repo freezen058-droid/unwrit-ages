@@ -2,7 +2,6 @@ package com.unciv.ui.screens.pickerscreens
 
 import com.unciv.logic.map.mapunit.MapUnit
 import com.unciv.models.translations.tr
-import com.unciv.ui.components.extensions.surroundWithCircle
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.popups.AskTextPopup
 import com.unciv.ui.screens.basescreen.BaseScreen
@@ -12,7 +11,7 @@ class UnitRenamePopup(val screen: BaseScreen, val unit: MapUnit, val actionOnClo
         AskTextPopup(
             screen,
             label = "Choose name for [${unit.baseUnit.name}]",
-            icon = ImageGetter.getUnitIcon(unit.baseUnit).surroundWithCircle(80f),
+            icon = ImageGetter.getConstructionPortrait(unit.baseUnit.name, 80f),
             defaultText = unit.instanceName ?: unit.baseUnit.name.tr(hideIcons = true),
             validate = { it != unit.name },
             actionOnOk = { userInput ->

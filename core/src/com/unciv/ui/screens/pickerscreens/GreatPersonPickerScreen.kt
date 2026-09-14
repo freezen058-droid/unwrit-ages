@@ -23,8 +23,13 @@ class GreatPersonPickerScreen(val worldScreen: WorldScreen, val civInfo: Civiliz
         val useMayaLongCount = civInfo.greatPeople.mayaLimitedFreeGP > 0
 
         for (unit in greatPersonUnits) {
-            val button =
-                PickerPane.getPickerOptionButton(ImageGetter.getUnitIcon(unit), unit.name)
+            // getUnitIcon multiplies the icon by a colour, which turns a painted
+            // Great Person into a black blob; getConstructionPortrait goes through
+            // PortraitUnit, which draws UnitPortraits/<name> untinted when one exists
+            // and falls back to the tinted UnitIcons silhouette when it does not.
+            val button = PickerPane.getPickerOptionButton(
+                ImageGetter.getConstructionPortrait(unit.name, PickerPane.pickerOptionIconSize),
+                unit.name)
             button.pack()
             button.isEnabled = !useMayaLongCount || unit.name in civInfo.greatPeople.longCountGPPool
             if (button.isEnabled) {

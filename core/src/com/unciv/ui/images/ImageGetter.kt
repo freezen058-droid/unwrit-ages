@@ -247,10 +247,19 @@ object ImageGetter {
 
     fun getRandomNationPortrait(size: Float): Portrait = PortraitNation(Constants.random, size)
 
-    fun getUnitIcon(unit: BaseUnit, color: Color = CHARCOAL): Image =
-        if (imageExists("UnitIcons/${unit.name}"))
+    /** A unit's icon, tinted [color] — except where a painted portrait exists.
+     *
+     *  Tinting multiplies the texture, so it turns a painting into a single-colour
+     *  blob. Units that ship a `UnitPortraits/<name>` (the Great People) are drawn from
+     *  that, untinted, at every size; ownership still reads from the flag background
+     *  behind the map icon. Everything else keeps the tinted `UnitIcons/` silhouette,
+     *  which is what stays legible at 20-30 px. */
+    fun getUnitIcon(unit: BaseUnit, color: Color = CHARCOAL): Image = when {
+        imageExists("UnitPortraits/${unit.name}") -> getImage("UnitPortraits/${unit.name}")
+        imageExists("UnitIcons/${unit.name}") ->
             getImage("UnitIcons/${unit.name}").apply { this.color = color }
-        else getImage("UnitTypeIcons/${unit.type}").apply { this.color = color }
+        else -> getImage("UnitTypeIcons/${unit.type}").apply { this.color = color }
+    }
 
     fun getConstructionPortrait(construction: String, size: Float): Group {
         if (ruleset.buildings.containsKey(construction)) {
