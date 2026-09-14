@@ -349,152 +349,145 @@ BuildingPortraits/Ironworks
   index: -1
 BuildingPortraits/Kremlin
   rotate: false
-  xy: 1668, 1308
+  xy: 628, 60
   size: 200, 200
   orig: 200, 200
   offset: 0, 0
   index: -1
 BuildingPortraits/Krepost
   rotate: false
-  xy: 628, 60
+  xy: 836, 268
   size: 200, 200
   orig: 200, 200
   offset: 0, 0
   index: -1
 BuildingPortraits/Leaning Tower of Pisa
   rotate: false
-  xy: 836, 268
+  xy: 1044, 476
   size: 200, 200
   orig: 200, 200
   offset: 0, 0
   index: -1
 BuildingPortraits/Library
   rotate: false
-  xy: 1044, 476
+  xy: 1252, 684
   size: 200, 200
   orig: 200, 200
   offset: 0, 0
   index: -1
 BuildingPortraits/Lighthouse
   rotate: false
-  xy: 1252, 684
+  xy: 1460, 892
   size: 200, 200
   orig: 200, 200
   offset: 0, 0
   index: -1
 BuildingPortraits/Longhouse
   rotate: false
-  xy: 1460, 892
+  xy: 1668, 1100
   size: 200, 200
   orig: 200, 200
   offset: 0, 0
   index: -1
 BuildingPortraits/Machu Picchu
   rotate: false
-  xy: 1668, 1100
+  xy: 836, 60
   size: 200, 200
   orig: 200, 200
   offset: 0, 0
   index: -1
 BuildingPortraits/Manhattan Project
   rotate: false
-  xy: 836, 60
+  xy: 1044, 268
   size: 200, 200
   orig: 200, 200
   offset: 0, 0
   index: -1
 BuildingPortraits/Market
   rotate: false
-  xy: 1044, 268
+  xy: 1252, 476
   size: 200, 200
   orig: 200, 200
   offset: 0, 0
   index: -1
 BuildingPortraits/Mausoleum of Halicarnassus
   rotate: false
-  xy: 1252, 476
+  xy: 1460, 684
   size: 200, 200
   orig: 200, 200
   offset: 0, 0
   index: -1
 BuildingPortraits/Medical Lab
   rotate: false
-  xy: 1460, 684
+  xy: 1668, 892
   size: 200, 200
   orig: 200, 200
   offset: 0, 0
   index: -1
 BuildingPortraits/Military Academy
   rotate: false
-  xy: 1668, 892
+  xy: 1044, 60
   size: 200, 200
   orig: 200, 200
   offset: 0, 0
   index: -1
 BuildingPortraits/Military Base
   rotate: false
-  xy: 1044, 60
+  xy: 1252, 268
   size: 200, 200
   orig: 200, 200
   offset: 0, 0
   index: -1
 BuildingPortraits/Mint
   rotate: false
-  xy: 1252, 268
+  xy: 1460, 476
   size: 200, 200
   orig: 200, 200
   offset: 0, 0
   index: -1
 BuildingPortraits/Monastery
   rotate: false
-  xy: 1460, 476
+  xy: 1668, 684
   size: 200, 200
   orig: 200, 200
   offset: 0, 0
   index: -1
 BuildingPortraits/Monument
   rotate: false
-  xy: 1668, 684
+  xy: 1252, 60
   size: 200, 200
   orig: 200, 200
   offset: 0, 0
   index: -1
 BuildingPortraits/Mosque
   rotate: false
-  xy: 1252, 60
+  xy: 1460, 268
   size: 200, 200
   orig: 200, 200
   offset: 0, 0
   index: -1
 BuildingPortraits/Mud Pyramid Mosque
   rotate: false
-  xy: 1460, 268
+  xy: 1668, 476
   size: 200, 200
   orig: 200, 200
   offset: 0, 0
   index: -1
 BuildingPortraits/Mughal Fort
   rotate: false
-  xy: 1668, 476
+  xy: 1460, 60
   size: 200, 200
   orig: 200, 200
   offset: 0, 0
   index: -1
 BuildingPortraits/Museum
   rotate: false
-  xy: 1460, 60
-  size: 200, 200
-  orig: 200, 200
-  offset: 0, 0
-  index: -1
-BuildingPortraits/National College
-  rotate: false
   xy: 1668, 268
   size: 200, 200
   orig: 200, 200
   offset: 0, 0
   index: -1
-BuildingPortraits/National Epic
+BuildingPortraits/National College
   rotate: false
   xy: 1668, 60
   size: 200, 200
@@ -567,6 +560,13 @@ UnitPortraits/Great Prophet
 UnitPortraits/Great Scientist
   rotate: false
   xy: 420, 268
+  size: 200, 200
+  orig: 200, 200
+  offset: 0, 0
+  index: -1
+UnitPortraits/Khan
+  rotate: false
+  xy: 1668, 1308
   size: 200, 200
   orig: 200, 200
   offset: 0, 0
@@ -829,79 +829,86 @@ BuildingIcons/Water Mill
   orig: 200, 200
   offset: 0, 0
   index: -1
-BuildingPortraits/National Intelligence Agency
+BuildingPortraits/National Epic
   rotate: false
   xy: 4, 1809
   size: 200, 200
   orig: 200, 200
   offset: 0, 0
   index: -1
-BuildingPortraits/National Treasury
+BuildingPortraits/National Intelligence Agency
   rotate: false
   xy: 212, 1809
   size: 200, 200
   orig: 200, 200
   offset: 0, 0
   index: -1
-BuildingPortraits/Neuschwanstein
+BuildingPortraits/National Treasury
   rotate: false
   xy: 420, 1809
   size: 200, 200
   orig: 200, 200
   offset: 0, 0
   index: -1
-BuildingPortraits/Notre Dame
+BuildingPortraits/Neuschwanstein
   rotate: false
   xy: 628, 1809
   size: 200, 200
   orig: 200, 200
   offset: 0, 0
   index: -1
-BuildingPortraits/Nuclear Plant
+BuildingPortraits/Notre Dame
   rotate: false
   xy: 836, 1809
   size: 200, 200
   orig: 200, 200
   offset: 0, 0
   index: -1
-BuildingPortraits/Observatory
+BuildingPortraits/Nuclear Plant
   rotate: false
   xy: 1044, 1809
   size: 200, 200
   orig: 200, 200
   offset: 0, 0
   index: -1
-BuildingPortraits/Opera House
+BuildingPortraits/Observatory
   rotate: false
   xy: 1252, 1809
   size: 200, 200
   orig: 200, 200
   offset: 0, 0
   index: -1
-BuildingPortraits/Oxford University
+BuildingPortraits/Opera House
   rotate: false
   xy: 1460, 1809
   size: 200, 200
   orig: 200, 200
   offset: 0, 0
   index: -1
-BuildingPortraits/Pagoda
+BuildingPortraits/Oxford University
   rotate: false
   xy: 1668, 1809
   size: 200, 200
   orig: 200, 200
   offset: 0, 0
   index: -1
-BuildingPortraits/Palace
+BuildingPortraits/Pagoda
   rotate: false
   xy: 4, 1601
   size: 200, 200
   orig: 200, 200
   offset: 0, 0
   index: -1
-BuildingPortraits/Paper Maker
+BuildingPortraits/Palace
   rotate: false
   xy: 212, 1601
+  size: 200, 200
+  orig: 200, 200
+  offset: 0, 0
+  index: -1
+BuildingPortraits/Paper Maker
+  rotate: false
+  xy: 420, 1601
   size: 200, 200
   orig: 200, 200
   offset: 0, 0
@@ -1688,13 +1695,6 @@ UnitIcons/Galley
   xy: 1084, 4
   size: 100, 100
   orig: 100, 100
-  offset: 0, 0
-  index: -1
-UnitPortraits/Paratrooper
-  rotate: false
-  xy: 420, 1601
-  size: 200, 200
-  orig: 200, 200
   offset: 0, 0
   index: -1
 UnitPortraits/SS Cockpit
