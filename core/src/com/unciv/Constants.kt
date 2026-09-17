@@ -116,7 +116,7 @@ object Constants {
     const val dropboxMultiplayerServer = "Dropbox"
     const val uncivXyzServer = "https://uncivserver.xyz"
 
-    const val defaultTileset = "HexaRealm"
+    const val defaultTileset = "CivilWars"
     /** Default for TileSetConfig.fallbackTileSet - Don't change unless you've also moved the crosshatch, borders, and arrows as well */
     const val defaultFallbackTileset = "FantasyHex"
     const val defaultUnitset = "AbsoluteUnits"
