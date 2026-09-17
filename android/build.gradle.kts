@@ -116,6 +116,14 @@ tasks.register("texturePacker") {
     }
 }
 
+// Repack before every build. Upstream leaves this manual because the desktop launcher
+// repacks at startup, which is fine while you are developing on desktop - but an APK or
+// AAB built without it ships whatever assets/*.atlas happened to be on disk. That is how
+// a release goes out with the old tileset in it.
+tasks.matching { it.name == "preBuild" }.configureEach {
+    dependsOn("texturePacker")
+}
+
 // called every time gradle gets executed, takes the native dependencies of
 // the natives configuration, and extracts them to the proper libs/ folders
 // so they get packed with the APK.
