@@ -1,5 +1,7 @@
 package com.unciv.logic.city
 
+import com.unciv.logic.chronicle.Chronicle
+import com.unciv.logic.chronicle.ChronicleKind
 import com.unciv.GUI
 import com.unciv.UncivGame
 import com.unciv.logic.automation.Timers.Companion.timeThis
@@ -579,6 +581,8 @@ class CityConstructions : IsPartOfGameInfoSerialization {
         val locationAndPediaActions = listOf(locationAction, pediaAction)
 
         if (construction is Building && construction.isWonder) {
+            Chronicle.record(city.civ.gameInfo, ChronicleKind.WonderBuilt,
+                city.civ.civName, detail = construction.name)
             city.civ.popupAlerts.add(PopupAlert(AlertType.WonderBuilt, construction.name))
             for (civ in city.civ.gameInfo.civilizations) {
                 if (civ.hasExplored(city.getCenterTile()))

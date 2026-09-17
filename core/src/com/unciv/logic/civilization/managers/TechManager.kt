@@ -1,5 +1,7 @@
 package com.unciv.logic.civilization.managers
 
+import com.unciv.logic.chronicle.Chronicle
+import com.unciv.logic.chronicle.ChronicleKind
 import com.unciv.Constants
 import com.unciv.logic.IsPartOfGameInfoSerialization
 import com.unciv.logic.automation.Timers.Companion.timeThis
@@ -423,6 +425,8 @@ class TechManager : IsPartOfGameInfoSerialization {
         updateEra()
         val currentEra = civInfo.getEra()
         if (previousEra == currentEra) return
+        Chronicle.record(civInfo.gameInfo, ChronicleKind.EraEntered,
+            civInfo.civName, detail = currentEra.name)
         
         if (showNotification) {
             if (!civInfo.isSpectator())

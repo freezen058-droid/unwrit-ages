@@ -1,5 +1,7 @@
 package com.unciv.logic.city.managers
 
+import com.unciv.logic.chronicle.Chronicle
+import com.unciv.logic.chronicle.ChronicleKind
 import com.unciv.Constants
 import com.unciv.logic.city.City
 import com.unciv.logic.civilization.Civilization
@@ -28,6 +30,7 @@ class CityFounder {
             civInfo,
             civInfo.gameInfo.civilizations.asSequence().filter { civ -> civ.isAlive() }.toSet()
         ) ?: NamingConstants.fallback
+        Chronicle.record(civInfo.gameInfo, ChronicleKind.CityFounded, civInfo.civName, detail = city.name)
 
         city.isOriginalCapital = civInfo.citiesCreated == 0
         if (city.isOriginalCapital) {

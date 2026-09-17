@@ -1,5 +1,7 @@
 package com.unciv.logic.civilization.diplomacy
 
+import com.unciv.logic.chronicle.Chronicle
+import com.unciv.logic.chronicle.ChronicleKind
 import com.unciv.Constants
 import com.unciv.logic.civilization.AlertType
 import com.unciv.logic.civilization.Civilization
@@ -24,6 +26,8 @@ object DeclareWar {
      * Should only ever be set to true for calls originating from within this function.
      */
     internal fun declareWar(diplomacyManager: DiplomacyManager, declareWarReason: DeclareWarReason) {
+        Chronicle.record(diplomacyManager.civInfo.gameInfo, ChronicleKind.WarDeclared,
+            diplomacyManager.civInfo.civName, diplomacyManager.otherCiv.civName)
         val civInfo = diplomacyManager.civInfo
         val otherCiv = diplomacyManager.otherCiv
         val otherCivDiplomacy = diplomacyManager.otherCivDiplomacy()

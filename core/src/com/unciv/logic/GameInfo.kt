@@ -5,6 +5,7 @@ import com.unciv.Constants
 import com.unciv.GUI
 import com.unciv.UncivGame
 import com.unciv.json.json
+import com.unciv.logic.chronicle.Chronicle
 import com.unciv.logic.BackwardCompatibility.convertFortify
 import com.unciv.logic.BackwardCompatibility.ensureUnitIds
 import com.unciv.logic.BackwardCompatibility.guaranteeUnitPromotions
@@ -120,6 +121,10 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
 
     var victoryData: VictoryData? = null
 
+    /** The milestones of this game, recorded as they happen - see [Chronicle].
+     *  Empty for any game started before this existed; nothing in an old save can rebuild it. */
+    var chronicle = Chronicle()
+
     /** Maps a civ to the civ they voted for - `null` on the value side means they abstained */
     var diplomaticVictoryVotesCast = HashMap<String, String?>()
     // Set to false whenever the results still need te be processed
@@ -213,6 +218,7 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
         toReturn.oneMoreTurnMode = oneMoreTurnMode
         toReturn.customSaveLocation = customSaveLocation
         toReturn.victoryData = victoryData?.copy()
+        toReturn.chronicle = chronicle.copy()
         toReturn.historyStartTurn = historyStartTurn
         toReturn.lastUnitId = lastUnitId
         toReturn.unitNamesTaken.addAll(unitNamesTaken)

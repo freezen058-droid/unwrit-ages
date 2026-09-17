@@ -1,5 +1,7 @@
 package com.unciv.logic.civilization.diplomacy
 
+import com.unciv.logic.chronicle.Chronicle
+import com.unciv.logic.chronicle.ChronicleKind
 import com.badlogic.gdx.graphics.Color
 import com.unciv.Constants
 import com.unciv.logic.IsPartOfGameInfoSerialization
@@ -626,6 +628,7 @@ class DiplomacyManager() : IsPartOfGameInfoSerialization {
 
 
     fun makePeace() {
+        Chronicle.record(civInfo.gameInfo, ChronicleKind.PeaceMade, civInfo.civName, otherCiv.civName)
         makePeaceOneSide()
         otherCivDiplomacy().makePeaceOneSide()
 

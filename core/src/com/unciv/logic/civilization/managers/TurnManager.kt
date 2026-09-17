@@ -1,5 +1,7 @@
 package com.unciv.logic.civilization.managers
 
+import com.unciv.logic.chronicle.Chronicle
+import com.unciv.logic.chronicle.ChronicleKind
 import com.unciv.UncivGame
 import com.unciv.logic.VictoryData
 import com.unciv.logic.automation.civilization.NextTurnAutomation
@@ -352,6 +354,8 @@ class TurnManager(val civInfo: Civilization) {
         if (victoryType != null) {
             civInfo.gameInfo.victoryData =
                     VictoryData(civInfo, victoryType, civInfo.gameInfo.turns)
+            Chronicle.record(civInfo.gameInfo, ChronicleKind.Victory,
+                civInfo.civName, detail = victoryType)
 
             // Notify other human players about this civInfo's victory
             for (otherCiv in civInfo.gameInfo.civilizations) {

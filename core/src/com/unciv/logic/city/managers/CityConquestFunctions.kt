@@ -1,5 +1,7 @@
 package com.unciv.logic.city.managers
 
+import com.unciv.logic.chronicle.Chronicle
+import com.unciv.logic.chronicle.ChronicleKind
 import com.unciv.Constants
 import com.unciv.GUI
 import com.unciv.logic.battle.Battle
@@ -122,9 +124,20 @@ class CityConquestFunctions(val city: City) {
 
         destroyBuildingsOnCapture()
 
+        val cityName = city.name
         city.moveToCiv(receivingCiv)
 
+        Chronicle.record(city.civ.gameInfo,
+            if (receivingCiv == conqueredCiv) ChronicleKind.CityLiberated else ChronicleKind.CityCaptured,
+            conqueringCiv.civName, conqueredCiv.civName, cityName)
+
         Battle.destroyIfDefeated(conqueredCiv, conqueringCiv, city.location.toHexCoord())
+
+        // The only moment we can name who struck the last blow, which is the thing a player
+        // remembers - "turn 143, I finished off Rome". After this the loser is simply gone.
+        if (conqueredCiv.isDefeated())
+            Chronicle.record(city.civ.gameInfo, ChronicleKind.CivDefeated,
+                conqueringCiv.civName, conqueredCiv.civName)
 
         city.health = city.getMaxHealth() / 2 // I think that cities recover to half health when conquered?
         city.avoidGrowth = false // reset settings

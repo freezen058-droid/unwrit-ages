@@ -1,5 +1,7 @@
 package com.unciv.logic.city
 
+import com.unciv.logic.chronicle.Chronicle
+import com.unciv.logic.chronicle.ChronicleKind
 import com.unciv.Constants
 import com.unciv.logic.IsPartOfGameInfoSerialization
 import com.unciv.logic.MultiFilter
@@ -470,6 +472,12 @@ class City : IsPartOfGameInfoSerialization, INamed {
     }
 
     fun destroyCity(overrideSafeties: Boolean = false) {
+        // destroyCity() is reached from several places that do not all carry the attacker, so the
+        // razer is taken as whoever is acting: GameInfo.currentPlayer is set to the civ whose turn
+        // is being processed, AI civs included (GameInfo.nextTurn), which is right for every path a
+        // city is actually razed on.
+        Chronicle.record(civ.gameInfo, ChronicleKind.CityDestroyed,
+            civ.gameInfo.currentPlayerCiv.civName, civ.civName, name)
         // Original capitals and holy cities cannot be destroyed,
         // unless, of course, they are captured by a one-city-challenger.
         if (!canBeDestroyed() && !overrideSafeties) return
