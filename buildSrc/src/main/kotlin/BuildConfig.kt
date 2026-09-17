@@ -14,4 +14,5 @@ object BuildConfig {
     /** Store-facing unique app id (Play Store / Solana dApp Store listing key). This is what
      * distinguishes this fork from upstream Unciv - must never collide with com.unciv.app. */
     const val applicationId = "com.civilwars.app"
+
 }

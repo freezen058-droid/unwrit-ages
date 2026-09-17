@@ -116,6 +116,14 @@ object Constants {
     const val dropboxMultiplayerServer = "Dropbox"
     const val uncivXyzServer = "https://uncivserver.xyz"
 
+    /** Where a recipient of a published build can obtain the Source Code Form of the
+     *  MPL-2.0 covered files this fork modified - the list is in MPL-NOTICE.md.
+     *  MPL-2.0 section 3.2 requires this to be offered alongside any distributed binary.
+     *  A repository URL or a contact address; shown under Options - About.
+     *  MUST be filled in before a public release: left empty, the About tab says so out
+     *  loud rather than quietly omitting the offer. */
+    const val sourceOfferUrl = ""
+
     const val defaultTileset = "CivilWars"
     /** Default for TileSetConfig.fallbackTileSet - Don't change unless you've also moved the crosshatch, borders, and arrows as well */
     const val defaultFallbackTileset = "FantasyHex"

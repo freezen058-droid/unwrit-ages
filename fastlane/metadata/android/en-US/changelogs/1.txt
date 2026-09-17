@@ -1,0 +1,5 @@
+First release.
+
+* Complete 4X campaign: technologies, policies, units, buildings, diplomacy
+* New terrain set rendered as lit relief, with several variants of every tile
+* Redrawn unit and building icons

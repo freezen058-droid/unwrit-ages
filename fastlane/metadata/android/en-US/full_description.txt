@@ -1,13 +1,16 @@
-An open-source reimplementation of the most famous civilization-building game ever - fast, small, no ads, free forever!
+Build a civilization from a single settler to a world power. Found cities, research
+technologies, work the land, choose your policies, and meet every other leader on the map
+across the whole sweep of history.
 
-Build your civilization, research technologies, expand your cities and defeat your foes!
+CivilWars is a turn-based 4X strategy game: you take your turn, everyone else takes theirs,
+and nothing happens until you are ready. No timers, no ads, no energy meters.
 
-Requests? Bugs? Want to help development? Todo list for the application is https://github.com/yairm210/Unciv/issues
+* A full technology tree, policy trees and a complete set of units and buildings
+* Randomly generated worlds, or hand-made maps in the built-in editor
+* Terrain rendered as lit relief - hills, mountain ranges, floes and marshes are drawn from
+  real height fields, so the map reads at a glance
+* Plays offline, on the phone or the desktop, and saves are yours to keep
 
-Questions? Comments? Join us on discord at https://discord.gg/bjrB4Xw ;)
-
-Want to help translating the game into your language? See https://yairm210.github.io/Unciv/Translating/Translating/
-
-The world awaits! Will you build your civilization into an empire that will stand the test of time?
-
-The 'have full network access' permission is required for user-initiated downloads and the multiplayer feature. All other listed permissions are included automatically by the API used to implement multiplayer turn notifications. Network permissions are used to list mods, download mods, download music and to upload/download multiplayer games. No other internet communication is initiated by Unciv.
+CivilWars is built on Unciv, which is free software under the Mozilla Public License 2.0.
+The source of every MPL-covered file we modified is available on request; see the notice
+inside the app under Options - About.

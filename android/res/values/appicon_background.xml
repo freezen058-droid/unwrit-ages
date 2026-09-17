@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The dark rock the CivilWars icon's hexes sit on, taken from the Mountain tile. -->
+    <color name="appicon_background">#2E241E</color>
+</resources>
