@@ -218,6 +218,9 @@ detekt/reports.html
 !/pic/batch_review/_sd/*.py
 !/pic/batch_review/_sd/*.md
 !/pic/batch_review/_sd/regress_ledger.json
+!/pic/batch_review/_sd/chaincost/
+!/pic/batch_review/_sd/chaincost/*.mjs
+!/pic/batch_review/_sd/chaincost/*.md
 
 # Loose reference images dropped in while working - never shipped
 /anotherref/
