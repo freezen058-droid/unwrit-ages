@@ -227,3 +227,10 @@ detekt/reports.html
 # recipe and not the output. The tileset's config json stays tracked - it is HexaRealm's
 # config plus a header, and contains no art.
 /android/Images.Tilesets/TileSets/CivilWars/
+
+# The construction icons. Same rule as the tileset art above: these 252 files are written
+# by pic/batch_review/_sd/integrate.py from the approved rounds, so the repo keeps the
+# generator and not the output. Removed from history on 2026-09-17 at the user's request;
+# the stock upstream set is in _original_backups/ConstructionIcons_upstream/ and can also
+# be fetched with: git checkout upstream/master -- android/Images.ConstructionIcons
+/android/Images.ConstructionIcons/
