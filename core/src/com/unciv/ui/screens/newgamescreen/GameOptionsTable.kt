@@ -108,17 +108,9 @@ class GameOptionsTable(
         }).row()
         addVictoryTypeCheckboxes()
 
-        val checkboxTable = Table().apply { defaults().left().pad(2.5f) }
-        val selectBoxTable = Table()
-        checkboxTable.addIsOnlineMultiplayerCheckbox()
-        if (gameParameters.isOnlineMultiplayer){
-            checkboxTable.addAnyoneCanSpectateCheckbox()
-            selectBoxTable.addDurationSelectBox("Time until skip turn:", GameParameters::minutesUntilSkipTurn, 1, 0, 0)
-            selectBoxTable.addDurationSelectBox("Total time to play:", GameParameters::minutesUntilForceResign, 3, 0, 0)
-            selectBoxTable.addDurationSelectBox("Time recovered per turn:", GameParameters::minutesRecoveredPerTurn, 3, 0, 0)
-        }
-        add(checkboxTable).center().row()
-        add(selectBoxTable).center().row()
+        // Online multiplayer is not part of this fork, so neither is its setup: the checkbox,
+        // the spectator toggle it reveals, and the three turn-timer boxes behind it are all gone.
+        // gameParameters.isOnlineMultiplayer simply stays false.
 
         val expander = ExpanderTab(
             "Advanced Settings",

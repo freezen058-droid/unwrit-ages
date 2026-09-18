@@ -43,7 +43,8 @@ internal class DisplayTab(
 
         addHeader("Graphics")
 
-        addTileSetSelectBox()
+        // No tileset picker: this fork ships one terrain set and it is the look of the game.
+        // The unit set and skin stay, because those are genuinely a matter of taste.
         addUnitSetSelectBox()
         addSkinSelectBox()
 

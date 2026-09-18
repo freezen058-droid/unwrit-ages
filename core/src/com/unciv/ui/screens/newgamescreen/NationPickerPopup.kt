@@ -248,7 +248,7 @@ internal class NationPickerPopup(
     }
 
     private fun getSortedNations(): Sequence<NationIterationElement> {
-        // Random and Spectator come first, both optional
+        // Random comes first, optional
         val part1 = sequence {
             if (!noRandom) {
                 val random = Nation().apply {
@@ -259,9 +259,9 @@ internal class NationPickerPopup(
                 }
                 yield(NationIterationElement(random))
             }
-            val spectator = previousScreen.ruleset.nations[Constants.spectator]
-            if (spectator != null && player.playerType != PlayerType.AI)  // only humans can spectate, sorry robots
-                yield(NationIterationElement(spectator))
+            // No spectator: it exists to watch other people take their turns, which only
+            // happens in multiplayer. Offering it in a single-player game is offering a seat
+            // with nothing to do.
         }
         // Then what PlayerPickerTable says we should display - see its doc
         val part2 = playerPicker.getAvailablePlayerCivs(player.chosenCiv)

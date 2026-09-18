@@ -12,7 +12,7 @@ object BuildConfig {
     const val namespace = "com.unciv.app"
 
     /** Store-facing unique app id (Play Store / Solana dApp Store listing key). This is what
-     * distinguishes this fork from upstream Unciv - must never collide with com.unciv.app. */
-    const val applicationId = "com.civilwars.app"
+     * distinguishes this fork from upstream Unciv - must never collide with com.unciv.app. Locked once published. */
+    const val applicationId = "com.unwritages.app"
 
 }
