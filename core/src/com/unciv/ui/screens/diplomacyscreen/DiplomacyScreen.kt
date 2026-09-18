@@ -228,7 +228,10 @@ class DiplomacyScreen(
     internal fun setTrade(otherCiv: Civilization): TradeTable {
         rightSideTable.clear()
         val tradeTable = TradeTable(viewingCivView, ForeignCivView(otherCiv, viewingCiv), this)
-        rightSideTable.add(tradeTable)
+        // In a ScrollPane like every other right-side panel: the sizing above should keep the
+        // Offer trade button on screen, but a long enough translation or a big font should degrade
+        // to "you can scroll to it", never to "the button is unreachable".
+        rightSideTable.add(ScrollPane(tradeTable)).height(stage.height)
         return tradeTable
     }
 

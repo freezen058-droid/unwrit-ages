@@ -6,6 +6,7 @@ import com.unciv.logic.trade.TradeOffer
 import com.unciv.logic.trade.TradeOffersList
 import com.unciv.logic.trade.TradeOfferType
 import com.unciv.models.translations.tr
+import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.extensions.addSeparator
 import com.unciv.ui.components.extensions.surroundWithCircle
 import com.unciv.ui.images.ImageGetter
@@ -63,37 +64,49 @@ class OfferColumnsTable(
 
         val columnWidth = screen.getTradeColumnsWidth() - 20f // Subtract padding: ours and OffersListScroll's
 
+        // How much height the four lists may share.
+        //
+        // They used to take stage.height/2 + stage.height/3 outright - five sixths of the screen,
+        // before the two header rows, the separators, the padding and the "Offer trade" button
+        // underneath. On a short screen that pushes the button off the bottom, and TradeTable is
+        // added without a ScrollPane, so the trade can never be sent: exactly what a 2670x1200
+        // phone showed. Reserve room for that chrome first, measured from a real label so it
+        // scales with the player's font size, and share out what is left.
+        val rowHeight = "Our items".tr().toLabel().prefHeight
+        val reserved = rowHeight * (if (isPortraitMode) 9f else 6f) + 60f
+        val listsHeight = (screen.stage.height - reserved).coerceAtLeast(screen.stage.height * 0.35f)
+
         if (!isPortraitMode) {
             // In landscape, arrange in 4 panels: ours left / theirs right ; items top / offers bottom.
             add("Our items".tr())
             add("[${theirCiv.civName}]'s items".tr()).row()
 
-            add(ourAvailableOffersTable).prefSize(columnWidth, screen.stage.height / 2)
-            add(theirAvailableOffersTable).prefSize(columnWidth, screen.stage.height / 2).row()
+            add(ourAvailableOffersTable).prefSize(columnWidth, listsHeight * 0.58f)
+            add(theirAvailableOffersTable).prefSize(columnWidth, listsHeight * 0.58f).row()
 
             addSeparator().height(2f)
 
             add("Our trade offer".tr())
             add("[${theirCiv.civName}]'s trade offer".tr()).row()
-            add(ourOffersTable).size(columnWidth, screen.stage.height / 3)
-            add(theirOffersTable).size(columnWidth, screen.stage.height / 3)
+            add(ourOffersTable).size(columnWidth, listsHeight * 0.42f)
+            add(theirOffersTable).size(columnWidth, listsHeight * 0.42f)
         } else {
             // In portrait, this will arrange the items lists vertically
             // and the offers still side-by-side below that
             add("Our items".tr()).colspan(2).row()
-            add(ourAvailableOffersTable).height(screen.stage.height / 4f).colspan(2).row()
+            add(ourAvailableOffersTable).height(listsHeight * 0.3f).colspan(2).row()
 
             addSeparator().height(2f)
 
             add("[${theirCiv.civName}]'s items".tr()).colspan(2).row()
-            add(theirAvailableOffersTable).height(screen.stage.height / 4f).colspan(2).row()
+            add(theirAvailableOffersTable).height(listsHeight * 0.3f).colspan(2).row()
 
             addSeparator().height(5f)
 
             add("Our trade offer".tr())
             add("[${theirCiv.civName}]'s trade offer".tr()).row()
-            add(ourOffersTable).height(screen.stage.height / 4f).width(columnWidth)
-            add(theirOffersTable).height(screen.stage.height / 4f).width(columnWidth)
+            add(ourOffersTable).height(listsHeight * 0.2f).width(columnWidth)
+            add(theirOffersTable).height(listsHeight * 0.2f).width(columnWidth)
         }
         pack()
         update()
