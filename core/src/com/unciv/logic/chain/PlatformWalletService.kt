@@ -36,6 +36,33 @@ interface PlatformWalletService {
         onError: (Exception) -> Unit = {}
     )
 
+    /**
+     * Stores [saveData] permanently, mints a victory certificate owned by the connected wallet, and
+     * reports the asset's address.
+     *
+     * The order is fixed and the reason is money: the storage upload and the mint are paid for
+     * separately, so the upload must complete and its URI be handed back through
+     * [alreadyUploadedSaveUri] / [buildMetadata] before the mint is attempted. A mint that fails can
+     * then be retried without paying to store the same save again.
+     *
+     * @param alreadyUploadedSaveUri set when a previous attempt got as far as uploading; the
+     *        implementation must skip the upload and reuse it.
+     * @param buildMetadata called once the save's URI is known - returns the metadata JSON to store
+     *        and point the asset at.
+     * @param onProgress a short user-facing line: uploading, minting, done.
+     * @param onSuccess the minted asset's address, and the save URI, which the caller records so a
+     *        later retry can skip the upload.
+     */
+    fun mintVictoryCertificate(
+        certificateName: String,
+        saveData: ByteArray,
+        alreadyUploadedSaveUri: String?,
+        buildMetadata: (saveUri: String, imageUri: String) -> String,
+        onProgress: (String) -> Unit = {},
+        onSuccess: (assetAddress: String, saveUri: String) -> Unit,
+        onError: (Exception) -> Unit = {}
+    )
+
     companion object {
         val None = object : PlatformWalletService {
             override val isAvailable = false
@@ -49,6 +76,17 @@ interface PlatformWalletService {
                 saveName: String,
                 hashHex: String,
                 onSuccess: (txSignature: String) -> Unit,
+                onError: (Exception) -> Unit
+            ) {
+                onError(UnsupportedOperationException("Wallet integration is not available on this platform"))
+            }
+            override fun mintVictoryCertificate(
+                certificateName: String,
+                saveData: ByteArray,
+                alreadyUploadedSaveUri: String?,
+                buildMetadata: (saveUri: String, imageUri: String) -> String,
+                onProgress: (String) -> Unit,
+                onSuccess: (assetAddress: String, saveUri: String) -> Unit,
                 onError: (Exception) -> Unit
             ) {
                 onError(UnsupportedOperationException("Wallet integration is not available on this platform"))

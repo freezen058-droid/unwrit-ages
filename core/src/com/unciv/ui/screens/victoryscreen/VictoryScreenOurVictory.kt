@@ -3,12 +3,17 @@ package com.unciv.ui.screens.victoryscreen
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.utils.Align
+import com.unciv.logic.chain.VictoryCertificateService
 import com.unciv.logic.civilization.Civilization
 import com.unciv.models.ruleset.Victory
 import com.unciv.ui.components.widgets.TabbedPager
 import com.unciv.ui.components.extensions.addSeparator
 import com.unciv.ui.components.extensions.equalizeColumns
+import com.unciv.ui.components.extensions.disable
+import com.unciv.ui.components.extensions.enable
 import com.unciv.ui.components.extensions.toLabel
+import com.unciv.ui.components.extensions.toTextButton
+import com.unciv.ui.components.input.onClick
 import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.screens.worldscreen.WorldScreen
 
@@ -38,6 +43,55 @@ class VictoryScreenOurVictory(
         }
 
         header.addSeparator(Color.GRAY)
+
+        addCertificateRow(worldScreen, victoriesToShow.size)
+    }
+
+    /**
+     * The certificate offer, at the one moment it means something.
+     *
+     * Deliberately the last row and nothing more than a button: winning is the emotional peak of a
+     * game that took hours, and the worst thing to put there is a sales pitch. It is absent unless
+     * this player actually won and a wallet is available, so a player who never touches the chain
+     * never sees it.
+     */
+    private companion object {
+        /** Said only when an upload is already paid for, because it changes what a retry costs. */
+        const val RETRY_HINT = "\nThe world is stored - retrying only mints."
+    }
+
+    private fun addCertificateRow(worldScreen: WorldScreen, columns: Int) {
+        val gameInfo = worldScreen.gameInfo
+        val civ = worldScreen.selectedGameView.civView.getCiv()
+        if (!VictoryCertificateService.isAvailable(gameInfo, civ)) return
+
+        val status = "".toLabel()
+        val button = "Mint victory certificate".toTextButton()
+        button.onClick {
+            button.disable()
+            status.setText("Storing the final world...")
+            VictoryCertificateService.mint(
+                gameInfo, civ,
+                imageUri = "",
+                onProgress = { status.setText(it) },
+                onSuccess = { status.setText("Certificate minted: $it") },
+                onError = {
+                    // The upload may already be paid for; say so, because it changes what a retry costs.
+                    val paid = VictoryCertificateService.alreadyMintedUpload(gameInfo) != null
+                    status.setText(
+                        (it.localizedMessage ?: "Could not mint the certificate") +
+                            (if (paid) RETRY_HINT else "")
+                    )
+                    button.enable()
+                }
+            )
+        }
+
+        row()
+        val cell = Table()
+        cell.add(button).padBottom(6f).row()
+        cell.add(status).row()
+        add(cell).colspan(maxOf(1, columns)).padTop(16f)
     }
 
     private fun getColumn(victory: Victory, playerCiv: Civilization): Table {
