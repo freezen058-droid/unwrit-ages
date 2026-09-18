@@ -43,10 +43,9 @@ internal class DisplayTab(
 
         addHeader("Graphics")
 
-        // No tileset picker: this fork ships one terrain set and it is the look of the game.
-        // The unit set and skin stay, because those are genuinely a matter of taste.
-        addUnitSetSelectBox()
-        addSkinSelectBox()
+        // No tileset, unit set or skin picker. This game ships one look; offering three
+        // dropdowns to change it makes the look feel provisional, and every combination is
+        // a state we would have to make sure still reads.
 
         addHeader("UI")
 

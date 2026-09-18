@@ -36,7 +36,7 @@ internal class LanguageTable(val language: String, val percentComplete: Int) : T
             add(ImageGetter.getImage("FlagIcons/$language")).size(40f)
 
         val spaceSplitLang = language.replace("_"," ")
-        add("$spaceSplitLang ($percentComplete%)".toLabel())
+        add(spaceSplitLang.toLabel())
         update("")
         touchable =
             Touchable.enabled // so click listener is activated when any part is clicked, not only children
@@ -55,15 +55,6 @@ internal class LanguageTable(val language: String, val percentComplete: Int) : T
         fun Table.addLanguageTables(expectedWidth: Float): ArrayList<LanguageTable> {
             val languageTables = ArrayList<LanguageTable>()
 
-            val translationDisclaimer = FormattedLine(
-                text = "Please note that translations are a community-based work in progress and are" +
-                    " INCOMPLETE! The percentage shown is how much of the language is translated in-game." +
-                    " If you want to help translating the game into your language, click here.",
-                link = "${Constants.wikiURL}Translating/Translating/",
-                size = 15
-            )
-            add(MarkupRenderer.render(listOf(translationDisclaimer),expectedWidth)).pad(5f).row()
-
             val tableLanguages = Table()
             tableLanguages.defaults().uniformX().fillX().pad(10.0f)
 
@@ -73,6 +64,7 @@ internal class LanguageTable(val language: String, val percentComplete: Int) : T
                 .percentCompleteOfLanguages
             languageTables.addAll(
                 languageCompletionPercentage
+                .filter { it.key in SHIPPED_LANGUAGES }
                 .map { LanguageTable(it.key, if (it.key == Constants.english) 100 else it.value) }
                 .sortedWith(
                     compareBy<LanguageTable> { it.language != Constants.english }
@@ -88,6 +80,31 @@ internal class LanguageTable(val language: String, val percentComplete: Int) : T
 
             return languageTables
         }
+
+        /**
+         * The languages this game ships.
+         *
+         * Upstream lists all 48 translations it has ever received, at every level of
+         * completeness, with a note asking the player to help finish them. That is right for a
+         * community project and wrong for a published game: a player opening the language list
+         * should be choosing, not auditing. Everything here is at 97% or better.
+         */
+        val SHIPPED_LANGUAGES = setOf(
+            Constants.english,
+            "Simplified_Chinese",       // 99%
+            "Traditional_Chinese",      // 98%
+            "Spanish",                  // 99%
+            "Brazilian_Portuguese",     // 99%
+            "Russian",                  // 99%
+            "French",                   // 99%
+            "German",                   // 97%
+            "Japanese",                 // 97%
+            "Indonesian",               // 99%
+            "Italian",                  // 99%
+            "Polish",                   // 99%
+            "Turkish",                  // 98%
+            "Vietnamese",               // 99%
+        )
 
         /** Create round-robin letter key handling, such that repeatedly pressing 'R' will cycle through all languages starting with 'R' */
         fun Actor.addLanguageKeyShortcuts(languageTables: ArrayList<LanguageTable>, getSelection: ()->String, action: (String)->Unit) {
