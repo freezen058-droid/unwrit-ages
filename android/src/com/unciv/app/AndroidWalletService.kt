@@ -338,6 +338,23 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
         _connectedAddress = null
     }
 
+    /**
+     * Not built yet. It needs two things this class does not have: an Arweave bundler upload paid
+     * in SOL, and a Metaplex Core mint. Until both exist this says so plainly rather than failing
+     * somewhere less obvious - the victory screen surfaces the message to the player.
+     */
+    override fun mintVictoryCertificate(
+        certificateName: String,
+        saveData: ByteArray,
+        alreadyUploadedSaveUri: String?,
+        buildMetadata: (saveUri: String, imageUri: String) -> String,
+        onProgress: (String) -> Unit,
+        onSuccess: (assetAddress: String, saveUri: String) -> Unit,
+        onError: (Exception) -> Unit
+    ) {
+        onError(UnsupportedOperationException("Victory certificates are not available in this build yet"))
+    }
+
     override fun recordSaveHash(
         gameId: String,
         saveName: String,

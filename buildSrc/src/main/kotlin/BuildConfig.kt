@@ -3,7 +3,7 @@ package com.unciv.build
 
 object BuildConfig {
     /** Display name of this fork, shown as the app name and in store listings */
-    const val appName = "CivilWars"
+    const val appName = "Unwrit Ages"
     const val appCodeNumber = 1
     const val appVersion = "0.1.0"
 

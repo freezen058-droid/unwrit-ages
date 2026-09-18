@@ -124,7 +124,7 @@ object Constants {
      *  loud rather than quietly omitting the offer. */
     const val sourceOfferUrl = ""
 
-    const val defaultTileset = "CivilWars"
+    const val defaultTileset = "UnwritAges"
     /** Default for TileSetConfig.fallbackTileSet - Don't change unless you've also moved the crosshatch, borders, and arrows as well */
     const val defaultFallbackTileset = "FantasyHex"
     const val defaultUnitset = "AbsoluteUnits"

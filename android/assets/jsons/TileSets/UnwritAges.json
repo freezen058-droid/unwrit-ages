@@ -1,4 +1,4 @@
-// CivilWars: HexaRealm with the terrain, hills, fallout, farms and canopies re-rendered
+// Unwrit Ages: HexaRealm with the terrain, hills, fallout, farms and canopies re-rendered
 // as lit height fields (see pic/batch_review/_sd/relief.py and surfaces.py).  Everything
 // else -- ruleVariants, edge images, the whole improvement and resource set -- is
 // HexaRealm's, and this file is its config unchanged apart from this note, so any tile we

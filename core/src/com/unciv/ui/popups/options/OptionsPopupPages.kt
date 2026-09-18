@@ -19,7 +19,11 @@ enum class OptionsPopupPages(
         override fun getIcon(language: String) = ImageGetter.getImage(iconPath + language)
     },
     Sound("Sound", "OtherIcons/Speaker", { SoundTab(this) }),
-    Multiplayer("Multiplayer", "OtherIcons/Multiplayer", { MultiplayerTab(this) }),
+    // Multiplayer is not part of this fork's offering, and its options page is a wall of
+    // sync intervals and turn-notification settings that mean nothing in a single-player game.
+    Multiplayer("Multiplayer", "OtherIcons/Multiplayer", { MultiplayerTab(this) }) {
+        override fun visible(withDebug: Boolean) = false
+    },
     Keys("Keys", "OtherIcons/Keyboard", { KeyBindingsTab(this, tabMinWidth - 40f) }) {   // 40 = padding
         override fun visible(withDebug: Boolean) = GUI.keyboardAvailable
     },
