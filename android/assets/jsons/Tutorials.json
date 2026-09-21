@@ -111,7 +111,7 @@
     "steps": [
       "As cities grow in size and influence, you have to deal with a happiness mechanic that is no longer tied to each individual city.\nInstead, your entire empire shares the same level of satisfaction.\nAs your cities grow in population you’ll find that it is more and more difficult to keep your empire happy."    ,
       "In addition, you can’t even build any city improvements that increase happiness until you’ve done the appropriate research.\nIf your empire’s happiness ever goes below zero the growth rate of your cities will be hurt.\nIf your empire becomes severely unhappy (as indicated by the smiley-face icon at the top of the interface)\n  your armies will have a big penalty slapped on to their overall combat effectiveness."    ,
-      "This means that it is very difficult to expand quickly in Unciv.\nIt isn’t impossible, but as a new player you probably shouldn't do it.\nSo what should you do? Chill out, scout, and improve the land that you do have by building Workers.\nOnly build new cities once you have found a spot that you believe is appropriate."
+      "This means that it is very difficult to expand quickly in Unwrit Ages.\nIt isn’t impossible, but as a new player you probably shouldn't do it.\nSo what should you do? Chill out, scout, and improve the land that you do have by building Workers.\nOnly build new cities once you have found a spot that you believe is appropriate."
     ]
   },
   {
@@ -160,8 +160,8 @@
     "name": "Victory Types",
     "steps": [
       "Once you’ve settled 3-4 cities and build universities, you’re probably already 100 to 150 turns into the game.\nNow is a good time to start thinking about how, exactly, you want to win – if you haven’t already.",
-      "There are four ways to win in Unciv. They are:\n - Cultural Victory: Complete 5 Social Policy Trees and build the Utopia Project\n - Domination Victory: Conquer the original capital of all other Major civs\n - Science Victory: Be the first to construct a Spaceship\n - Diplomatic Victory: Build the United Nations and win the vote",
-      "So to sum it up, these are the basics of Unciv – Found a prosperous first city, expand slowly to manage happiness, and set yourself up for the victory condition you wish to pursue.\nObviously, there is much more to it than that, but it is important not to jump into the deep end before you know how to swim."
+      "There are four ways to win in Unwrit Ages. They are:\n - Cultural Victory: Complete 5 Social Policy Trees and build the Utopia Project\n - Domination Victory: Conquer the original capital of all other Major civs\n - Science Victory: Be the first to construct a Spaceship\n - Diplomatic Victory: Build the United Nations and win the vote",
+      "So to sum it up, these are the basics of Unwrit Ages – Found a prosperous first city, expand slowly to manage happiness, and set yourself up for the victory condition you wish to pursue.\nObviously, there is much more to it than that, but it is important not to jump into the deep end before you know how to swim."
     ]
   },
   {
@@ -394,7 +394,7 @@
     "civilopediaText": [{"extraImage":"World_Screen"}],
     "steps": [
     "",
-    "This is where you spend most of your time playing Unciv. See the world, control your units, access other screens from here.",
+    "This is where you spend most of your time playing Unwrit Ages. See the world, control your units, access other screens from here.",
     "",
     "①: The menu button - civilopedia, save, load, options...",
     "②: The player/nation whose turn it is - click for diplomacy overview.",
@@ -425,10 +425,10 @@
     "ⓕ: Number of turns played with translation into calendar years. Click to see the victory overview.",
     "ⓖ: The number of gold coins in your treasury and income. Clicks lead to the Stats overview screen.",
     "ⓗ: The quantity of ☮Faith your citizens have generated, or 'off' if religion is disabled. Clicking it makes you go to the religion overview screen.",
-    "ⓧ: In the center of all this - the world map! Here, the \"X\" marks a spot outside the map. Yes, unless the wrap option was used, Unciv worlds are flat. Don't worry, your ships won't fall off the edge.",
+    "ⓧ: In the center of all this - the world map! Here, the \"X\" marks a spot outside the map. Yes, unless the wrap option was used, Unwrit Ages worlds are flat. Don't worry, your ships won't fall off the edge.",
     "ⓨ: By the way, here's how an empire border looks like - it's in the national colours of the nation owning the territory.",
     "ⓩ: And this is the red targeting circle that led to the attack pane back under ⑬.",
-    "What you don't see: The phone/tablet's back button will pop the question whether you wish to leave Unciv and go back to Real Life. On desktop versions, you can use the ESC key."
+    "What you don't see: The phone/tablet's back button will pop the question whether you wish to leave Unwrit Ages and go back to Real Life. On desktop versions, you can use the ESC key."
     ]
   },
   {
@@ -527,7 +527,7 @@
       "Once active, the game's year display will use mayan notation.",
       "",
       "The Maya measured time in days from what we would call 11th of August, 3114 BCE. A day is called K'in, 20 days are a Winal, 18 Winals are a Tun, 20 Tuns are a K'atun, 20 K'atuns are a B'ak'tun, 20 B'ak'tuns a Piktun, and so on.",
-      "Unciv only displays ය B'ak'tuns, ඹ K'atuns and ම Tuns (from left to right) since that is enough to approximate gregorian calendar years. The Maya numerals are pretty obvious to understand. Have fun deciphering them!"
+      "Unwrit Ages only displays ය B'ak'tuns, ඹ K'atuns and ම Tuns (from left to right) since that is enough to approximate gregorian calendar years. The Maya numerals are pretty obvious to understand. Have fun deciphering them!"
       ]
   },
   {
@@ -679,7 +679,7 @@
             {"text":"Additional controls for the construction queue","header":5,"color":"#fa0"},
             {"text":"Right-click or long press a construction item to open a popup menu with additional controls, allowing to manage production of the same item in all cities, by issuing the commands from the same City Screen."},
             {"text":"The \"Disable\" option moves an item to a separated \"Disabled\" tab, preventing its automatic queueing by the \"Auto-assign city production\" option. To move a disabled item back to its initial place, enter again the popup menu, and choose \"Enable\"."},
-            {"text":"Disabled items are set globally and persistent: they are not reset in a new game, or by restarting Unciv."},
+            {"text":"Disabled items are set globally and persistent: they are not reset in a new game, or by restarting Unwrit Ages."},
             {},
             {"text":"Show Great Person Points breakdown","header":5,"color":"#fa0"},
             {"text":"In the right sidepanel, click a Great People row to display the details of Great Person Points (GPP) accumulated each turn by the current city, for this type of Great People."},
@@ -724,29 +724,29 @@
         "name": "Differences from Civilization V",
         "civilopediaText": [
             {},
-            {"text":"Production Focus\nIn Civilization V, the Food yield in a city is calculated first, then population grows by consuming stored food (growth), then production is calculated, and so on one by one the other stats are calculated. Thus, citizens can produce yields in the same turn as they are born. The city focus is set to Production to assign the newborn citizen to a hill so they'll contribute Production, and then manually reassigned to a growth tile on the next turn. Alternatively, you can set city focus to Gold (e.g. with Cerro de Potosi), Faith (e.g. with Mount Sinai) or whatever gains the most yields. In Unciv, citizens only start producing yields on the next turn, so you can ignore this whole concept."},
+            {"text":"Production Focus\nIn Civilization V, the Food yield in a city is calculated first, then population grows by consuming stored food (growth), then production is calculated, and so on one by one the other stats are calculated. Thus, citizens can produce yields in the same turn as they are born. The city focus is set to Production to assign the newborn citizen to a hill so they'll contribute Production, and then manually reassigned to a growth tile on the next turn. Alternatively, you can set city focus to Gold (e.g. with Cerro de Potosi), Faith (e.g. with Mount Sinai) or whatever gains the most yields. In Unwrit Ages, citizens only start producing yields on the next turn, so you can ignore this whole concept."},
             {},
-            {"text":"Science Queueing\nIn Civilization V, Science yield is calculated after production, so if you finish an item and have Science (or Gold) queued as a perpetual construction, the Production overflow from item will be converted into Science (or Gold), but the Production is not consumed, as this will only happen again on the next turn. By immediately swapping out your perpetual construction for an item on the next turn, you'll get this Science (or Gold) for free. This doesn't apply to Unciv, so don't bother."},
+            {"text":"Science Queueing\nIn Civilization V, Science yield is calculated after production, so if you finish an item and have Science (or Gold) queued as a perpetual construction, the Production overflow from item will be converted into Science (or Gold), but the Production is not consumed, as this will only happen again on the next turn. By immediately swapping out your perpetual construction for an item on the next turn, you'll get this Science (or Gold) for free. This doesn't apply to Unwrit Ages, so don't bother."},
             {},
-            {"text":"Double Aqueducts\nIn Civilization V, the game sells existing copies of the building for you before providing a free copy of the building. So, if you build an aqueduct in a city, and then in the turn of adopting Tradition Complete you sell a cheap building (e.g a shrine) beforehand, the game is unable to sell more than 1 building per turn, and thus you'll keep your aqueduct, together with the new free aqueduct. Not applicable to Unciv."},
+            {"text":"Double Aqueducts\nIn Civilization V, the game sells existing copies of the building for you before providing a free copy of the building. So, if you build an aqueduct in a city, and then in the turn of adopting Tradition Complete you sell a cheap building (e.g a shrine) beforehand, the game is unable to sell more than 1 building per turn, and thus you'll keep your aqueduct, together with the new free aqueduct. Not applicable to Unwrit Ages."},
             {},
-            {"text":"Legalism Oxford\nIn Civilization V, national wonders such as Oxford University are considered culture buildings, so you can get them for free with Legalism. Not applicable to Unciv."},
+            {"text":"Legalism Oxford\nIn Civilization V, national wonders such as Oxford University are considered culture buildings, so you can get them for free with Legalism. Not applicable to Unwrit Ages."},
             {},
-            {"text":"Roads and Forts\nIn Civilization V, you can't use roads and forts in enemy territory. In Unciv, you can use them, so instead of mindlessly constructing them everywhere when at war, you need to decide if and when they'll benefit you more than your opponents."},
+            {"text":"Roads and Forts\nIn Civilization V, you can't use roads and forts in enemy territory. In Unwrit Ages, you can use them, so instead of mindlessly constructing them everywhere when at war, you need to decide if and when they'll benefit you more than your opponents."},
             {},
-            {"text":"Citizen Conversion\nIn Civilization V, a citizen is born religious if the parent city is already converted. This is not the case in Unciv, which can lead to temporary deconversion of a city when it grows."},
+            {"text":"Citizen Conversion\nIn Civilization V, a citizen is born religious if the parent city is already converted. This is not the case in Unwrit Ages, which can lead to temporary deconversion of a city when it grows."},
             {},
-            {"text":"Unassigned Citizens\nIn Civilization V, unassigned citizens are considered specialists, and subject to the same type of bonuses (e.g. Korea's ability). It can be worthwhile to leave citizens unassigned, instead of being assigned to a tile. Not applicable to Unciv."},
+            {"text":"Unassigned Citizens\nIn Civilization V, unassigned citizens are considered specialists, and subject to the same type of bonuses (e.g. Korea's ability). It can be worthwhile to leave citizens unassigned, instead of being assigned to a tile. Not applicable to Unwrit Ages."},
             {},
-            {"text":"Settler Construction\nIn Civilization V, cities can't starve when constructing settlers, so you can assign all citizens to production tiles and none to food tiles. In Unciv, citizens keep consuming two food per turn."},
+            {"text":"Settler Construction\nIn Civilization V, cities can't starve when constructing settlers, so you can assign all citizens to production tiles and none to food tiles. In Unwrit Ages, citizens keep consuming two food per turn."},
             {},
             {"text":"Water Melee Attack\nAs result of a Discord poll, Water Melee units can attack military land units on the shore, unlike in Civilization V."},
             {},
-            {"text":"Tile improvements\nIn Civilzation V, workers start working on an improvement-under-construction at the beginning of movement. Unciv changes this, to allow players to assign workers to tiles, and then reconsider and change improvement or move them elsewhere."},
+            {"text":"Tile improvements\nIn Civilzation V, workers start working on an improvement-under-construction at the beginning of movement. Unwrit Ages changes this, to allow players to assign workers to tiles, and then reconsider and change improvement or move them elsewhere."},
             {},
-            {"text":"Forest and Jungle Visibility\nIn Unciv, forests and jungles are visible 1 tile outside visibility range. In Civilization V, this is the behaviour of hills and mountains, but not of forests and jungles, yet jungle and forest can block hills, and hill + forest can block mountain, indicating they're on the same elevation. This is considered to be a bug in the otherwise well-structured visibility logic in Civilization V."},
+            {"text":"Forest and Jungle Visibility\nIn Unwrit Ages, forests and jungles are visible 1 tile outside visibility range. In Civilization V, this is the behaviour of hills and mountains, but not of forests and jungles, yet jungle and forest can block hills, and hill + forest can block mountain, indicating they're on the same elevation. This is considered to be a bug in the otherwise well-structured visibility logic in Civilization V."},
             {},
-            {"text":"City razing\nIn Civilization V, the player can never raze any of the cities he/she founded. Not applicable to Unciv."}
+            {"text":"City razing\nIn Civilization V, the player can never raze any of the cities he/she founded. Not applicable to Unwrit Ages."}
         ]
     },
     {
