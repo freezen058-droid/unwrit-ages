@@ -1,16 +1,21 @@
-Build a civilization from a single settler to a world power. Found cities, research
-technologies, work the land, choose your policies, and meet every other leader on the map
-across the whole sweep of history.
+Unwrit Ages is a turn-based 4X strategy game in the spirit of Civilization V. Found a city, work the land around it, research your way from the Ancient era to the Modern, and win by conquest, culture, science or diplomacy — whichever suits the empire you actually built.
 
-CivilWars is a turn-based 4X strategy game: you take your turn, everyone else takes theirs,
-and nothing happens until you are ready. No timers, no ads, no energy meters.
+It is a complete game. No ads, no accounts, no analytics, no energy timers, nothing to buy inside it. You install it and you play it.
 
-* A full technology tree, policy trees and a complete set of units and buildings
-* Randomly generated worlds, or hand-made maps in the built-in editor
-* Terrain rendered as lit relief - hills, mountain ranges, floes and marshes are drawn from
-  real height fields, so the map reads at a glance
-* Plays offline, on the phone or the desktop, and saves are yours to keep
+WHAT IS IN IT
+- The full Civ V-style ruleset: cities, citizens, tiles and yields, a complete technology tree, social policies, religion, espionage, city-states, great people, diplomacy and war.
+- An original tileset drawn for this game, from the grassland under your first settler to the seventeen natural wonders.
+- Ten languages: English, 简体中文, 繁體中文, 日本語, Deutsch, Français, Español, Português (Brasil), Русский, Polski.
+- A guide for new players that gathers the game's sixty tutorials into six readable chapters, and a small teaching game to try them in.
 
-CivilWars is built on Unciv, which is free software under the Mozilla Public License 2.0.
-The source of every MPL-covered file we modified is available on request; see the notice
-inside the app under Options - About.
+THE OPTIONAL WALLET FEATURES
+Unwrit Ages can connect to a Solana wallet on your phone — Phantom, Solflare, or any other Mobile Wallet Adapter app. This is entirely optional, and the whole game is playable start to finish without ever opening the Wallet screen. Your seed phrase never touches this app.
+
+Connecting one makes two things possible:
+
+- Recording a save on-chain. This writes the save's name and its SHA-256 fingerprint to Solana, so anyone can verify later that exactly that save existed at exactly that moment. The save file itself never leaves your device. It costs 1 SKR, only ever for a save you named yourself, and autosaves are never charged.
+- Minting a victory certificate. Win a game and you can mint an NFT recording who won, by which victory, on which turn and in which year, owned by your wallet. It costs US$0.75, converted to SOL at the moment you mint, plus the network's own cost of roughly US$0.17 — the rent for the account that holds it. The certificate carries its record inside itself rather than pointing at a website, so it does not go blank if some server disappears.
+
+Those two are the only charges this game will ever ask you for, and neither happens without your wallet asking you to approve it first.
+
+Unwrit Ages is a fork of Unciv by Yair Morgenstern and contributors, used under the Mozilla Public License 2.0.

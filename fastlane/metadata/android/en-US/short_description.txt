@@ -1,1 +1,1 @@
-Turn-based 4X strategy on a hand-rendered hex world
+A turn-based 4X empire game. No ads, no accounts, optional Solana wallet.
