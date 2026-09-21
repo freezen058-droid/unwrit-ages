@@ -30,6 +30,9 @@ desugar = "2.1.5"
 solanaMwa = "2.0.8"
 solanaWeb3 = "0.3.0"
 androidxActivity = "1.9.3"
+# Pure-Java Ed25519. Needed because minSdk is 24 and java.security's "Ed25519"
+# KeyPairGenerator/Signature only exists from API 33 - see AndroidWalletService.AssetKeypair.
+eddsa = "0.3.0"
 
 
 [libraries]
@@ -82,6 +85,7 @@ android-ktx-runtime = { group = "androidx.work", name = "work-runtime-ktx", vers
 solana-mwa-clientlib = { group = "com.solanamobile", name = "mobile-wallet-adapter-clientlib-ktx", version.ref = "solanaMwa" }
 solana-web3 = { group = "com.solanamobile", name = "web3-solana", version.ref = "solanaWeb3" }
 androidx-activity = { group = "androidx.activity", name = "activity-ktx", version.ref = "androidxActivity" }
+eddsa = { group = "net.i2p.crypto", name = "eddsa", version.ref = "eddsa" }
 
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 mockito = { group = "org.mockito", name = "mockito-core", version.ref = "mockito" }

@@ -1,16 +1,15 @@
 package com.unciv.ui.screens
 
-import com.badlogic.gdx.scenes.scene2d.actions.Actions
-import com.unciv.ui.components.extensions.center
-import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.screens.basescreen.BaseScreen
 
-class GameStartScreen : BaseScreen() {
-    init {
-        val logoImage = ImageGetter.getExternalImage("banner.png")
-        logoImage.center(stage)
-        logoImage.color.a = 0f
-        logoImage.addAction(Actions.alpha(1f, 0.3f))
-        stage.addActor(logoImage)
-    }
-}
+/**
+ * The root screen for the moment between launch and the main menu, while the atlas and skin load.
+ *
+ * Deliberately empty. It used to fade in `ExtraImages/banner.png` - upstream's UNCIV wordmark, and
+ * then this fork's - but a splash is a thing a player looks at instead of playing, and this one was
+ * on screen for a fraction of a second on a modern device. What is left is the clear colour, so the
+ * app opens straight into the menu's own background rather than flashing a logo at it. The class
+ * stays because [com.unciv.UncivGame] and [BaseScreen] both test for it by type: it is how they
+ * tell "still starting up" from "a real screen".
+ */
+class GameStartScreen : BaseScreen()

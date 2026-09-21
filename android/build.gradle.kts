@@ -204,4 +204,11 @@ dependencies {
     // ActivityResultSender - likely already pulled in transitively by the MWA clientlib, but
     // declared explicitly so compilation doesn't depend on that assumption.
     implementation(libs.androidx.activity)
+    // Ed25519 keypair generation + signing for the victory-certificate mint's asset account
+    // (AndroidWalletService.AssetKeypair). ~90 KB pure Java, no native code. BouncyCastle would
+    // also do it but costs ~8 MB, and this module has isMinifyEnabled = false so that is 8 MB of
+    // shipped APK. Verified against the RFC 8032 test vectors before being chosen - salkt's
+    // TweetNaclFast, already on the classpath via web3-solana, does not expose key generation and
+    // its crypto_sign did not reproduce those vectors.
+    implementation(libs.eddsa)
 }

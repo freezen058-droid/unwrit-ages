@@ -3,9 +3,12 @@ package com.unciv.ui.screens.victoryscreen
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.utils.Align
+import com.unciv.Constants
+import com.unciv.logic.chain.ChainWallet
 import com.unciv.logic.chain.VictoryCertificateService
 import com.unciv.logic.civilization.Civilization
 import com.unciv.models.ruleset.Victory
+import com.unciv.models.translations.tr
 import com.unciv.ui.components.widgets.TabbedPager
 import com.unciv.ui.components.extensions.addSeparator
 import com.unciv.ui.components.extensions.equalizeColumns
@@ -69,12 +72,19 @@ class VictoryScreenOurVictory(
         val button = "Mint victory certificate".toTextButton()
         button.onClick {
             button.disable()
-            status.setText("Storing the final world...")
+            // The service connects a wallet first if there is none, so say which of the two is
+            // happening - "Preparing certificate" while a wallet dialog is coming up is a lie.
+            // .tr() on every one of these: a Label only translates the text it was built with, and
+            // these arrive later, from the platform, as the mint moves through its stages.
+            status.setText(
+                (if (ChainWallet.isConnected) "Preparing certificate..."
+                else "Waiting for your wallet...").tr()
+            )
             VictoryCertificateService.mint(
                 gameInfo, civ,
                 imageUri = "",
-                onProgress = { status.setText(it) },
-                onSuccess = { status.setText("Certificate minted: $it") },
+                onProgress = { status.setText(it.tr()) },
+                onSuccess = { status.setText("Certificate minted: [$it]".tr()) },
                 onError = {
                     // The upload may already be paid for; say so, because it changes what a retry costs.
                     val paid = VictoryCertificateService.alreadyMintedUpload(gameInfo) != null
@@ -90,6 +100,15 @@ class VictoryScreenOurVictory(
         row()
         val cell = Table()
         cell.add(button).padBottom(6f).row()
+        // The price, before the button is pressed - not in a confirmation afterwards. A fee a
+        // player only learns about once a wallet dialog is already open is a fee they were not
+        // asked about.
+        val feeCents = ChainWallet.service.certificateFeeUsdCents
+        if (feeCents > 0) {
+            val price = "US$" + "%.2f".format(feeCents / 100.0)
+            cell.add("A [$price] fee goes towards the game's development, on top of the network's own cost."
+                .toLabel(fontSize = Constants.defaultFontSize - 4)).padBottom(6f).row()
+        }
         cell.add(status).row()
         add(cell).colspan(maxOf(1, columns)).padTop(16f)
     }

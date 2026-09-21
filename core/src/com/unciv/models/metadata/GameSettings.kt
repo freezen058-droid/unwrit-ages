@@ -63,7 +63,9 @@ class GameSettings {
     // Defaulting this to "" - and implement the fallback only in NotificationsScroll leads to Options popup and actual effect being in disagreement!
     var notificationScroll: String = NotificationsScroll.UserSetting.default().name
     var showMinimap = true
-    var showTutorials = true
+    /** Off by default: a published game should not open with an instruction box over the map.
+     *  Still switchable in Options - Display, and "Reset tutorials" is right beside it. */
+    var showTutorials = false
     // There have no UI other than the "Reset tutorials" button:
     var tutorialsShown = HashSet<String>()
     var tutorialTasksCompleted = HashSet<String>()

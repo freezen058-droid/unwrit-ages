@@ -14,6 +14,14 @@ interface PlatformWalletService {
     /** Currently connected wallet address (base58), or null if not connected. */
     val connectedAddress: String?
 
+    /**
+     * The service fee charged for one victory certificate, in US cents, so the player can be told
+     * the price before they agree to it. Zero where certificates are not offered at all. In cents
+     * rather than a currency-formatted string because the platform charges in a cryptocurrency and
+     * converts at mint time - this is the stable number, not what leaves the wallet.
+     */
+    val certificateFeeUsdCents: Int get() = 0
+
     fun connect(
         onConnected: (address: String) -> Unit,
         onError: (Exception) -> Unit = {}
@@ -49,6 +57,10 @@ interface PlatformWalletService {
      *        implementation must skip the upload and reuse it.
      * @param buildMetadata called once the save's URI is known - returns the metadata JSON to store
      *        and point the asset at.
+     * @param buildInlineMetadata the same certificate cut down to what fits *inside* the mint
+     *        transaction, for a platform that writes the metadata into the asset as a `data:` URI
+     *        rather than uploading it. Takes the image URI and whether to include the description,
+     *        which is the one field a caller can drop to get back under the size limit.
      * @param onProgress a short user-facing line: uploading, minting, done.
      * @param onSuccess the minted asset's address, and the save URI, which the caller records so a
      *        later retry can skip the upload.
@@ -58,6 +70,7 @@ interface PlatformWalletService {
         saveData: ByteArray,
         alreadyUploadedSaveUri: String?,
         buildMetadata: (saveUri: String, imageUri: String) -> String,
+        buildInlineMetadata: (imageUri: String, withDescription: Boolean) -> String,
         onProgress: (String) -> Unit = {},
         onSuccess: (assetAddress: String, saveUri: String) -> Unit,
         onError: (Exception) -> Unit = {}
@@ -85,6 +98,7 @@ interface PlatformWalletService {
                 saveData: ByteArray,
                 alreadyUploadedSaveUri: String?,
                 buildMetadata: (saveUri: String, imageUri: String) -> String,
+                buildInlineMetadata: (imageUri: String, withDescription: Boolean) -> String,
                 onProgress: (String) -> Unit,
                 onSuccess: (assetAddress: String, saveUri: String) -> Unit,
                 onError: (Exception) -> Unit

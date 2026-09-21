@@ -28,4 +28,17 @@ class DesktopWalletService : PlatformWalletService {
     ) {
         onError(UnsupportedOperationException("Wallet login is only available on Android for now"))
     }
+
+    override fun mintVictoryCertificate(
+        certificateName: String,
+        saveData: ByteArray,
+        alreadyUploadedSaveUri: String?,
+        buildMetadata: (saveUri: String, imageUri: String) -> String,
+        buildInlineMetadata: (imageUri: String, withDescription: Boolean) -> String,
+        onProgress: (String) -> Unit,
+        onSuccess: (assetAddress: String, saveUri: String) -> Unit,
+        onError: (Exception) -> Unit
+    ) {
+        onError(UnsupportedOperationException("Wallet login is only available on Android for now"))
+    }
 }

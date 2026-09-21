@@ -28,7 +28,6 @@ enum class TutorialTrigger(val value: String, val isCivilopedia: Boolean = !valu
     Workers("Workers"),
     Embarking("Embarking"),
     IdleUnits("Idle_Units"),
-    ContactMe("Contact_Me"),
     Pillaging("Pillaging"),
     Experience("Experience"),
     Combat("Combat"),

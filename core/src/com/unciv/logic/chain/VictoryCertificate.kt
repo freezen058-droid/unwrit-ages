@@ -157,11 +157,59 @@ object VictoryCertificate {
         return sb.toString()
     }
 
-    private fun description(record: Record): String {
+    /**
+     * The same certificate, small enough to live *inside* the asset instead of behind a URL.
+     *
+     * [metadataJson] is a few kilobytes - the chronicle and five ranking curves - and has to be
+     * uploaded somewhere and pointed at. This one is the subset a wallet actually renders, written
+     * to fit in the `uri` field of the mint transaction itself as a `data:` URI. Nothing to upload,
+     * nothing to keep paying for, and no host whose disappearance empties the certificate.
+     *
+     * Everything variable in it is bounded, because the budget is a hard one: a Solana transaction
+     * is 1232 bytes and this shares them with two signatures, five account keys and two
+     * instructions. [withDescription] is the one thing the caller can turn off, because it is the
+     * longest field and the only one that is prose rather than fact.
+     */
+    fun compactMetadataJson(record: Record, imageUri: String, withDescription: Boolean = true): String {
+        val sb = StringBuilder(640)
+        sb.append('{')
+        sb.field("name", "${record.winner} - ${describe(record.victoryType)}, turn ${record.victoryTurn}")
+        if (withDescription) {
+            sb.append(',')
+            sb.field("description", description(record, short = true))
+        }
+        if (imageUri.isNotEmpty()) {
+            sb.append(',')
+            sb.field("image", imageUri)
+        }
+        sb.append(",\"attributes\":[")
+        val attributes = listOf(
+            "Victory" to describe(record.victoryType),
+            "Civilization" to record.winner,
+            "Turn" to record.victoryTurn.toString(),
+            "Year" to year(record.victoryYear),
+            "Difficulty" to record.difficulty,
+            "Speed" to record.gameSpeed
+        )
+        attributes.forEachIndexed { i, (trait, value) ->
+            if (i > 0) sb.append(',')
+            sb.append('{')
+            sb.field("trait_type", trait)
+            sb.append(',')
+            sb.field("value", value)
+            sb.append('}')
+        }
+        sb.append("]}")
+        return sb.toString()
+    }
+
+    /** @param short drops the parts whose length the player controls - see [compactMetadataJson]. */
+    private fun description(record: Record, short: Boolean = false): String {
         val lines = StringBuilder()
         lines.append("${record.winner} achieved a ${describe(record.victoryType).lowercase()} ")
             .append("on turn ${record.victoryTurn}, ${year(record.victoryYear)}, ")
             .append("at ${record.difficulty} difficulty.")
+        if (short) return lines.toString()
         if (record.eliminated.isNotEmpty())
             lines.append(" Eliminated: ${record.eliminated.joinToString(", ")}.")
         lines.append(" The final world is stored permanently and can be reopened from this certificate.")

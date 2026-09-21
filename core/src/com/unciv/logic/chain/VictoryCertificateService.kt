@@ -43,6 +43,32 @@ object VictoryCertificateService {
             onError(ex); return
         }
 
+        // The only place to connect a wallet is the main menu's WalletPopup, and this screen is
+        // reached after hours of play - telling a winner to quit to the menu and come back is not
+        // an option, so connect here and carry straight on into the mint. [isAvailable] has already
+        // said the platform can do this; what is missing is only the authorization round-trip.
+        if (!ChainWallet.isConnected) {
+            ChainWallet.service.connect(
+                onConnected = {
+                    onProgress("Wallet connected")
+                    mintConnected(gameInfo, imageUri, record, onProgress, onSuccess, onError)
+                },
+                onError = onError
+            )
+            return
+        }
+        mintConnected(gameInfo, imageUri, record, onProgress, onSuccess, onError)
+    }
+
+    /** The mint itself, with a connected wallet guaranteed and the record already assembled. */
+    private fun mintConnected(
+        gameInfo: GameInfo,
+        imageUri: String,
+        record: VictoryCertificate.Record,
+        onProgress: (String) -> Unit,
+        onSuccess: (assetAddress: String) -> Unit,
+        onError: (Exception) -> Unit
+    ) {
         // Force the zipped form regardless of the player's setting: this is the copy that has to
         // travel and be paid for by the byte, not the one they read in a text editor.
         val saveData = UncivFiles.gameInfoToString(gameInfo, forceZip = true)
@@ -56,6 +82,9 @@ object VictoryCertificateService {
             alreadyUploadedSaveUri = alreadyMintedUpload(gameInfo),
             buildMetadata = { saveUri, image ->
                 VictoryCertificate.metadataJson(record, image.ifEmpty { imageUri }, saveUri)
+            },
+            buildInlineMetadata = { image, withDescription ->
+                VictoryCertificate.compactMetadataJson(record, image.ifEmpty { imageUri }, withDescription)
             },
             onProgress = onProgress,
             onSuccess = { assetAddress, saveUri ->

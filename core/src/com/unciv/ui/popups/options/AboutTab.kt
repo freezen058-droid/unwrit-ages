@@ -25,7 +25,7 @@ internal class AboutTab(
                 yield(FormattedLine())
                 yield(FormattedLine("{Version}: ${UncivGame.VERSION.toNiceString()}"))
                 yield(FormattedLine())
-                yield(FormattedLine("CivilWars is a fork of Unciv by Yair Morgenstern and contributors, licensed under MPL-2.0."))
+                yield(FormattedLine("Unwrit Ages is a fork of Unciv by Yair Morgenstern and contributors, licensed under MPL-2.0."))
                 yield(FormattedLine("Unciv", link = "https://github.com/yairm210/Unciv"))
                 // MPL-2.0 3.2: a binary may be distributed only if the Source Code Form of
                 // the Covered Files it modifies is made available to its recipients.

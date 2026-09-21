@@ -3,6 +3,7 @@ package com.unciv.ui.screens.devconsole
 import com.unciv.Constants
 import com.unciv.UncivGame
 import com.unciv.logic.GameInfo
+import com.unciv.logic.VictoryData
 import com.unciv.logic.civilization.Civilization
 import com.unciv.ui.popups.ConfirmPopup
 import com.unciv.ui.screens.worldscreen.WorldScreen
@@ -16,6 +17,23 @@ internal class ConsoleGameCommands : ConsoleCommandNode {
             console.gameInfo.difficulty = difficulty.name
             console.gameInfo.setTransients()
             DevConsoleResponse.OK
+        },
+
+        // There is no other way to reach a finished game on demand, and the victory screen - and
+        // the certificate offered on it - is otherwise only testable by actually winning one.
+        "victory" to ConsoleAction("game victory [civName] [victoryType]") { console, params ->
+            val civ = console.getCivByNameOrSelected(params.getOrNull(0))
+            // victories is a LinkedHashMap, so "the first one" is the ruleset's own order and the
+            // same one every time - not whatever a hash happened to put in front.
+            val victoryType = params.getOrNull(1)
+                ?.let { it.findOrNull(console.gameInfo.ruleset.victories.keys)
+                    ?: throw ConsoleErrorException("Unrecognized victory type") }
+                ?: console.gameInfo.ruleset.victories.keys.first()
+            console.gameInfo.victoryData = VictoryData(civ, victoryType, console.gameInfo.turns)
+            // WorldScreen.update() opens the VictoryScreen itself, but only when no popup is open -
+            // and this console is one. So mark it dirty here and it lands as the console closes.
+            console.screen.shouldUpdate = true
+            DevConsoleResponse.hint("[${civ.civName}] wins by [$victoryType] - close the console to see it")
         },
 
         "setturn" to ConsoleAction("game setturn <nonNegativeAmount>") { console, params ->
