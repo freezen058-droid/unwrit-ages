@@ -20,7 +20,9 @@ import com.unciv.logic.map.MapSize
 import com.unciv.logic.map.MapType
 import com.unciv.logic.map.mapgenerator.MapGenerator
 import com.unciv.models.metadata.BaseRuleset
+import com.unciv.logic.civilization.PlayerType
 import com.unciv.models.metadata.GameSetupInfo
+import com.unciv.models.metadata.Player
 import com.unciv.models.ruleset.Ruleset
 import com.unciv.models.ruleset.RulesetCache
 import com.unciv.models.tilesets.TileSetCache
@@ -42,8 +44,10 @@ import com.unciv.ui.components.tilegroups.TileGroupMap
 import com.unciv.ui.components.widgets.AutoScrollPane
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.images.padTopDescent
+import com.unciv.ui.popups.ConfirmPopup
 import com.unciv.ui.popups.Popup
 import com.unciv.ui.popups.ToastPopup
+import com.unciv.ui.popups.TutorialGuidePopup
 import com.unciv.ui.popups.WalletPopup
 import com.unciv.ui.popups.closeAllPopups
 import com.unciv.ui.popups.hasOpenPopups
@@ -171,6 +175,11 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
             game.pushScreen(LoadGameScreen())
         }
         column1.add(loadGameTable).row()
+
+        val guideTable = getMenuButton("Guide", "OtherIcons/Quickstart", KeyboardBinding.None) {
+            TutorialGuidePopup(stage, getCivilopediaRuleset()) { startTutorialGame() }.open(true)
+        }
+        column2.add(guideTable).row()
 
         val walletTable = getMenuButton("Wallet", "OtherIcons/Settings", KeyboardBinding.None) {
             WalletPopup(stage, game.settings).open(true)
@@ -314,6 +323,82 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
             }
         } else {
             QuickSave.autoLoadGame(this)
+        }
+    }
+
+    /**
+     * A game built for learning on: small, gentle, and with the hints turned back on.
+     *
+     * Not [quickstartNewGame] with different numbers - that one deliberately reuses the player's
+     * last setup, which for a beginner is either nothing or whatever they last fumbled. This is a
+     * fixed preset, so what the guide promises is what they get.
+     *
+     * Turning the hints on means resetting which ones have been seen, and that is a real loss for
+     * a player who has dismissed dozens of them, so they are asked first. A new player has none
+     * and is not asked.
+     */
+    private fun startTutorialGame() {
+        val settings = game.settings
+        if (settings.tutorialsShown.isEmpty()) return startTutorialGameConfirmed()
+        ConfirmPopup(
+            this,
+            "This turns the hints back on and shows them from the beginning again.",
+            "Start"
+        ) { startTutorialGameConfirmed() }.open(true)
+    }
+
+    private fun startTutorialGameConfirmed() {
+        val settings = game.settings
+        settings.showTutorials = true
+        settings.tutorialsShown.clear()
+        settings.tutorialTasksCompleted.clear()
+        settings.save()
+
+        ToastPopup(Constants.working, this)
+        Concurrency.run("TutorialGame") {
+            val newGame: GameInfo
+            try {
+                val setup = GameSetupInfo()
+                setup.gameParameters.apply {
+                    difficulty = "Chieftain"
+                    speed = "Quick"
+                    // One rival, so diplomacy and war are both reachable inside an evening, and a
+                    // couple of city-states because they are half of what the early game is about.
+                    players = arrayListOf(
+                        Player(playerType = PlayerType.Human),
+                        Player(playerType = PlayerType.AI)
+                    )
+                    randomNumberOfPlayers = false
+                    randomNumberOfCityStates = false
+                    numberOfCityStates = 2
+                    minNumberOfCityStates = 2
+                    maxNumberOfCityStates = 2
+                    val ruleset = RulesetCache.getComplexRuleset(this)
+                    if (victoryTypes.isEmpty()) victoryTypes.addAll(ruleset.victories.keys)
+                }
+                setup.mapParameters.apply {
+                    mapSize = MapSize.Tiny
+                    shape = MapShape.rectangular
+                    reseed()
+                }
+                newGame = GameStarter.startNewGame(setup)
+            } catch (notAPlayer: UncivShowableException) {
+                val (message) = LoadGameScreen.getLoadExceptionMessage(notAPlayer)
+                launchOnGLThread { ToastPopup(message, this@MainMenuScreen) }
+                return@run
+            } catch (_: Exception) {
+                launchOnGLThread {
+                    ToastPopup("Cannot start game with the default new game parameters!", this@MainMenuScreen)
+                }
+                return@run
+            }
+            try {
+                game.loadGame(newGame)
+            } catch (_: Exception) {
+                launchOnGLThread {
+                    ToastPopup("Cannot start game with the default new game parameters!", this@MainMenuScreen)
+                }
+            }
         }
     }
 

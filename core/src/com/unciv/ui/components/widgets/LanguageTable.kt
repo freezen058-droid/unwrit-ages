@@ -87,23 +87,27 @@ internal class LanguageTable(val language: String, val percentComplete: Int) : T
          * Upstream lists all 48 translations it has ever received, at every level of
          * completeness, with a note asking the player to help finish them. That is right for a
          * community project and wrong for a published game: a player opening the language list
-         * should be choosing, not auditing. Everything here is at 97% or better.
+         * should be choosing, not auditing.
+         *
+         * Ten, not the fourteen that were here before. The cut was not about how complete the
+         * translations are - upstream's are done and cost us nothing - but about the strings
+         * *this fork* adds, the wallet and certificate ones above all. A fee disclosure showing
+         * in English inside a Turkish interface is worse than not offering Turkish. Every
+         * language below is one we keep our own strings current in; percentages measured
+         * 2026-09-21, and the one key missing everywhere is ConditionalsOrder, a sorting
+         * sentinel that is empty in French too.
          */
         val SHIPPED_LANGUAGES = setOf(
             Constants.english,
-            "Simplified_Chinese",       // 99%
-            "Traditional_Chinese",      // 98%
-            "Spanish",                  // 99%
-            "Brazilian_Portuguese",     // 99%
-            "Russian",                  // 99%
-            "French",                   // 99%
-            "German",                   // 97%
-            "Japanese",                 // 97%
-            "Indonesian",               // 99%
-            "Italian",                  // 99%
-            "Polish",                   // 99%
-            "Turkish",                  // 98%
-            "Vietnamese",               // 99%
+            "Simplified_Chinese",       // 100%
+            "Traditional_Chinese",      // 100%
+            "French",                   // 99.9%
+            "Brazilian_Portuguese",     // 99.9%
+            "Russian",                  // 99.8%
+            "Spanish",                  // 99.7%
+            "Polish",                   // 99.2%
+            "German",                   // 97.9%
+            "Japanese",                 // 97.0%
         )
 
         /** Create round-robin letter key handling, such that repeatedly pressing 'R' will cycle through all languages starting with 'R' */

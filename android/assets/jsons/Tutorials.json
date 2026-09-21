@@ -757,5 +757,35 @@
             {},
             {"text": "Food conversion to Production\nDuring the construction of a Settler, the city will not grow. Instead, the 1st, 2nd, 4th, and from there on every 4th, excess Food (Growth) is converted into Production, with the rest of the excess Food being lost."}
         ]
+    },
+
+    {
+        "name": "Your Wallet",
+        "category": "Blockchain",
+        "steps": [
+            "Unwrit Ages can connect to a Solana wallet on your phone - Phantom or Solflare. This is entirely optional. The whole game is playable, start to finish, without ever opening the Wallet screen.",
+            "Connecting one makes two things possible: recording a save on the chain, and minting a certificate for a game you have won. Each is something you choose, one at a time. Nothing is ever charged without your wallet asking you to approve it first.",
+            "Connect from the Wallet button on the main menu. Disconnecting is immediate and local - the game simply forgets your address."
+        ]
+    },
+
+    {
+        "name": "Recording Saves On-Chain",
+        "category": "Blockchain",
+        "steps": [
+            "Recording a save writes its fingerprint - a SHA-256 hash - and its name onto the Solana chain. The save file itself never leaves your device. Nothing is uploaded.",
+            "What that buys you is proof of when: anyone can check afterwards that exactly that save existed at exactly that moment. It costs 1 SKR from your wallet, and only ever for a save you named yourself.",
+            "Autosaves are never charged for. If you want a particular turn recorded, switch on 'Ask to record on-chain every autosave' and the game will ask each time - and you are free to say no every time."
+        ]
+    },
+
+    {
+        "name": "Victory Certificate",
+        "category": "Blockchain",
+        "steps": [
+            "Win a game and the victory screen offers you a certificate: an NFT recording who won, by which victory, on which turn and in which year, owned by your wallet.",
+            "It costs US$0.75, converted to SOL at the moment you mint it, plus the network's own cost of roughly US$0.17 - the rent for the account that will hold the certificate forever. The US$0.75 is the game's, and it goes towards building the game further. That is the only charge: there is no subscription, no advertising, and nothing to buy inside the game.",
+            "The certificate carries its own record inside it rather than pointing at a website, so it does not go blank if some server disappears. And it is genuinely yours - it lives in your wallet, and you can hold, transfer or sell it like anything else there."
+        ]
     }
 ]

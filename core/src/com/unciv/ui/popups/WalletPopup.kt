@@ -73,7 +73,9 @@ private class WalletPage(
 
         addHeader("Wallet")
 
-        add("將已命名的存檔雜湊上傳至區塊鏈，以彰顯你的文明之功績，僅需支付 1 SKR。\n(僅限手動存檔，自動存檔不會收費，見「自動存檔」頁籤)".toLabel()
+        add(("Put a named save's fingerprint on the blockchain - a permanent record that your "
+            + "civilization reached that point - for 1 SKR.\nManual saves only; autosaves are never "
+            + "charged, see the Auto-Save tab.").toLabel()
             .apply { wrap = true }).colspan(2).fillX().row()
 
         addSeparator()
@@ -141,7 +143,8 @@ private class AutoSavePage(
 
         addSeparator()
 
-        add("開啟後，每到自動存檔的回合，會跳出提示詢問是否要額外將該次進度上傳區塊鏈（1 SKR），\n不會在沒有你確認的情況下自動扣款。".toLabel()
+        add(("With this on, every autosave turn asks whether to put that progress on the chain "
+            + "as well, for 1 SKR.\nNothing is ever charged without you saying yes to it first.").toLabel()
             .apply { wrap = true }).colspan(2).fillX().row()
         addCheckbox("Ask to record on-chain every autosave", settings::remindRecordOnChainOnAutosave)
     }
