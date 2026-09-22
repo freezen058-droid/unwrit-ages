@@ -168,7 +168,11 @@ class GameSettings {
     var androidCutout = false
     var androidHideSystemUi = true
     var fontFamilyData: FontFamilyData = FontFamilyData.default
-    var fontSizeMultiplier: Float = 1f
+    /** 1.5, not upstream's 1. Upstream's default was chosen against a desktop window; on a
+     *  phone held at arm's length the same text is too small to read comfortably, and this game
+     *  puts a lot of it on screen at once. Only affects a fresh install - a settings file that
+     *  already carries a value keeps it. */
+    var fontSizeMultiplier: Float = 1.5f
     var longPressDelay = 1.1f
     var multiTapInterval = 0.25f
 

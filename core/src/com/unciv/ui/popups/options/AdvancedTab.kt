@@ -211,7 +211,9 @@ internal class AdvancedTab(
     }
 
     private fun addFontSizeMultiplier() {
-        addSlider("Font size multiplier", settings::fontSizeMultiplier, 0.7f, 1.5f, 0.05f) {
+        // Ceiling raised from 1.5 with the default: a default sitting on the maximum can only be
+        // adjusted downwards, and someone who needs 1.5 to read it may well want more.
+        addSlider("Font size multiplier", settings::fontSizeMultiplier, 0.7f, 2f, 0.05f) {
             reloadWorldAndOptions()
         }
     }
