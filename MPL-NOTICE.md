@@ -46,7 +46,10 @@ The list is derived from git every time the archive is built, never kept by hand
 git diff --name-only --diff-filter=M upstream/master..HEAD
 ```
 
-As of fork `c86b4a7b180e`, compared against upstream `yairm210/Unciv` `81d6c6aab976` (2026-08-27).
+Compared against upstream `yairm210/Unciv` `81d6c6aab976` (2026-08-27). The fork commit each archive
+was built from is recorded in that archive's `MANIFEST`, not here, so that this notice
+does not claim to describe a commit that has since been superseded.
+
 The complete per-file list, with sha256 and byte size, is the archive's `MANIFEST`;
 below is the shape of it, because 613 paths written into a notice go stale the moment
 someone edits one.
