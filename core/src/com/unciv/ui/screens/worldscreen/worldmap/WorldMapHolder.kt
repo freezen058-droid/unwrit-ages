@@ -43,6 +43,8 @@ import com.unciv.ui.screens.basescreen.UncivStage
 import com.unciv.ui.screens.worldscreen.UndoHandler.Companion.recordUndoCheckpoint
 import com.unciv.ui.screens.worldscreen.WorldScreen
 import com.unciv.ui.screens.worldscreen.bottombar.BattleTableHelpers.battleAnimationDeferred
+import com.unciv.ui.components.extensions.toCheckBox
+import com.unciv.ui.popups.Popup
 import com.unciv.utils.Concurrency
 import com.unciv.utils.Log
 import com.unciv.utils.launchOnGLThread
@@ -279,6 +281,36 @@ class WorldMapHolder(
         UncivGame.Current.settings.addCompletedTutorialTask(key)
     }
 
+    /**
+     * Say what happens to a half-built improvement when its worker walks away.
+     *
+     * Nothing, is the answer: the remaining turns live on the tile, not on the unit, and no code
+     * path clears them when a unit leaves - the work simply stops advancing until a worker stands
+     * there again. A beginner has no way to know that, and the two possible guesses are far
+     * apart: "I just threw away four turns" or "it will finish by itself". It is worth one
+     * sentence, and worth being able to switch off.
+     */
+    private fun warnIfLeavingUnfinishedWork(unit: MapUnit) {
+        if (UncivGame.Current.settings.hideWorkerLeavingWarning) return
+        val tile = unit.getTile()
+        val improvement = tile.improvementInProgress ?: return
+        val turns = tile.turnsToImprovement
+        if (turns <= 0) return
+        if (!unit.cache.hasUniqueToBuildImprovements) return
+
+        val popup = Popup(worldScreen)
+        popup.addGoodSizedLabel(
+            "[$improvement] here is [$turns] turns from finished. Moving the worker away only pauses it - the work already done stays on this tile."
+        ).colspan(2).row()
+        val checkBox = "Don't show again".toCheckBox()
+        popup.add(checkBox)
+        popup.addCloseButton {
+            UncivGame.Current.settings.hideWorkerLeavingWarning = checkBox.isChecked
+            UncivGame.Current.settings.save()
+        }
+        popup.open()
+    }
+
     internal fun moveUnitToTargetTile(selectedUnits: List<MapUnitView>, targetTileView: TileView) {
         val targetTile = targetTileView.getTile()
         // this can take a long time, because of the unit-to-tile calculation needed, so we put it in a different thread
@@ -292,6 +324,7 @@ class WorldMapHolder(
         val selectedUnitView = selectedUnits.first()
         val selectedUnit = selectedUnitView.getUnit()
         markUnitMoveTutorialComplete(selectedUnitView) // not too expensive to have it repeat too often
+        warnIfLeavingUnfinishedWork(selectedUnit)
 
         Concurrency.run("TileToMoveTo") {
             // these are the heavy parts, finding where we want to go

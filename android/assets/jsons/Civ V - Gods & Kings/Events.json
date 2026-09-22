@@ -6,6 +6,7 @@
             {"text":"Save your game!", "centered":true},
             {"text":"Menu (top left) → Save game → name it → Save. Load it again from 'Load game' on the main menu."},
             {"text":"The game also autosaves every few turns on its own, and 'Resume' on the main menu picks up the latest one. How often it does that is in the Wallet menu, under Auto-Save."},
+            {"text":"Autosaves are hidden in the load list until you tick 'Show autosaves' there - so an empty looking list does not mean the game has not been saving."},
             {"text":"This is the last of the step-by-step hints. From here they appear only when something new happens - meeting another civilization, going to war, building your first aircraft."},
         ],
         "uniques": [
@@ -98,7 +99,7 @@
 			{"text":"Reassign worked tiles!", "centered":true},
             {"extraImage":"Tutorials/Reassign worked tiles", "imageSize":140},
             {"text":"Enter city screen → Click the assigned tile to unassign → Click an unassigned tile to assign population."},
-            {"text":"Each citizen works one tile. Take one off a tile and {Unassigned population} at the top right goes up by one; click another tile and it goes back down as that citizen starts working there."},
+            {"text":"Each citizen works one tile. Take one off a tile and the unassigned population at the top right goes up by one; click another tile and it goes back down as that citizen starts working there."},
             {"text":"A tile gives the city whatever that tile yields. Move a citizen off wheat onto a gold mine and the city earns more gold but grows more slowly; move it onto pasture and you trade food for production. Neither is a waste - you are choosing what this city should be good at right now."},
 		],
         "uniques": [

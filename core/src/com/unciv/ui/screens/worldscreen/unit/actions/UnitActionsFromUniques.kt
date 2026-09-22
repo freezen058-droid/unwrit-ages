@@ -10,6 +10,7 @@ import com.unciv.logic.civilization.diplomacy.DiplomacyFlags
 import com.unciv.logic.civilization.managers.ImprovementFunctions
 import com.unciv.logic.map.mapunit.MapUnit
 import com.unciv.logic.map.tile.ImprovementBuildingProblem
+import com.unciv.models.ruleset.tile.TileImprovement
 import com.unciv.logic.map.tile.RoadStatus
 import com.unciv.logic.map.tile.Tile
 import com.unciv.models.Counter
@@ -348,6 +349,14 @@ object UnitActionsFromUniques {
                         (civResources[improvementUnique.params[1]] ?: 0) < improvementUnique.params[0].toInt()
                 }
 
+                val canAct = resourcesAvailable
+                    && unit.hasMovement()
+                    && tile.improvementFunctions.canBuildImprovement(improvement, unit.cache.state)
+                    // Next test is to prevent interfering with UniqueType.CreatesOneImprovement -
+                    // not pretty, but users *can* remove the building from the city queue an thus clear this:
+                    && !tile.isMarkedForCreatesOneImprovement()
+                    && UnitActionModifiers.canActivateSideEffects(unit, unique)
+
                 yield(UnitAction(UnitActionType.CreateImprovement, useFrequency,
                     title = UnitActionModifiers.actionTextWithSideEffects(
                         "Create [${improvement.name}]",
@@ -355,6 +364,8 @@ object UnitActionsFromUniques {
                         unit
                     ),
                     associatedUnique = unique,
+                    disabledReason = if (canAct) null
+                        else whyNot(unit, tile, improvement, gameContext, resourcesAvailable),
                     action = {
                         val unitTile = unit.getTile()
                         unitTile.setImprovement(improvement, unit.civ, unit)
@@ -362,17 +373,47 @@ object UnitActionsFromUniques {
                         unit.civ.cache.updateViewableTiles() // to update 'last seen improvement'
 
                         UnitActionModifiers.activateSideEffects(unit, unique)
-                    }.takeIf {
-                        resourcesAvailable
-                            && unit.hasMovement()
-                            && tile.improvementFunctions.canBuildImprovement(improvement, unit.cache.state)
-                            // Next test is to prevent interfering with UniqueType.CreatesOneImprovement -
-                            // not pretty, but users *can* remove the building from the city queue an thus clear this:
-                            && !tile.isMarkedForCreatesOneImprovement()
-                            && UnitActionModifiers.canActivateSideEffects(unit, unique)
-                    }
+                    }.takeIf { canAct }
                 ))
             }
+        }
+    }
+
+    /**
+     * Why a Great General cannot put a Citadel here, and the like.
+     *
+     * Five separate conditions used to collapse into one greyed-out button that said nothing:
+     * no movement, missing tech, wrong side of the border, a missing strategic resource, or the
+     * tile being held for a wonder. The improvement picker already has translated wording for
+     * most of these, so this reuses it rather than inventing a second vocabulary for the same
+     * facts.
+     */
+    private fun whyNot(
+        unit: MapUnit,
+        tile: Tile,
+        improvement: TileImprovement,
+        gameContext: GameContext,
+        resourcesAvailable: Boolean
+    ): String {
+        val problems = tile.improvementFunctions
+            .getImprovementBuildingProblems(improvement, gameContext).toSet()
+        return when {
+            !unit.hasMovement() -> "This unit has no movement left this turn."
+            ImprovementBuildingProblem.MissingTech in problems && improvement.techRequired != null ->
+                "Research [${improvement.techRequired}] first"
+            ImprovementBuildingProblem.OutsideBorders in problems ->
+                "Have this tile inside your empire"
+            ImprovementBuildingProblem.NotJustOutsideBorders in problems ->
+                "Have this tile close to your borders"
+            !resourcesAvailable -> {
+                val missing = improvement.getMatchingUniques(UniqueType.ConsumesResources)
+                    .firstOrNull { unit.civ.getResourceAmount(it.params[1]) < it.params[0].toInt() }
+                if (missing != null) "Acquire more [${missing.params[1]}]"
+                else "[${improvement.name}] cannot be built on this tile."
+            }
+            tile.isMarkedForCreatesOneImprovement() ->
+                "This tile is being kept for a building already in a city's queue."
+            else -> "[${improvement.name}] cannot be built on this tile."
         }
     }
 

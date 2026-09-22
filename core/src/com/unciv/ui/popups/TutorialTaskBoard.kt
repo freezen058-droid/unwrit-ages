@@ -51,6 +51,17 @@ object TutorialTaskBoard {
         table.add("Step by step".toLabel(fontSize = Constants.headingFontSize)).row()
         for (task in chain) addRow(table, task, done, task === current, width)
 
+        // The closing line also lives in the last task's own text, but a player who happened to
+        // do that step early never sees it - the task is skipped, the panel goes quiet, and the
+        // guide looks broken rather than finished. Here it cannot be skipped.
+        if (current == null && chain.isNotEmpty()) {
+            val finished = ("The step-by-step part is done. From here the hints appear only when "
+                + "something new happens - meeting another civilization, going to war, building "
+                + "your first aircraft.").toLabel(fontColor = Color.LIGHT_GRAY)
+            finished.wrap = true
+            table.add(finished).width(width - 40f).padTop(10f).align(Align.left).row()
+        }
+
         if (situational.isNotEmpty()) {
             table.addSeparator(Color.GRAY).padTop(10f).padBottom(10f)
             table.add("When it comes up".toLabel(fontSize = Constants.headingFontSize)).row()
@@ -93,6 +104,25 @@ object TutorialTaskBoard {
     private fun heading(task: Event) =
         task.civilopediaText.firstOrNull { it.text.isNotEmpty() }?.text ?: taskKey(task)
 
+    /**
+     * Requirements written out for the four situational tasks.
+     *
+     * The generic rendering of their conditions is correct but reads like a rule engine -
+     * "[countable] 大于 [countable2] 时" - and cannot be improved by translating better, because
+     * the countable inside it has no entry of its own: pulled out and translated alone, "[Air]
+     * Units" comes back as "空军 Units" with the English showing through. Four short lines are
+     * worth more than a clever derivation that cannot say "once you have your first aircraft".
+     *
+     * Anything not listed falls back to the condition as the ruleset states it, so a mod's own
+     * tasks still say something true.
+     */
+    private val writtenRequirements = mapOf(
+        "Meet another civilization" to "Once you have met another civilization",
+        "Create a trade route" to "Once you have a second city",
+        "Conquer a city" to "Once you are at war",
+        "Move an air unit" to "Once you have your first aircraft",
+    )
+
     /** Everything an undone task is still waiting for, minus the chain bookkeeping. */
     private fun unmetConditions(task: Event) = task.uniqueObjects
         .filter { it.type == UniqueType.OnlyAvailable }
@@ -118,7 +148,8 @@ object TutorialTaskBoard {
         val row = Table()
         row.add("$marker ${heading(task).tr()}".toLabel(fontColor = color)).align(Align.left).row()
         if (!isDone) {
-            for (condition in unmetConditions(task)) {
+            val written = writtenRequirements[taskKey(task)]
+            for (condition in if (written != null) listOf(written) else unmetConditions(task)) {
                 val label = condition.tr().toLabel(fontColor = Color.GRAY,
                     fontSize = Constants.defaultFontSize - 4)
                 label.wrap = true

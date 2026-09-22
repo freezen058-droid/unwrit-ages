@@ -497,7 +497,6 @@ class UnitMovement(val unit: MapUnit) {
             unit.currentMovement = 0f
             unit.mostRecentMoveType = UnitMovementMemoryType.UnitTeleported
             clearPathfindingCache()
-            markTutorialTaskDone("Move an air unit")
             return
         }
 
@@ -544,7 +543,6 @@ class UnitMovement(val unit: MapUnit) {
         var previousTile = unit.getTile()
         var passingMovementSpent = 0f // Movement points spent since last tile we could end our turn on
 
-
         for (tile in pathToLastReachableTile) {
             if (!unit.movement.canPassThrough(tile)) {
                 // AAAH something happened making our previous path invalid
@@ -590,7 +588,6 @@ class UnitMovement(val unit: MapUnit) {
         if (unit.currentMovement < Constants.minimumMovementEpsilon)
             unit.currentMovement = 0f
 
-
         // The .toList() here is because we have a sequence that's running on the units in the tile,
         // then if we move one of the units we'll get a ConcurrentModificationException, se we save them all to a list
         val payloadUnits = origin.getUnits().filter { it.isTransported && unit.canTransport(it) }.toList()
@@ -621,25 +618,8 @@ class UnitMovement(val unit: MapUnit) {
         if (unit.currentTile != origin) {
             clearPathfindingCache()
             unit.getOtherEscortUnit()?.movement?.clearPathfindingCache()
-            markTutorialTaskDone("Move unit")
         }
         unit.updateUniques()
-    }
-
-    /**
-     * Tick off a tutorial task the player has just performed.
-     *
-     * "Move unit" and "Move an air unit" are two of the fourteen tutorial tasks the ruleset
-     * defines, and they were the only two that nothing in the code ever marked complete - so they
-     * sat on screen for the rest of the game, and any attempt to show the tasks in a fixed order
-     * would have deadlocked on the very first one.
-     *
-     * Only for a human player's own unit: the AI moving units is not the player learning anything.
-     */
-    private fun markTutorialTaskDone(task: String) {
-        if (!unit.civ.isHuman()) return
-        if (!UncivGame.isCurrentInitialized()) return
-        UncivGame.Current.settings.addCompletedTutorialTask(task)
     }
 
     /**
@@ -869,7 +849,6 @@ class UnitMovement(val unit: MapUnit) {
         return null
     }
 
-
     /**
      * @param includeOtherEscortUnit determines whether or not this method will also check if the other escort units [getDistanceToTiles] if it has one.
      * Leave it as default unless you know what [getDistanceToTiles] does.
@@ -912,7 +891,6 @@ class UnitMovement(val unit: MapUnit) {
         val startingTile = unit.currentTile
         tilesToCheck.add(startingTile)
         tilesReached[startingTile] = startingTile
-
 
         while (tilesToCheck.isNotEmpty()) {
             val newTilesToCheck = ArrayList<Tile>()

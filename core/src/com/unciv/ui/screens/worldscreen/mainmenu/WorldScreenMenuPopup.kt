@@ -7,6 +7,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextButton.TextButtonStyle
 import com.unciv.ui.components.input.KeyboardBinding
 import com.unciv.ui.components.input.onLongPress
 import com.unciv.ui.popups.Popup
+import com.unciv.ui.popups.TutorialGuidePopup
 import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.screens.savescreens.LoadGameScreen
 import com.unciv.ui.screens.victoryscreen.VictoryScreen
@@ -47,6 +48,14 @@ class WorldScreenMenuPopup(
         addButton("Civilopedia", KeyboardBinding.Civilopedia) {
             close()
             worldScreen.openCivilopedia()
+        }.nextColumn()
+
+        // The guide was reachable only from the main menu, which meant leaving the game to read
+        // it - and its most useful page, the task list with what each unfinished one is waiting
+        // for, is exactly what a player wants while playing.
+        addButton("Guide", KeyboardBinding.None) {
+            close()
+            TutorialGuidePopup(worldScreen.stage, worldScreen.gameInfo.ruleset).open(true)
         }.nextColumn()
         if (showSave)
             addButton("Save game", KeyboardBinding.SaveGame) {

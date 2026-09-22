@@ -98,19 +98,31 @@
 
         <!-- Transparent bridge Activity to host Mobile Wallet Adapter transact() calls, which
              require a ComponentActivity - see WalletBridgeActivity.kt for why.
-             screenOrientation/configChanges match AndroidLauncher's: without this, this activity
-             (and the wallet app's own approval UI on top of it) follows the device's sensor
-             orientation while AndroidLauncher underneath is locked to landscape - the resulting
-             orientation mismatch/config change destroys and recreates this activity mid-flight,
-             cancelling its lifecycleScope (and with it the in-progress transact() call) before the
-             wallet app can respond. Confirmed via logcat: a "config changes=... land" transition
-             lines up exactly with a JobCancellationException from AndroidWalletService. -->
+             configChanges is what keeps the in-progress transact() alive: declaring
+             orientation|screenSize means the system hands this activity a configuration change
+             instead of destroying and recreating it, which used to cancel its lifecycleScope
+             mid-flight (a "config changes=... land" transition lined up exactly with a
+             JobCancellationException from AndroidWalletService).
+
+             taskAffinity puts this activity - and the wallet's approval sheet, which the system
+             launches into the same task - in a task of their own, away from AndroidLauncher.
+             Everything else here follows from that. The wallet sheet declares
+             SCREEN_ORIENTATION_PORTRAIT while the game is landscape, and with all three in one
+             task there was no arrangement that worked: pinning this activity to landscape forced
+             the sheet sideways so the player had nothing to approve, and leaving it unpinned let
+             the display rotate to portrait and back, after which the menu came back as one flat
+             colour. In its own task the sheet rotates freely and the game's task is never touched.
+
+             It also fixes what happened when a player walked away from the approval sheet: the
+             abandoned sheet used to be the only thing left in the game's task, so tapping the
+             launcher icon resumed that task and bounced straight back to the home screen, and the
+             game could only be reached again by force-stopping it. -->
         <activity
             android:name="com.unciv.app.WalletBridgeActivity"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
             android:excludeFromRecents="true"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize"
-            android:screenOrientation="userLandscape"
+            android:taskAffinity=":wallet"
             android:exported="false" />
     </application>
 

@@ -52,6 +52,9 @@ class GameSettings {
     /** If true and a wallet is connected, every [turnsBetweenAutosaves] turns the player is asked
      *  (never charged silently) whether to also record that point on-chain for 1 SKR. */
     var remindRecordOnChainOnAutosave = false
+    /** Set by the "Don't show again" box on the warning that leaving a half-built improvement
+     *  pauses it. */
+    var hideWorkerLeavingWarning = false
 
     //// Graphics
     var tileSet: String = Constants.defaultTileset

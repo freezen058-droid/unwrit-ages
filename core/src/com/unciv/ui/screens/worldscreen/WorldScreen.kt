@@ -33,6 +33,9 @@ import com.unciv.ui.components.input.KeyShortcutDispatcherVeto
 import com.unciv.ui.components.input.KeyboardBinding
 import com.unciv.ui.components.input.KeyboardPanningListener
 import com.unciv.ui.components.input.onClick
+import com.unciv.ui.components.extensions.surroundWithCircle
+import com.unciv.ui.popups.TutorialTaskBoard
+import com.unciv.ui.components.widgets.AutoScrollPane
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.popups.AuthPopup
 import com.unciv.ui.popups.ConfirmPopup
@@ -156,6 +159,18 @@ class WorldScreen(
     }
     private var tutorialTaskTableHash = 0
 
+    /**
+     * Always-there way into the task list, floating under the hint.
+     *
+     * The hint panel shows one task and vanishes entirely once the chain is finished, so it
+     * cannot be the way in: a player wanting to know what is left, or what an unfinished task is
+     * waiting for, had to quit to the main menu to find out. This stays put whether or not there
+     * is a current hint.
+     */
+    private val tutorialProgressButton = ImageGetter.getImage("OtherIcons/Quickstart")
+        .apply { setSize(24f, 24f) }
+        .surroundWithCircle(44f, color = skinStrings.skinConfig.baseColor)
+
     private var nextTurnUpdateJob: Job? = null
 
     private val events = EventBus.EventReceiver()
@@ -182,6 +197,14 @@ class WorldScreen(
         stage.scrollFocus = mapHolder
         stage.addActor(notificationsScroll)  // very low in z-order, so we're free to let it extend _below_ tile info and minimap if we want
         stage.addActor(tutorialTaskTable)    // behind topBar!
+        stage.addActor(tutorialProgressButton)
+        tutorialProgressButton.onClick {
+            val popup = Popup(this)
+            popup.add(AutoScrollPane(TutorialTaskBoard.build(gameInfo.ruleset, stage.width * 0.7f)))
+                .maxHeight(stage.height * 0.7f).maxWidth(stage.width * 0.75f).row()
+            popup.addCloseButton()
+            popup.open(true)
+        }
         stage.addActor(topBar)
         stage.addActor(statusButtons)
         stage.addActor(techPolicyAndDiplomacy)
@@ -528,6 +551,8 @@ class WorldScreen(
             tutorialTaskTable.isVisible = false
             tutorialTaskTable.clear()
             tutorialTaskTableHash = 0
+            // The button outlives the hint - it is the way in once the chain is finished.
+            positionTutorialProgressButton()
         }
         if (!game.settings.showTutorials || viewingCiv.isDefeated()) return setInvisible()
         val tutorialTask = getCurrentTutorialTask() ?: return setInvisible()
@@ -540,7 +565,13 @@ class WorldScreen(
                 }
                 if (!renderEvent.isValid) return setInvisible()
                 tutorialTaskTable.clear()
-                tutorialTaskTable.add(renderEvent).pad(10f)
+                // A task can run to several paragraphs - reassigning citizens explains what the
+                // number on screen does and what the choice costs - and the panel sits over the
+                // map, so without a ceiling it covered the game the player is being taught.
+                tutorialTaskTable.add(AutoScrollPane(renderEvent))
+                    .pad(10f)
+                    .maxHeight(stage.height * 0.4f)
+                    .maxWidth(stage.width * 0.6f)
                 tutorialTaskTableHash = hash
             }
         } else {
@@ -556,6 +587,19 @@ class WorldScreen(
             displayTutorialTaskOnUpdate()
         }
         tutorialTaskTable.isVisible = true
+        positionTutorialProgressButton()
+    }
+
+    /** Park the progress button under the hint, or where the hint would have been. */
+    private fun positionTutorialProgressButton() {
+        tutorialProgressButton.isVisible = game.settings.showTutorials && !viewingCiv.isDefeated()
+        if (!tutorialProgressButton.isVisible) return
+        val below = if (tutorialTaskTable.isVisible) tutorialTaskTable.y
+            else topBar.getYForTutorialTask()
+        tutorialProgressButton.setPosition(
+            stage.width / 2 - tutorialProgressButton.width / 2,
+            below - tutorialProgressButton.height - 5f
+        )
     }
 
     fun setSelectedCiv(civ: Civilization) {
@@ -800,7 +844,10 @@ class WorldScreen(
         displayTutorial(TutorialTrigger.Happiness) { viewingCiv.getHappiness() < 5 }
         displayTutorial(TutorialTrigger.Unhappiness) { viewingCiv.getHappiness() < 0 }
         displayTutorial(TutorialTrigger.GoldenAge) { viewingCiv.goldenAges.isGoldenAge() }
-        displayTutorial(TutorialTrigger.IdleUnits) { gameInfo.turns >= 50 && game.settings.checkForDueUnits }
+        // Turn 50 was far too late for something a player meets in their first few turns - the
+        // "next unit" button starts nagging immediately, and by turn 50 they have either worked
+        // it out or been annoyed by it for an hour.
+        displayTutorial(TutorialTrigger.IdleUnits) { gameInfo.turns >= 5 && game.settings.checkForDueUnits }
         val resources = viewingCiv.detailedCivResources.asSequence().filter { it.origin == "All" }  // Avoid full list copy
         displayTutorial(TutorialTrigger.LuxuryResource) { resources.any { it.resource.resourceType == ResourceType.Luxury } }
         displayTutorial(TutorialTrigger.StrategicResource) { resources.any { it.resource.resourceType == ResourceType.Strategic } }
