@@ -147,8 +147,22 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
         // mutable by the update authority, which defaults to the payer, so a later UpdateV1 can
         // repoint a certificate at an Arweave copy without re-minting it.
         private const val INLINE_METADATA_PREFIX = "data:application/json;base64,"
-        /** One shared illustration for every certificate - the per-game detail is in the attributes. */
-        private const val CERTIFICATE_IMAGE_URI = "https://unwritages.app/certificate.png"
+        /** One shared illustration for every certificate - the per-game detail is in the attributes.
+         *
+         *  An Arweave transaction rather than a URL on our own site, because this string is written
+         *  into every certificate ever minted and cannot be repointed for the ones already out
+         *  there: it must not depend on a domain or a host outliving the keepsake. Uploaded
+         *  2026-09-22 from `store/certificate.jpg` (36.8 KiB, inside Turbo's free tier) and fetched
+         *  back byte-identical through arweave.net before being written here. Turbo's own gateway
+         *  served it ten minutes before arweave.net did, and shipping that gateway's URL instead
+         *  would have tied every certificate to one gateway - so the wait was the point.
+         *
+         *  It costs 25 characters against [TRANSACTION_SIZE_LIMIT]. Measured with
+         *  `pic/batch_review/_sd/chaincost/fit.mjs`: the longest civilization name that still keeps
+         *  its description goes from 37 characters to 30. The longest name in any shipped ruleset is
+         *  "The Netherlands" at 15, so the description-dropping fallback below is still reached only
+         *  by mods, never by the base game - with twice the headroom it needs. */
+        private const val CERTIFICATE_IMAGE_URI = "https://arweave.net/vdY2Pjns9oLNWn2GqAR4k2Kj8rc4N3ouD91ndzwieNg"
         /** https://solana.com/docs/core/transactions - the whole signed transaction, not the message. */
         private const val TRANSACTION_SIZE_LIMIT = 1232
     }
@@ -414,14 +428,17 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
     private val walletAdapter: MobileWalletAdapter by lazy {
         MobileWalletAdapter(
             connectionIdentity = ConnectionIdentity(
-                // MWA wallets show this URI to the player during the auth prompt, so it has to be
-                // the game's own domain and has to match the name beside it - the app has been
-                // Unwrit Ages since round 169. The site itself needs to exist before release:
-                // wallets can check it, and a player who taps it should not get a 404.
-                identityUri = Uri.parse("https://unwritages.app"),
+                // MWA wallets show this URI to the player during the auth prompt, so it has to
+                // resolve and has to match the name beside it - the app has been Unwrit Ages since
+                // round 169. Verified live 2026-09-22: the site serves the landing page, the
+                // privacy policy and the licence notice, so a player who taps it lands somewhere
+                // real. It is a pages.dev subdomain rather than a registered domain, which is a
+                // deliberate cost decision, not an oversight - moving to one later means changing
+                // this and iconUri and shipping a version, so it is a release-time change.
+                identityUri = Uri.parse("https://unwritages.pages.dev"),
                 // Must be an absolute URI, not a bare relative path - a security audit found the
                 // previous "favicon.ico" would show as a broken icon in the wallet's approval UI.
-                iconUri = Uri.parse("https://unwritages.app/favicon.ico"),
+                iconUri = Uri.parse("https://unwritages.pages.dev/icon.png"),
                 identityName = "Unwrit Ages"
             )
         ).apply {

@@ -1,59 +1,53 @@
 package com.unciv.ui.screens
 
-import com.unciv.models.metadata.LocaleCode
+import com.unciv.Constants
 import com.unciv.models.translations.tr
 import com.unciv.ui.components.extensions.enable
-import com.unciv.ui.components.extensions.scrollTo
 import com.unciv.ui.components.input.KeyCharAndCode
 import com.unciv.ui.components.input.keyShortcuts
 import com.unciv.ui.components.input.onActivation
 import com.unciv.ui.components.input.onClick
 import com.unciv.ui.components.widgets.LanguageTable
-import com.unciv.ui.components.widgets.LanguageTable.Companion.addLanguageKeyShortcuts
-import com.unciv.ui.components.widgets.LanguageTable.Companion.addLanguageTables
+import com.unciv.ui.components.widgets.LanguageTable.Companion.LanguageSelection
+import com.unciv.ui.components.widgets.LanguageTable.Companion.addLanguageSelection
 import com.unciv.ui.popups.options.OptionsPopup
 import com.unciv.ui.screens.mainmenuscreen.MainMenuScreen
 import com.unciv.ui.screens.pickerscreens.PickerScreen
 
 /** A [PickerScreen] to select a language, used once on the initial run after a fresh install.
  *  After that, [OptionsPopup] provides the functionality.
- *  Reusable code is in [LanguageTable] and [addLanguageTables].
+ *  Reusable code is in [LanguageTable] and [addLanguageSelection].
  */
 class LanguagePickerScreen : PickerScreen() {
-    private var chosenLanguage: String
+    /**
+     * English, not the device's language.
+     *
+     * This used to be `LocaleCode.getSystemLanguage()`, which answers from a list of every
+     * language upstream ever had - so on a device set to one of the 37 this fork stopped
+     * shipping it returned a language with no file and no row in the list, left the button
+     * enabled, and wrote that language into the settings when pressed. English is both the safe
+     * answer and the one a player expects to find already chosen.
+     */
+    private var chosenLanguage = Constants.english
 
-    private val languageTables: ArrayList<LanguageTable>
+    private val selection: LanguageSelection
 
     fun update() {
-        languageTables.forEach { it.update(chosenLanguage) }
+        selection.update(chosenLanguage)
     }
 
     init {
-        chosenLanguage = LocaleCode.getSystemLanguage()
-
         closeButton.isVisible = false
 
-        languageTables = topTable.addLanguageTables(stage.width - 60f)
-
-        for (languageTable in languageTables) {
-            languageTable.onClick {
-                onChoice(languageTable.language)
-            }
-        }
-
-        topTable.addLanguageKeyShortcuts(languageTables, { chosenLanguage }) { language ->
-            onChoice(language)
-            val selectedTable = languageTables.firstOrNull { it.language == language }
-                ?: return@addLanguageKeyShortcuts
-            scrollPane.scrollTo(selectedTable, true)
-        }
+        selection = topTable.addLanguageSelection { onChoice(it) }
+        selection.englishRow.onClick { onChoice(Constants.english) }
 
         rightSideButton.setText("Pick language".tr())
         rightSideButton.onActivation {
             pickLanguage()
         }
         rightSideButton.keyShortcuts.add(KeyCharAndCode.RETURN)
-        if (chosenLanguage.isNotEmpty()) onChoice()
+        onChoice()
     }
 
     private fun onChoice(choice: String) {

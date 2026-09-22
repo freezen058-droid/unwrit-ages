@@ -15,9 +15,10 @@ enum class OptionsPopupPages(
     Display("Display", "UnitPromotionIcons/Scouting", { DisplayTab(this) }),
     Gameplay("Gameplay", "OtherIcons/Options", { GameplayTab(this) }),
     Automation("Automation", "OtherIcons/NationSwap", { AutomationTab(this) }),
-    Language("Language", "FlagIcons/", { LanguageTab(this) }) {
-        override fun getIcon(language: String) = ImageGetter.getImage(iconPath + language)
-    },
+    // A speech bubble, not the current language's flag. A flag stands for a state, and Spanish,
+    // Russian, Portuguese and both Chinese scripts are each spoken across borders that picking one
+    // flag takes a side in.
+    Language("Language", "OtherIcons/Chat", { LanguageTab(this) }),
     Sound("Sound", "OtherIcons/Speaker", { SoundTab(this) }),
     // Multiplayer is not part of this fork's offering, and its options page is a wall of
     // sync intervals and turn-notification settings that mean nothing in a single-player game.
@@ -38,7 +39,7 @@ enum class OptionsPopupPages(
     ;
 
     internal open fun visible(withDebug: Boolean) = true
-    internal open fun getIcon(language: String) =
+    internal fun getIcon() =
         if (iconPath.endsWith(".png")) ImageGetter.getExternalImage(iconPath)
         else ImageGetter.getImage(iconPath)
 

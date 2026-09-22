@@ -63,7 +63,7 @@ class OptionsPopup(
         for (page in OptionsPopupPages.entries) {
             if (!page.visible(withDebug)) continue
             val content = page.getContent(this)
-            tabs.addPage(page.label, content, page.getIcon(settings.language), 24f)
+            tabs.addPage(page.label, content, page.getIcon(), 24f)
             pageIndex[page] = content
         }
 

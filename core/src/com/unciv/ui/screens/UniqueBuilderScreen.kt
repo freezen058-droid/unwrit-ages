@@ -18,17 +18,14 @@ import com.unciv.models.translations.getPlaceholderParameters
 import com.unciv.ui.components.extensions.*
 import com.unciv.ui.components.input.onChange
 import com.unciv.ui.components.input.onClick
-import com.unciv.ui.components.widgets.LanguageTable
-import com.unciv.ui.components.widgets.LanguageTable.Companion.addLanguageTables
 import com.unciv.ui.components.widgets.WrappableLabel
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.popups.options.OptionsPopup
 import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.screens.pickerscreens.PickerScreen
 
-/** A [PickerScreen] to select a language, used once on the initial run after a fresh install.
- *  After that, [OptionsPopup] provides the functionality.
- *  Reusable code is in [LanguageTable] and [addLanguageTables].
+/** A [PickerScreen] for composing a Unique and seeing at once whether the ruleset accepts it.
+ *  The doc comment here used to describe the language picker, which this screen has never been.
  */
 class UniqueBuilderScreen(ruleset: Ruleset) : PickerScreen() {
 

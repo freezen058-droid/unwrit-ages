@@ -124,6 +124,12 @@ object Constants {
      *  loud rather than quietly omitting the offer. */
     const val sourceOfferUrl = ""
 
+    /** Where the published privacy policy lives - shown under Options - About, and the same URL
+     *  given to the store as privacy_policy_url. The dApp Store developer agreement requires the
+     *  policy to be reachable from inside the app, not only from the listing, so an empty value
+     *  says so out loud rather than quietly omitting the link. Source: docs/Privacy-Policy.md. */
+    const val privacyPolicyUrl = "https://unwritages.pages.dev/privacy.html"
+
     const val defaultTileset = "UnwritAges"
     /** Default for TileSetConfig.fallbackTileSet - Don't change unless you've also moved the crosshatch, borders, and arrows as well */
     const val defaultFallbackTileset = "FantasyHex"

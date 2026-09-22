@@ -475,8 +475,19 @@ private fun logRunningThreads() {
     override fun getGcCount(): Int = ManagementFactory.getGarbageCollectorMXBeans().sumOf { it.collectionCount }.toInt()
 
     companion object {
+        /** Upstream Unciv release this fork is built from. Kept so the About page can say which
+         *  one, which is what a recipient of the MPL source needs in order to diff it. */
+        const val UPSTREAM_VERSION = "4.21.13"
+
+        // The region below is rewritten by upstream's release workflow, which this fork does not
+        // run - so when BuildConfig was bumped to 1.0.0 nothing updated it and it still read
+        // 4.21.13, which is the number the main menu, the About page and the crash report all
+        // show. Version's own KDoc says text and number are BuildConfig.appVersion and
+        // appCodeNumber, so 1.0.0 / 1 is what belongs here. Changing it affects no save:
+        // CompatibilityVersion.compareTo only compares its own `number`
+        // (CURRENT_COMPATIBILITY_NUMBER), never the Version it carries.
         //region AUTOMATICALLY GENERATED VERSION DATA - DO NOT CHANGE THIS REGION, INCLUDING THIS COMMENT
-        val VERSION = Version("4.21.13", 1254)
+        val VERSION = Version("1.0.0", 1)
         //endregion
 
         /** Global reference to the one Gdx.Game instance created by the platform launchers - do not use without checking [isCurrentInitialized] first. */

@@ -25,7 +25,7 @@ internal class AboutTab(
                 yield(FormattedLine())
                 yield(FormattedLine("{Version}: ${UncivGame.VERSION.toNiceString()}"))
                 yield(FormattedLine())
-                yield(FormattedLine("Unwrit Ages is a fork of Unciv by Yair Morgenstern and contributors, licensed under MPL-2.0."))
+                yield(FormattedLine("Unwrit Ages is a fork of Unciv ${UncivGame.UPSTREAM_VERSION} by Yair Morgenstern and contributors, licensed under MPL-2.0."))
                 yield(FormattedLine("Unciv", link = "https://github.com/yairm210/Unciv"))
                 // MPL-2.0 3.2: a binary may be distributed only if the Source Code Form of
                 // the Covered Files it modifies is made available to its recipients.
@@ -34,6 +34,13 @@ internal class AboutTab(
                 else
                     yield(FormattedLine("Source for the modified MPL files",
                         link = Constants.sourceOfferUrl))
+                yield(FormattedLine())
+                // The dApp Store developer agreement requires the privacy policy to be reachable
+                // from inside the app, so an empty value is announced rather than hidden.
+                if (Constants.privacyPolicyUrl.isEmpty())
+                    yield(FormattedLine("Privacy policy not configured - see docs/Privacy-Policy.md"))
+                else
+                    yield(FormattedLine("Privacy policy", link = Constants.privacyPolicyUrl))
             }
             MarkupRenderer.renderTo(table, lines.asIterable())
         }

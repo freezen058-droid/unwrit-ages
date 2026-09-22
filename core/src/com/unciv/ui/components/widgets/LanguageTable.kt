@@ -1,30 +1,21 @@
 package com.unciv.ui.components.widgets
 
-import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Touchable
+import com.badlogic.gdx.scenes.scene2d.ui.SelectBox
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.unciv.Constants
-import com.unciv.UncivGame
-import com.unciv.models.metadata.LocaleCode
+import com.unciv.models.translations.tr
 import com.unciv.ui.components.extensions.darken
 import com.unciv.ui.components.extensions.toLabel
-import com.unciv.ui.components.input.KeyCharAndCode
-import com.unciv.ui.components.input.KeyShortcutDispatcher
-import com.unciv.ui.components.input.KeyboardBinding
-import com.unciv.ui.components.input.keyShortcuts
-import com.unciv.ui.components.widgets.LanguageTable.Companion.addLanguageTables
-import com.unciv.ui.images.ImageGetter
+import com.unciv.ui.components.input.onChange
 import com.unciv.ui.popups.options.OptionsPopup
 import com.unciv.ui.screens.LanguagePickerScreen
 import com.unciv.ui.screens.basescreen.BaseScreen
-import com.unciv.ui.screens.civilopediascreen.FormattedLine
-import com.unciv.ui.screens.civilopediascreen.MarkupRenderer
-
 
 /** Represents a row in the Language picker, used both in [OptionsPopup] and in [LanguagePickerScreen]
- *  @see addLanguageTables
+ *  @see addLanguageSelection
  */
-internal class LanguageTable(val language: String, val percentComplete: Int) : Table() {
+internal class LanguageTable(val language: String) : Table() {
     private val baseColor = BaseScreen.skinStrings.skinConfig.baseColor
     private val darkBaseColor = baseColor.darken(0.5f)
 
@@ -32,8 +23,9 @@ internal class LanguageTable(val language: String, val percentComplete: Int) : T
         pad(10f)
         defaults().pad(10f)
         left()
-        if(ImageGetter.imageExists("FlagIcons/$language"))
-            add(ImageGetter.getImage("FlagIcons/$language")).size(40f)
+        // No flag icon. A flag is a state, not a language: Spanish, Russian, Portuguese and both
+        // Chinese scripts are each spoken across borders that a single flag necessarily picks a
+        // side in, and a store listing is not the place to do that. The name alone is unambiguous.
 
         val spaceSplitLang = language.replace("_"," ")
         add(spaceSplitLang.toLabel())
@@ -51,34 +43,71 @@ internal class LanguageTable(val language: String, val percentComplete: Int) : T
     }
 
     companion object {
-        /** Extension to add the Language boxes to a Table, used both in OptionsPopup and in LanguagePickerScreen */
-        fun Table.addLanguageTables(expectedWidth: Float): ArrayList<LanguageTable> {
-            val languageTables = ArrayList<LanguageTable>()
+        /** One entry in the [LanguageSelection] dropdown. [language] is the key as the settings and
+         *  the translation files spell it; what the player reads is [display] - the same name with
+         *  its underscores opened out, or the prompt text for the entry that selects nothing. */
+        internal class LanguageChoice(val language: String, private val display: String) {
+            override fun toString() = display
+            // SelectBox.selected = needs these, or setting the selection by value does nothing.
+            override fun equals(other: Any?) = other is LanguageChoice && language == other.language
+            override fun hashCode() = language.hashCode()
+        }
 
-            val tableLanguages = Table()
-            tableLanguages.defaults().uniformX().fillX().pad(10.0f)
-
-            val systemLanguage = LocaleCode.getSystemLanguage()
-
-            val languageCompletionPercentage = UncivGame.Current.translations
-                .percentCompleteOfLanguages
-            languageTables.addAll(
-                languageCompletionPercentage
-                .filter { it.key in SHIPPED_LANGUAGES }
-                .map { LanguageTable(it.key, if (it.key == Constants.english) 100 else it.value) }
-                .sortedWith(
-                    compareBy<LanguageTable> { it.language != Constants.english }
-                    .thenBy { it.language != systemLanguage }
-                    .thenByDescending { it.percentComplete }
-                )
-            )
-
-            languageTables.forEach {
-                tableLanguages.add(it).row()
+        /** The language chooser: English as a row of its own, the rest behind one dropdown.
+         *
+         *  Ten boxes in a column needed scrolling on a phone and left most of a landscape screen
+         *  empty; this fits without either. English is a row rather than one more line in the list
+         *  because it is the default, and a default the player can see is worth more than the space
+         *  it costs.
+         */
+        internal class LanguageSelection(
+            val englishRow: LanguageTable,
+            private val others: SelectBox<LanguageChoice>
+        ) {
+            /** Show [language] as the chosen one: the row lights up for English, and the dropdown
+             *  names the language when it is one of the other nine, or goes back to its prompt. */
+            fun update(language: String) {
+                englishRow.update(language)
+                others.selected = others.items.firstOrNull { it.language == language }
+                    ?: others.items.first()
             }
-            add(tableLanguages).row()
+        }
 
-            return languageTables
+        /** Add the chooser to a Table. [onSelect] is called with a language whenever the player
+         *  picks one - from the English row or from the dropdown. */
+        internal fun Table.addLanguageSelection(onSelect: (String) -> Unit): LanguageSelection {
+            // A fixed width for both controls. Left to themselves they size to their own text,
+            // which on a landscape screen leaves two small boxes adrift in the middle of it - a
+            // heading and one column of matching width read as something someone laid out.
+            // "Language" rather than a new string of our own: it is already translated into all
+            // ten, being the name of the Options tab that holds this same chooser.
+            val controlWidth = 420f
+            add("Language".toLabel(fontSize = Constants.headingFontSize)).padBottom(16f).row()
+
+            val englishRow = LanguageTable(Constants.english)
+            add(englishRow).width(controlWidth).fillX().padBottom(10f).row()
+
+            // The first entry selects nothing - it is what the box reads when English is chosen, so
+            // the box never claims a language that is not the one in force.
+            val prompt = LanguageChoice("", "Other languages".tr())
+            val choices = listOf(prompt) + SHIPPED_LANGUAGES
+                .filter { it != Constants.english }
+                // Sorted on the name as displayed, because that is the string the player reads down.
+                .map { LanguageChoice(it, it.replace("_", " ")) }
+                .sortedBy { it.toString() }
+
+            val others = SelectBox<LanguageChoice>(BaseScreen.skin)
+            others.setItems(*choices.toTypedArray())
+            others.selected = prompt
+            others.onChange {
+                val picked = others.selected ?: return@onChange
+                // Re-picking the prompt is not a choice; leave the selection where it was.
+                if (picked.language.isEmpty()) return@onChange
+                onSelect(picked.language)
+            }
+            add(others).width(controlWidth).fillX().row()
+
+            return LanguageSelection(englishRow, others)
         }
 
         /**
@@ -109,28 +138,5 @@ internal class LanguageTable(val language: String, val percentComplete: Int) : T
             "German",                   // 97.9%
             "Japanese",                 // 97.0%
         )
-
-        /** Create round-robin letter key handling, such that repeatedly pressing 'R' will cycle through all languages starting with 'R' */
-        fun Actor.addLanguageKeyShortcuts(languageTables: ArrayList<LanguageTable>, getSelection: ()->String, action: (String)->Unit) {
-            // Yes this is too complicated. Trying to preserve existing architecture choices.
-            // One - extending KeyShortcut to allow another type filtering by a lambda,
-            //       then teach KeyShortcutDispatcher.Resolver to recognize that - and pass on the actual key to its activation - could help.
-            // Two - Changing addLanguageTables above to an actual container class holding the LanguageTables - could help.
-            fun activation(letter: Char) {
-                val candidates = languageTables.filter { it.language.first() == letter }
-                if (candidates.isEmpty()) return
-                if (candidates.size == 1) return action(candidates.first().language)
-                val currentIndex = candidates.indexOfFirst { it.language == getSelection() }
-                val newSelection = candidates[(currentIndex + 1) % candidates.size]
-                action(newSelection.language)
-            }
-
-            val letters = languageTables.map { it.language.first() }.toSet()
-            for (letter in letters) {
-                keyShortcuts.add(KeyShortcutDispatcher.KeyShortcut(KeyboardBinding.None, KeyCharAndCode(letter), 0)) {
-                    activation(letter)
-                }
-            }
-        }
     }
 }
