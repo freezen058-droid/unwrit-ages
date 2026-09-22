@@ -27,6 +27,18 @@ open class UnitAction(
     val isCurrentAction: Boolean = false,
     val uncivSound: UncivSound = type.uncivSound,
     val associatedUnique: Unique? = null,
+    /**
+     * Why [action] is null, in the player's words.
+     *
+     * A greyed-out button that says nothing is the commonest "why is nothing happening" in the
+     * game - founding a city, for instance, greys out both when the unit has already moved and
+     * when the spot is too close to another city, and the two look identical. Where this is set,
+     * tapping the disabled button says which it is.
+     *
+     * Declared before [action] so that [action] stays the last parameter: most call sites pass it
+     * as a trailing lambda.
+     */
+    val disabledReason: String? = null,
     /** Action is Null if this unit *can* execute the action but *not right now* - it's embarked, out of moves, etc */
     val action: (() -> Unit)? = null
 ) {

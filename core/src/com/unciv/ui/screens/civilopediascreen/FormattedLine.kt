@@ -168,7 +168,36 @@ class FormattedLine (
     private fun isValidInternalLink(link: String) = link.matches(Regex("""^[^/]+/[^/]+$"""))
 
     /** Constants used by [FormattedLine] */
+    /**
+     * True for an ExtraImage that is a screenshot of the game's own English UI.
+     *
+     * The pictures under `Tutorials/` are exactly that: they were captured in English and baked
+     * into the asset, so a Chinese player told to click the button marked "下一回合" was shown a
+     * picture of one reading "Next turn" - the instruction and the illustration contradicting each
+     * other at the moment a beginner is least able to tell which to trust. Ten of the thirteen
+     * carry English words.
+     *
+     * They are hidden outside English rather than deleted: an English player loses nothing, and
+     * re-shooting ten screenshots in ten languages is not something anyone will keep doing after
+     * every UI change. The two exceptions carry no words at all - a unit and an arrow, a patch of
+     * worked tiles - and so read the same everywhere. Anything else new in that folder is hidden
+     * by default, which is the safe direction: showing untranslated English is the failure being
+     * fixed here.
+     */
+    private fun isEnglishOnlyScreenshot(): Boolean {
+        if (!extraImage.startsWith(uiScreenshotFolder)) return false
+        if (extraImage in wordlessScreenshots) return false
+        if (!UncivGame.isCurrentInitialized()) return false
+        return UncivGame.Current.settings.language != Constants.english
+    }
+
     companion object {
+        private const val uiScreenshotFolder = "Tutorials/"
+        private val wordlessScreenshots = setOf(
+            "Tutorials/Move unit",
+            "Tutorials/Reassign worked tiles",
+        )
+
         /** Array of text sizes to translate the [header] attribute */
         val headerSizes = arrayOf(Constants.defaultFontSize,36,32,27,24,21,15,12,9)    // pretty arbitrary, yes
         /** Default color for [text] _and_ icons */
@@ -338,6 +367,7 @@ class FormattedLine (
 
     private fun renderExtraImage(labelWidth: Float): Table {
         val table = Table(BaseScreen.skin)
+        if (isEnglishOnlyScreenshot()) return table
         fun getExtraImage(): Image? {
             if (ImageGetter.imageExists(extraImage))
                 return if (centered) ImageGetter.getDrawable(extraImage).cropToContent()

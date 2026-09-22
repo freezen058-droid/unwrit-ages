@@ -26,6 +26,7 @@ import com.unciv.models.metadata.GameSetupInfo
 import com.unciv.models.ruleset.Event
 import com.unciv.models.ruleset.tile.ResourceType
 import com.unciv.models.ruleset.unique.UniqueType
+import com.unciv.models.translations.tr
 import com.unciv.ui.components.extensions.centerX
 import com.unciv.ui.components.extensions.darken
 import com.unciv.ui.components.input.KeyShortcutDispatcherVeto
@@ -810,6 +811,25 @@ class WorldScreen(
         displayTutorial(TutorialTrigger.Embarking) { viewingCiv.hasUnique(UniqueType.LandUnitEmbarkation) }
         displayTutorial(TutorialTrigger.NaturalWonders) { viewingCiv.naturalWonders.size > 0 }
         displayTutorial(TutorialTrigger.WeLoveTheKingDay) { viewingCiv.cities.any { it.demandedResource != "" } }
+
+        // Six tutorials that were written, translated, and then never shown: nothing in the code
+        // fired them, so they existed only for someone browsing the Civilopedia. These are the
+        // ones that teach the game beyond moving a unit around, and the conditions are
+        // deliberately the earliest ones that are still honest - the tutorial should be over
+        // inside an hour, not waiting on a war that may never come.
+        displayTutorial(TutorialTrigger.VictoryTypes) { gameInfo.turns >= 5 }
+        displayTutorial(TutorialTrigger.CityStates) { viewingCiv.getKnownCivs().any { it.isCityState } }
+        // Two soldiers means the player has started keeping an army rather than just scouting -
+        // and it does not collide with the barbarian popup, which fires on first sighting.
+        displayTutorial(TutorialTrigger.Combat) { viewingCiv.units.getCivUnits().count { it.isMilitary() } >= 2 }
+        displayTutorial(TutorialTrigger.RemovingTerrainFeatures) {
+            viewingCiv.units.getCivUnits().any { it.cache.hasUniqueToBuildImprovements }
+        }
+        displayTutorial(TutorialTrigger.GreatPeople) {
+            viewingCiv.greatPeople.greatPersonPointsCounter.values.any { it > 0 }
+        }
+        // Silent when the ruleset has no religion, which is the correct behaviour there.
+        displayTutorial(TutorialTrigger.Faith) { viewingCiv.religionManager.storedFaith > 0 }
     }
 
     private fun backButtonAndESCHandler() {
@@ -859,7 +879,12 @@ class WorldScreen(
 
         ConfirmPopup(
             this,
-            "Record this turn's progress on-chain for 1 SKR?",
+            // Two sentences, each translated on its own: the question keeps the translations it
+            // already has in all ten languages, and the reassurance can be added without
+            // orphaning them. It says the save is safe because the button is asking about a
+            // payment - a player who cancels needs to know they are not cancelling their save.
+            "Record this turn's progress on-chain for 1 SKR?".tr() + "\n" +
+                "This turn is already saved on this device.".tr(),
             "Record",
             isConfirmPositive = true
         ) {

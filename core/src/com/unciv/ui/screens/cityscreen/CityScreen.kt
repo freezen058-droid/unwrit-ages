@@ -28,6 +28,7 @@ import com.unciv.ui.components.input.KeyboardBinding
 import com.unciv.ui.components.input.keyShortcuts
 import com.unciv.ui.components.input.onActivation
 import com.unciv.ui.components.input.onClick
+import com.unciv.ui.components.widgets.TutorialTaskPanel
 import com.unciv.ui.components.tilegroups.CityTileGroup
 import com.unciv.ui.components.tilegroups.CityTileState
 import com.unciv.ui.components.tilegroups.TileGroupMap
@@ -84,6 +85,10 @@ class CityScreen(
 
     /** Displays raze city button - sits on TOP CENTER */
     private var razeCityButtonHolder = Table()
+
+    /** The current tutorial hint, repeated here because several of the tasks tell the player to
+     *  do something in this screen and the world map's panel does not follow them in. */
+    private val tutorialTaskPanel = TutorialTaskPanel()
 
     /** Displays city stats, population management, religion, built buildings info - TOP RIGHT */
     private var cityStatsTable = CityStatsTable(this)
@@ -161,6 +166,11 @@ class CityScreen(
         stage.addActor(tileTable)
         stage.addActor(cityPickerTable)  // add late so it's top in Z-order and doesn't get covered in cramped portrait
         stage.addActor(exitCityButton)
+        stage.addActor(tutorialTaskPanel)
+        tutorialTaskPanel.onClick {
+            UncivGame.Current.isTutorialTaskCollapsed = !UncivGame.Current.isTutorialTaskCollapsed
+            updateTutorialTaskPanel()
+        }
         update()
 
         globalShortcuts.add(KeyboardBinding.PreviousCity) { page(-1) }
@@ -220,6 +230,28 @@ class CityScreen(
         // Top center: Annex/Raze button
         updateAnnexAndRazeCityButton()
 
+        // Directly below it: the tutorial hint
+        updateTutorialTaskPanel()
+    }
+
+    /**
+     * Show the current tutorial task under the Annex/Raze button.
+     *
+     * Below that button rather than at the very top, because the button owns the top centre and
+     * the two would otherwise sit on top of each other. When there is no such button its holder
+     * packs to nothing and the hint lands at the top anyway.
+     */
+    private fun updateTutorialTaskPanel() {
+        // Half the screen: wide enough to read, narrow enough to leave the city panels alone.
+        // getCiv() is ForeignCivView's migration bridge - the task conditionals want the real
+        // Civilization's GameContext, which the view wrapper does not expose.
+        tutorialTaskPanel.update(cityView.viewingCiv().getCiv(), stage.width * 0.45f)
+        if (!tutorialTaskPanel.isVisible) return
+        val below = if (razeCityButtonHolder.height > 0f)
+            razeCityButtonHolder.y - 10f
+        else
+            stage.height - 20f
+        tutorialTaskPanel.setPosition(stage.width / 2, below, Align.top)
     }
 
     private fun updateCityStats() {

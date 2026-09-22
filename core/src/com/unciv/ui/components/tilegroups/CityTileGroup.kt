@@ -2,6 +2,8 @@ package com.unciv.ui.components.tilegroups
 
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.Actor
+import com.badlogic.gdx.scenes.scene2d.Group
+import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.utils.Align
 import com.unciv.UncivGame
 import com.unciv.view.CityView
@@ -24,6 +26,13 @@ enum class CityTileState {
 }
 
 class CityTileGroup(val cityView: CityView, tileView: TileView, tileSetStrings: TileSetStrings, private val nightMode: Boolean, private val isSpying: Boolean = false) : TileGroup(tileView, tileSetStrings) {
+    private companion object {
+        /** Unchanged from before - only what can be hit grew. */
+        const val iconSize = 26f
+        /** Against a hex 75 wide and roughly 50 apart vertically. */
+        const val iconTouchSize = 44f
+    }
+
 
     var tileState = CityTileState.NONE
 
@@ -137,10 +146,22 @@ class CityTileGroup(val cityView: CityView, tileView: TileView, tileSetStrings: 
         }
 
         if (icon != null) {
-            icon.setSize(26f, 26f)
+            icon.setSize(iconSize, iconSize)
+            // The icon is what assigns and unassigns a citizen, and at 26px against a 75px hex it
+            // was about a third of a finger wide - the tutorial task that asks the player to move
+            // a citizen between tiles could be read, understood and then simply not carried out.
+            // So the picture stays its old size and gets a transparent box around it to be hit:
+            // 44 of the hex's 75, which is wide enough for a thumb and still short of the vertical
+            // spacing between tiles, so neighbouring icons cannot steal each other's taps.
+            val touchArea = Group().apply {
+                setSize(iconTouchSize, iconTouchSize)
+                touchable = Touchable.enabled
+                addActor(icon)
+            }
+            icon.setPosition((iconTouchSize - iconSize) / 2, (iconTouchSize - iconSize) / 2)
             // Position absolutely: tile origin (x,y) + tile-local offset
-            icon.setPosition(x + width/2 - icon.width/2, y + height*0.85f - icon.height/2)
-            layerMisc.addWorkedIcon(icon)
+            touchArea.setPosition(x + width/2 - iconTouchSize/2, y + height*0.85f - iconTouchSize/2)
+            layerMisc.addWorkedIcon(touchArea)
         }
 
         // No unit flags and city-buttons inside CityScreen

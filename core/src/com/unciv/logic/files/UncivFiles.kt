@@ -19,6 +19,9 @@ import com.unciv.models.metadata.GameSettings
 import com.unciv.models.metadata.doMigrations
 import com.unciv.models.metadata.isMigrationNecessary
 import com.unciv.models.ruleset.RulesetCache
+import com.unciv.models.translations.tr
+import com.unciv.ui.popups.ToastPopup
+import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.screens.modmanager.ModUIData
 import com.unciv.logic.CompatibilityVersion
 import com.unciv.utils.Concurrency
@@ -205,9 +208,36 @@ class UncivFiles(
             gameId = game.gameId,
             saveName = saveName,
             hashHex = hash,
-            onSuccess = { tx -> debug("Recorded save %s hash on-chain, tx %s", game.gameId, tx) },
-            onError = { ex -> debug("Failed to record save %s hash on-chain: %s", game.gameId, ex.message) }
+            onSuccess = { tx ->
+                debug("Recorded save %s hash on-chain, tx %s", game.gameId, tx)
+                reportOnChainResult("[$saveName] is now recorded on the blockchain.".tr())
+            },
+            onError = { ex ->
+                debug("Failed to record save %s hash on-chain: %s", game.gameId, ex.message)
+                // The reason is appended rather than fed through a placeholder: it comes from the
+                // wallet or the network and may itself contain brackets, which would confuse the
+                // translation lookup.
+                reportOnChainResult(
+                    "Could not record [$saveName] on the blockchain. The game is saved on this device either way."
+                        .tr() + "\n" + (ex.message ?: "")
+                )
+            }
         )
+    }
+
+    /**
+     * Tell the player how the on-chain record went.
+     *
+     * Both callbacks used to only [debug] - which goes to the log, where no player will ever see
+     * it. Recording a save costs a fee and takes a signature, and it could succeed or fail in
+     * complete silence: a player who declined the prompt, or whose transaction failed, was left
+     * believing their save was on the chain when it was not. A paid action needs a receipt.
+     */
+    private fun reportOnChainResult(message: String) {
+        Concurrency.runOnGLThread {
+            val screen = UncivGame.Current.screen as? BaseScreen ?: return@runOnGLThread
+            ToastPopup(message, screen, time = 5000)
+        }
     }
 
     /**

@@ -8,6 +8,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
 import com.badlogic.gdx.utils.Align
 import com.unciv.Constants
+import com.unciv.UncivGame
 import com.unciv.logic.map.mapunit.MapUnit
 import com.unciv.logic.map.tile.ImprovementBuildingProblem
 import com.unciv.logic.map.tile.Tile
@@ -17,6 +18,8 @@ import com.unciv.models.ruleset.unique.UniqueType
 import com.unciv.models.stats.Stat
 import com.unciv.models.stats.Stats
 import com.unciv.models.translations.tr
+import com.unciv.ui.popups.ToastPopup
+import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.components.SmallButtonStyle
 import com.unciv.ui.components.UncivTooltip.Companion.addTooltip
 import com.unciv.ui.components.extensions.disable
@@ -70,8 +73,36 @@ class ImprovementPickerScreen(
             }
             unit.action = null // this is to "wake up" the worker if it's sleeping
             onAccept()
+            startedWorkOn = improvement
         }
         game.popScreen()
+        confirmWorkStarted()
+    }
+
+    /** What the picker did, so it can be reported once the picker itself has closed. */
+    private var startedWorkOn: TileImprovement? = null
+
+    /**
+     * Say out loud that the order was taken, and how long it will take.
+     *
+     * Accepting an improvement closed this screen and changed nothing a beginner would notice: the
+     * only feedback was the worker's flag icon quietly becoming the improvement's, and the task
+     * hint still asking for the thing they had just done - which reads, correctly, as "nothing
+     * happened". A Farm is seven turns, so there is nothing to see for seven turns unless someone
+     * says so.
+     *
+     * Only while the hints are on: a player who knows a Farm takes seven turns does not need
+     * telling every time.
+     */
+    private fun confirmWorkStarted() {
+        val improvement = startedWorkOn ?: return
+        startedWorkOn = null
+        if (!UncivGame.Current.settings.showTutorials) return
+        val turns = tile.turnsToImprovement
+        if (turns <= 0) return
+        val screen = UncivGame.Current.screen as? BaseScreen ?: return
+        ToastPopup("[${improvement.name}] will take [$turns] turns - leave the worker on this tile until it is finished.",
+            screen, time = 5000)
     }
 
     init {

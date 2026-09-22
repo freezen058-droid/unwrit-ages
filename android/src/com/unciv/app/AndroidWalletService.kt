@@ -436,9 +436,14 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
                 // deliberate cost decision, not an oversight - moving to one later means changing
                 // this and iconUri and shipping a version, so it is a release-time change.
                 identityUri = Uri.parse("https://unwritages.pages.dev"),
-                // Must be an absolute URI, not a bare relative path - a security audit found the
-                // previous "favicon.ico" would show as a broken icon in the wallet's approval UI.
-                iconUri = Uri.parse("https://unwritages.pages.dev/icon.png"),
+                // RELATIVE, resolved by the wallet against identityUri. The comment that used to
+                // sit here said the opposite - that it had to be absolute - and the code followed
+                // it, so MobileWalletAdapter rejected every connection attempt with "IF non-null,
+                // iconRelativeUri must be a relative Uri" and the wallet could not be connected at
+                // all. Nobody caught it because connecting a wallet on a real device was still an
+                // unticked line in the ship plan. Resolves to
+                // https://unwritages.pages.dev/icon.png, which the site serves.
+                iconUri = Uri.parse("icon.png"),
                 identityName = "Unwrit Ages"
             )
         ).apply {

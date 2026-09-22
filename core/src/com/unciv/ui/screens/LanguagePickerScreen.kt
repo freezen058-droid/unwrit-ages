@@ -3,20 +3,18 @@ package com.unciv.ui.screens
 import com.unciv.Constants
 import com.unciv.models.translations.tr
 import com.unciv.ui.components.extensions.enable
+import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.input.KeyCharAndCode
 import com.unciv.ui.components.input.keyShortcuts
 import com.unciv.ui.components.input.onActivation
-import com.unciv.ui.components.input.onClick
-import com.unciv.ui.components.widgets.LanguageTable
-import com.unciv.ui.components.widgets.LanguageTable.Companion.LanguageSelection
-import com.unciv.ui.components.widgets.LanguageTable.Companion.addLanguageSelection
+import com.unciv.ui.components.widgets.LanguageSelectBox
 import com.unciv.ui.popups.options.OptionsPopup
 import com.unciv.ui.screens.mainmenuscreen.MainMenuScreen
 import com.unciv.ui.screens.pickerscreens.PickerScreen
 
 /** A [PickerScreen] to select a language, used once on the initial run after a fresh install.
  *  After that, [OptionsPopup] provides the functionality.
- *  Reusable code is in [LanguageTable] and [addLanguageSelection].
+ *  The dropdown itself is [LanguageSelectBox].
  */
 class LanguagePickerScreen : PickerScreen() {
     /**
@@ -30,33 +28,24 @@ class LanguagePickerScreen : PickerScreen() {
      */
     private var chosenLanguage = Constants.english
 
-    private val selection: LanguageSelection
-
-    fun update() {
-        selection.update(chosenLanguage)
-    }
+    private val selectBox = LanguageSelectBox { chosenLanguage = it }
 
     init {
         closeButton.isVisible = false
 
-        selection = topTable.addLanguageSelection { onChoice(it) }
-        selection.englishRow.onClick { onChoice(Constants.english) }
+        // A width both controls share. Left to itself the dropdown sizes to its longest name,
+        // which on a landscape screen leaves one small box adrift in the middle of it.
+        val controlWidth = 420f
+        // "Language" rather than a string of our own: it is already translated into all ten,
+        // being the name of the Options tab that holds this same dropdown.
+        topTable.add("Language".toLabel(fontSize = Constants.headingFontSize)).padBottom(16f).row()
+        topTable.add(selectBox).width(controlWidth).fillX().row()
+        selectBox.showSelected(chosenLanguage)
 
         rightSideButton.setText("Pick language".tr())
-        rightSideButton.onActivation {
-            pickLanguage()
-        }
+        rightSideButton.onActivation { pickLanguage() }
         rightSideButton.keyShortcuts.add(KeyCharAndCode.RETURN)
-        onChoice()
-    }
-
-    private fun onChoice(choice: String) {
-        chosenLanguage = choice
-        onChoice()
-    }
-    private fun onChoice() {
         rightSideButton.enable()
-        update()
     }
 
     private fun pickLanguage() {

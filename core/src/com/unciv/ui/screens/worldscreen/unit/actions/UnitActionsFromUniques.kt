@@ -56,7 +56,11 @@ object UnitActionsFromUniques {
         val useFrequency = getUseFrequency(unit, unique, 80f)
 
         if (!unit.hasMovement() || !tile.canBeSettled(unit.civ))
-            return UnitAction(UnitActionType.FoundCity, useFrequency, action = null)
+            return UnitAction(UnitActionType.FoundCity, useFrequency, action = null,
+                disabledReason = if (!unit.hasMovement())
+                    "This unit has no movement left this turn."
+                else
+                    "A city cannot be founded here. It is too close to another city, or the land belongs to someone else.")
 
         val hasActionModifiers = unique.modifiers.any { it.type?.targetTypes?.contains(
             UniqueTarget.UnitActionModifier

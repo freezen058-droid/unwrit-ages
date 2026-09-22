@@ -147,7 +147,13 @@ class SaveGameScreen(private val gameInfo: GameInfo) : LoadOrSaveScreen("Current
                         rightSideButton.setText(saveButtonText.tr())
                         rightSideButton.enable()
                     }
-                    else UncivGame.Current.popScreen()
+                    else {
+                        // The one place a save is unambiguously the player's own doing - autosaves
+                        // and quicksaves do not come through this screen - so it is where the
+                        // tutorial task can be ticked off.
+                        UncivGame.Current.settings.addCompletedTutorialTask("Save your game")
+                        UncivGame.Current.popScreen()
+                    }
                 }
             }
         }

@@ -1,6 +1,10 @@
 package com.unciv.ui.screens.worldscreen.unit.actions
 
 import com.badlogic.gdx.graphics.Color
+import com.unciv.ui.popups.ToastPopup
+import com.unciv.models.translations.tr
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
+import com.badlogic.gdx.scenes.scene2d.InputEvent
 import com.badlogic.gdx.math.Interpolation
 import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.actions.Actions
@@ -184,6 +188,18 @@ class UnitActionsTable(val worldScreen: WorldScreen) : Table() {
 
         if (unitAction.action == null) {
             actionButton.disable()
+            val reason = unitAction.disabledReason
+            if (reason != null) {
+                // disable() turns touchability off, so it has to be put back to hear the tap -
+                // and the listener is a raw one because the input helpers check isDisabled and
+                // would swallow it. Tapping still performs no action; it only explains.
+                actionButton.touchable = Touchable.enabled
+                actionButton.addListener(object : ClickListener() {
+                    override fun clicked(event: InputEvent?, x: Float, y: Float) {
+                        ToastPopup(reason.tr(), worldScreen, time = 4000)
+                    }
+                })
+            }
         } else {
             actionButton.onActivation(unitAction.uncivSound, binding) {
                 activateAction(unitAction, unit)

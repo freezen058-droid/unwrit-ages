@@ -497,6 +497,7 @@ class UnitMovement(val unit: MapUnit) {
             unit.currentMovement = 0f
             unit.mostRecentMoveType = UnitMovementMemoryType.UnitTeleported
             clearPathfindingCache()
+            markTutorialTaskDone("Move an air unit")
             return
         }
 
@@ -620,8 +621,25 @@ class UnitMovement(val unit: MapUnit) {
         if (unit.currentTile != origin) {
             clearPathfindingCache()
             unit.getOtherEscortUnit()?.movement?.clearPathfindingCache()
+            markTutorialTaskDone("Move unit")
         }
         unit.updateUniques()
+    }
+
+    /**
+     * Tick off a tutorial task the player has just performed.
+     *
+     * "Move unit" and "Move an air unit" are two of the fourteen tutorial tasks the ruleset
+     * defines, and they were the only two that nothing in the code ever marked complete - so they
+     * sat on screen for the rest of the game, and any attempt to show the tasks in a fixed order
+     * would have deadlocked on the very first one.
+     *
+     * Only for a human player's own unit: the AI moving units is not the player learning anything.
+     */
+    private fun markTutorialTaskDone(task: String) {
+        if (!unit.civ.isHuman()) return
+        if (!UncivGame.isCurrentInitialized()) return
+        UncivGame.Current.settings.addCompletedTutorialTask(task)
     }
 
     /**
