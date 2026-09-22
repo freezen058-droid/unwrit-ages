@@ -29,7 +29,6 @@ enum class KeyboardBinding(
     // MainMenu
     QuitMainMenu(Category.MainMenu, "Quit", KeyCharAndCode.BACK),
     Resume(Category.MainMenu),
-    Quickstart(Category.MainMenu),
     StartNewGame(Category.MainMenu, "Start new game", KeyCharAndCode('N')),  // Not to be confused with NewGame (from World menu, Ctrl-N)
     MainMenuLoad(Category.MainMenu, "Load game", KeyCharAndCode('L')),
     Multiplayer(Category.MainMenu),  // Name disambiguation maybe soon, not yet necessary

@@ -1,6 +1,5 @@
 ﻿package com.unciv.ui.screens.mainmenuscreen
 
-import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.actions.Actions
@@ -151,46 +150,44 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
         if (game.settings.tileSet in TileSetCache)
             startBackgroundMapGeneration()
 
+        // The buttons are collected first and dealt into the columns afterwards, because Resume
+        // only exists when there is an autosave to resume. Assigning each button to a column by
+        // hand meant one of the two cases was always lopsided - a hardcoded 3+3 became 4+3 the
+        // moment a save existed, and moving Quickstart out of the list would have made the fresh
+        // install 2+3 instead, which is the case a new player and a store reviewer see first.
+        val menuButtons = buildList {
+            if (game.files.autosaves.autosaveExists())
+                add(getMenuButton("Resume", "OtherIcons/Resume", KeyboardBinding.Resume) { resumeGame() })
+
+            add(getMenuButton("Start new game", "OtherIcons/New", KeyboardBinding.StartNewGame) {
+                InputDisabling.disableInput()
+                game.pushScreen(NewGameScreen())
+            })
+
+            add(getMenuButton("Load game", "OtherIcons/Load", KeyboardBinding.MainMenuLoad) {
+                InputDisabling.disableInput()
+                game.pushScreen(LoadGameScreen())
+            })
+
+            add(getMenuButton("Guide", "OtherIcons/Quickstart", KeyboardBinding.None) {
+                TutorialGuidePopup(stage, getCivilopediaRuleset()) { startTutorialGame() }.open(true)
+            })
+
+            add(getMenuButton("Wallet", "OtherIcons/Settings", KeyboardBinding.None) {
+                WalletPopup(stage, game.settings).open(true)
+            })
+
+            add(getMenuButton("Options", "OtherIcons/Options", KeyboardBinding.MainMenuOptions) {
+                openOptionsPopup()
+            }.apply { onLongPress { openOptionsPopup(withDebug = true) } })
+        }
+
         val column1 = Table().apply { defaults().pad(10f).fillX() }
         val column2 = if (singleColumn) column1 else Table().apply { defaults().pad(10f).fillX() }
-
-        if (game.files.autosaves.autosaveExists()) {
-            val resumeTable = getMenuButton("Resume","OtherIcons/Resume", KeyboardBinding.Resume)
-                { resumeGame() }
-            column1.add(resumeTable).row()
-        }
-
-        val quickstartTable = getMenuButton("Quickstart", "OtherIcons/Quickstart", KeyboardBinding.Quickstart)
-            { quickstartNewGame() }
-        column1.add(quickstartTable).row()
-
-        val newGameButton = getMenuButton("Start new game", "OtherIcons/New", KeyboardBinding.StartNewGame) {
-            InputDisabling.disableInput()
-            game.pushScreen(NewGameScreen()) 
-        }
-        column1.add(newGameButton).row()
-
-        val loadGameTable = getMenuButton("Load game", "OtherIcons/Load", KeyboardBinding.MainMenuLoad) {
-            InputDisabling.disableInput()
-            game.pushScreen(LoadGameScreen())
-        }
-        column1.add(loadGameTable).row()
-
-        val guideTable = getMenuButton("Guide", "OtherIcons/Quickstart", KeyboardBinding.None) {
-            TutorialGuidePopup(stage, getCivilopediaRuleset()) { startTutorialGame() }.open(true)
-        }
-        column2.add(guideTable).row()
-
-        val walletTable = getMenuButton("Wallet", "OtherIcons/Settings", KeyboardBinding.None) {
-            WalletPopup(stage, game.settings).open(true)
-        }
-        column2.add(walletTable).row()
-
-        val optionsTable = getMenuButton("Options", "OtherIcons/Options", KeyboardBinding.MainMenuOptions)
-            { openOptionsPopup() }
-        optionsTable.onLongPress { openOptionsPopup(withDebug = true) }
-        column2.add(optionsTable).row()
-
+        // Odd counts put the extra button on the left, which is where reading starts.
+        val inFirstColumn = if (singleColumn) menuButtons.size else (menuButtons.size + 1) / 2
+        for ((index, button) in menuButtons.withIndex())
+            (if (index < inFirstColumn) column1 else column2).add(button).row()
 
         val table = Table().apply { defaults().pad(10f) }
         table.add(column1)
@@ -329,9 +326,9 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
     /**
      * A game built for learning on: small, gentle, and with the hints turned back on.
      *
-     * Not [quickstartNewGame] with different numbers - that one deliberately reuses the player's
-     * last setup, which for a beginner is either nothing or whatever they last fumbled. This is a
-     * fixed preset, so what the guide promises is what they get.
+     * A fixed preset, so what the guide promises is what a beginner gets. The menu used to carry
+     * a Quickstart button that started a game from the player's last setup instead; it was removed
+     * in round 179, and this is deliberately not that - a beginner has no last setup worth reusing.
      *
      * Turning the hints on means resetting which ones have been seen, and that is a real loss for
      * a player who has dismissed dozens of them, so they are asked first. A new player has none
@@ -397,49 +394,6 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
             } catch (_: Exception) {
                 launchOnGLThread {
                     ToastPopup("Cannot start game with the default new game parameters!", this@MainMenuScreen)
-                }
-            }
-        }
-    }
-
-    private fun quickstartNewGame() {
-        ToastPopup(Constants.working, this)
-        val errorText = "Cannot start game with the default new game parameters!"
-        Concurrency.run("QuickStart") {
-            val newGame: GameInfo
-            // Can fail when starting the game...
-            try {
-                val gameInfo = GameSetupInfo.fromSettings("Chieftain")
-                if (gameInfo.gameParameters.victoryTypes.isEmpty()) {
-                    val ruleSet = RulesetCache.getComplexRuleset(gameInfo.gameParameters)
-                    gameInfo.gameParameters.victoryTypes.addAll(ruleSet.victories.keys)
-                }
-                newGame = GameStarter.startNewGame(gameInfo)
-
-            } catch (notAPlayer: UncivShowableException) {
-                val (message) = LoadGameScreen.getLoadExceptionMessage(notAPlayer)
-                launchOnGLThread { ToastPopup(message, this@MainMenuScreen) }
-                return@run
-            } catch (_: Exception) {
-                launchOnGLThread { ToastPopup(errorText, this@MainMenuScreen) }
-                return@run
-            }
-
-            // ...or when loading the game
-            try {
-                game.loadGame(newGame)
-            } catch (_: OutOfMemoryError) {
-                launchOnGLThread {
-                    ToastPopup("Not enough memory on phone to load game!", this@MainMenuScreen)
-                }
-            } catch (notAPlayer: UncivShowableException) {
-                val (message) = LoadGameScreen.getLoadExceptionMessage(notAPlayer)
-                launchOnGLThread {
-                    ToastPopup(message, this@MainMenuScreen)
-                }
-            } catch (_: Exception) {
-                launchOnGLThread {
-                    ToastPopup(errorText, this@MainMenuScreen)
                 }
             }
         }
