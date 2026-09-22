@@ -237,3 +237,8 @@ detekt/reports.html
 # the stock upstream set is in _original_backups/ConstructionIcons_upstream/ and can also
 # be fetched with: git checkout upstream/master -- android/Images.ConstructionIcons
 /android/Images.ConstructionIcons/
+
+## MPL-2.0 source offer archive - regenerated per release by tools/mpl_source_bundle.py
+## and served from the website. 12 MiB of binary that git has no reason to keep a
+## history of; `python tools/mpl_source_bundle.py --stage-website` puts it back.
+/website/mpl-source-*.tar.gz

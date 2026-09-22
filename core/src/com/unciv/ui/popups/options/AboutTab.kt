@@ -27,6 +27,11 @@ internal class AboutTab(
                 yield(FormattedLine())
                 yield(FormattedLine("Unwrit Ages is a fork of Unciv ${UncivGame.UPSTREAM_VERSION} by Yair Morgenstern and contributors, licensed under MPL-2.0."))
                 yield(FormattedLine("Unciv", link = "https://github.com/yairm210/Unciv"))
+                // CC BY-SA 3.0 asks for attribution and for modifications to be marked, and it
+                // asks it of whoever receives the work - which means the person holding the app,
+                // not only someone reading NOTICE.md in the repository. The bulk recolour pass
+                // made this fork's tiles derivatives of that art, so the credit ships with them.
+                yield(FormattedLine("Tileset art by The Bucketeer / @GeneralWadaling, CC BY-SA 3.0, modified."))
                 // MPL-2.0 3.2: a binary may be distributed only if the Source Code Form of
                 // the Covered Files it modifies is made available to its recipients.
                 if (Constants.sourceOfferUrl.isEmpty())
