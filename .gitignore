@@ -242,3 +242,7 @@ detekt/reports.html
 ## and served from the website. 12 MiB of binary that git has no reason to keep a
 ## history of; `python tools/mpl_source_bundle.py --stage-website` puts it back.
 /website/mpl-source-*.tar.gz
+
+## wrangler's local cache, written by `wrangler pages deploy`. Holds the Cloudflare
+## account id and the account email - not something to commit.
+/.wrangler/
