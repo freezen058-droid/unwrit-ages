@@ -5,6 +5,7 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.utils.Base64Coder
 import com.unciv.Constants
 import com.unciv.UncivGame
+import com.unciv.logic.GameInfo
 import com.unciv.logic.multiplayer.FriendList
 import com.unciv.logic.multiplayer.chat.ChatWebSocket
 import com.unciv.models.UncivSound
@@ -71,6 +72,7 @@ class GameSettings {
     var showTutorials = false
     // There have no UI other than the "Reset tutorials" button:
     var tutorialsShown = HashSet<String>()
+    /** Unused since task progress moved into each game - see [addCompletedTutorialTask]. */
     var tutorialTasksCompleted = HashSet<String>()
 
     enum class LongPressIndicatorSetting {
@@ -245,10 +247,17 @@ class GameSettings {
         windowState = WindowState.current()
     }
 
-    fun addCompletedTutorialTask(tutorialTask: String): Boolean {
-        if (!tutorialTasksCompleted.add(tutorialTask)) return false
+    /** Marks [tutorialTask] done in [gameInfo] - the game the task happened in, which during turn
+     *  processing is not the one the screen holds, so logic passes its own. The progress lives in
+     *  the game, not here: see [GameInfo.tutorialTasksCompleted]. [tutorialTasksCompleted] above
+     *  stays only so settings files written before the move still load. */
+    fun addCompletedTutorialTask(
+        tutorialTask: String,
+        gameInfo: GameInfo? = UncivGame.Current.gameInfo
+    ): Boolean {
+        if (gameInfo == null || !gameInfo.isTutorialGame) return false
+        if (!gameInfo.tutorialTasksCompleted.add(tutorialTask)) return false
         UncivGame.Current.isTutorialTaskCollapsed = false
-        save()
         return true
     }
 

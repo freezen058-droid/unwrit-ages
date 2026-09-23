@@ -3,5 +3,5 @@ First release. The whole game, finished.
 * A complete 4X campaign: technologies, policies, units, buildings, diplomacy, and four ways to win
 * Terrain drawn for this game, rendered as lit relief with several variants of every tile
 * Unit and building icons redrawn to match
-* Ten languages, and a new-player guide gathering sixty tutorials into six chapters
+* English, Simplified and Traditional Chinese, and a new-player guide gathering sixty tutorials into six chapters
 * Optional: connect a Solana wallet to put a save on-chain, or mint a certificate when you win

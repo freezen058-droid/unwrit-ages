@@ -1131,7 +1131,7 @@ class Tile : IsPartOfGameInfoSerialization {
         val queueEntry = improvementQueue.removeAt(0)
 
         if (worker.civ.isCurrentPlayer())
-            UncivGame.Current.settings.addCompletedTutorialTask("Construct an improvement")
+            UncivGame.Current.settings.addCompletedTutorialTask("Construct an improvement", worker.civ.gameInfo)
 
         setImprovement(queueEntry.improvement, worker.civ, worker)
         return true

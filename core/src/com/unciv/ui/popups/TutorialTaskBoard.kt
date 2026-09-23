@@ -4,7 +4,6 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.utils.Align
 import com.unciv.Constants
-import com.unciv.UncivGame
 import com.unciv.models.ruleset.Event
 import com.unciv.models.ruleset.Ruleset
 import com.unciv.models.ruleset.unique.UniqueType
@@ -31,7 +30,8 @@ object TutorialTaskBoard {
     private const val CURRENT = "▶"
     private const val PENDING = "•"
 
-    fun build(ruleset: Ruleset, width: Float): Table {
+    /** [done] is the game's own progress - see [com.unciv.logic.GameInfo.tutorialTasksCompleted]. */
+    fun build(ruleset: Ruleset, done: Set<String>, width: Float): Table {
         val table = Table(BaseScreen.skin)
         table.pad(10f)
         table.defaults().pad(4f).align(Align.left)
@@ -43,9 +43,6 @@ object TutorialTaskBoard {
         val chain = orderedChain(tasks, byName)
         val situational = tasks.filter { it !in chain }
 
-        val done = UncivGame.Current.settings.tutorialTasksCompleted
-        // The current one is the first of the chain not yet done - which needs no game in
-        // progress, so this page reads correctly from the main menu too.
         val current = chain.firstOrNull { taskKey(it) !in done }
 
         table.add("Step by step".toLabel(fontSize = Constants.headingFontSize)).row()
@@ -96,7 +93,7 @@ object TutorialTaskBoard {
         .firstOrNull { it.type == UniqueType.ConditionalTutorialCompleted }
         ?.params?.firstOrNull()
 
-    /** The name as [com.unciv.models.metadata.GameSettings.tutorialTasksCompleted] stores it. */
+    /** The name as [com.unciv.logic.GameInfo.tutorialTasksCompleted] stores it. */
     private fun taskKey(task: Event) =
         task.name.removePrefix("Tutorial Task: [").removeSuffix("]")
 

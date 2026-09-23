@@ -1,5 +1,6 @@
 package com.unciv.ui.screens.victoryscreen
 
+import com.unciv.logic.chain.VictoryCertificateService
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.ui.Table
@@ -20,6 +21,7 @@ import com.unciv.ui.components.extensions.areSecretKeysPressed
 import com.unciv.ui.components.extensions.enable
 import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.input.KeyCharAndCode
+import com.unciv.ui.components.extensions.toTextButton
 import com.unciv.ui.components.input.onClick
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.screens.basescreen.BaseScreen
@@ -130,6 +132,22 @@ class VictoryScreen(
             else -> {
                 rightSideButton.isVisible = false
                 setDefaultCloseAction()
+            }
+        }
+
+        // The certificate is offered once, right as the game is won - and not again every time
+        // this screen is opened afterwards; the tab keeps it for a player who wants it later.
+        if (VictoryCertificateService.isAvailable(gameInfo, playerCiv)) {
+            // Always on screen, whatever tab is open: a popup closed by accident must not be the
+            // only way to a certificate the player just earned.
+            val certificateButton = "Mint victory certificate".toTextButton()
+            certificateButton.color = Color.GOLD
+            certificateButton.onClick { VictoryCertificatePopup(this, gameInfo, playerCiv).open() }
+            rightSideGroup.space(10f)
+            rightSideGroup.addActorAt(0, certificateButton)
+            if (!gameInfo.certificateOfferShown) {
+                gameInfo.certificateOfferShown = true
+                VictoryCertificatePopup(this, gameInfo, playerCiv).open()
             }
         }
 

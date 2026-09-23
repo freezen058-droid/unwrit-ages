@@ -200,7 +200,7 @@ class WorldScreen(
         stage.addActor(tutorialProgressButton)
         tutorialProgressButton.onClick {
             val popup = Popup(this)
-            popup.add(AutoScrollPane(TutorialTaskBoard.build(gameInfo.ruleset, stage.width * 0.7f)))
+            popup.add(AutoScrollPane(TutorialTaskBoard.build(gameInfo.ruleset, gameInfo.tutorialTasksCompleted, stage.width * 0.7f)))
                 .maxHeight(stage.height * 0.7f).maxWidth(stage.width * 0.75f).row()
             popup.addCloseButton()
             popup.open(true)
@@ -508,9 +508,9 @@ class WorldScreen(
     }
 
     private fun getCurrentTutorialTask(): Event? {
-        if (!game.settings.tutorialTasksCompleted.contains("Create a trade route")) {
+        if (!gameInfo.tutorialTasksCompleted.contains("Create a trade route")) {
             if (viewingCiv.cache.citiesConnectedToCapitalToMediums.any { it.key.civ == viewingCiv })
-                game.settings.addCompletedTutorialTask("Create a trade route")
+                game.settings.addCompletedTutorialTask("Create a trade route", gameInfo)
         }
         val stateForConditionals = viewingCiv.state
         return gameInfo.ruleset.events.values.firstOrNull {
@@ -554,7 +554,7 @@ class WorldScreen(
             // The button outlives the hint - it is the way in once the chain is finished.
             positionTutorialProgressButton()
         }
-        if (!game.settings.showTutorials || viewingCiv.isDefeated()) return setInvisible()
+        if (!game.settings.showTutorials || !gameInfo.isTutorialGame || viewingCiv.isDefeated()) return setInvisible()
         val tutorialTask = getCurrentTutorialTask() ?: return setInvisible()
 
         if (!UncivGame.Current.isTutorialTaskCollapsed) {
@@ -592,7 +592,7 @@ class WorldScreen(
 
     /** Park the progress button under the hint, or where the hint would have been. */
     private fun positionTutorialProgressButton() {
-        tutorialProgressButton.isVisible = game.settings.showTutorials && !viewingCiv.isDefeated()
+        tutorialProgressButton.isVisible = game.settings.showTutorials && gameInfo.isTutorialGame && !viewingCiv.isDefeated()
         if (!tutorialProgressButton.isVisible) return
         val below = if (tutorialTaskTable.isVisible) tutorialTaskTable.y
             else topBar.getYForTutorialTask()

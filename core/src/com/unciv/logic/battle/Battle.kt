@@ -720,7 +720,7 @@ object Battle {
         } else automateCityConquer(attackerCiv, city)
 
         if (attackerCiv.isCurrentPlayer())
-            UncivGame.Current.settings.addCompletedTutorialTask("Conquer a city")
+            UncivGame.Current.settings.addCompletedTutorialTask("Conquer a city", attackerCiv.gameInfo)
 
         for (unique in attackerCiv.getTriggeredUniques(UniqueType.TriggerUponConqueringCity, gameContext)
                 + attacker.unit.getTriggeredUniques(UniqueType.TriggerUponConqueringCity, gameContext))

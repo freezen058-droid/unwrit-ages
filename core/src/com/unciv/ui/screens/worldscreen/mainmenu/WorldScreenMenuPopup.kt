@@ -55,7 +55,7 @@ class WorldScreenMenuPopup(
         // for, is exactly what a player wants while playing.
         addButton("Guide", KeyboardBinding.None) {
             close()
-            TutorialGuidePopup(worldScreen.stage, worldScreen.gameInfo.ruleset).open(true)
+            TutorialGuidePopup(worldScreen.stage, worldScreen.gameInfo.ruleset, gameInfo = worldScreen.gameInfo).open(true)
         }.nextColumn()
         if (showSave)
             addButton("Save game", KeyboardBinding.SaveGame) {

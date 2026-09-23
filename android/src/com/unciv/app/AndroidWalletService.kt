@@ -66,16 +66,17 @@ import java.security.SecureRandom
 class AndroidWalletService(private val activity: Activity) : PlatformWalletService {
 
     companion object {
-        // TODO mainnet cutover: this is NOT just a matter of changing RPC_ENDPOINT. A security
-        // audit found that MobileWalletAdapter's own `blockchain`/`rpcCluster` fields are a
-        // SEPARATE setting from RPC_ENDPOINT (they control which cluster the wallet app itself
-        // authorizes/signs against) and default to devnet regardless of what RPC_ENDPOINT points
-        // at - see the `walletAdapter` property below, which sets both together from IS_MAINNET
-        // specifically so they can never drift apart. Flip IS_MAINNET, not just RPC_ENDPOINT, and
-        // switch to a paid RPC provider (Helius/QuickNode/Triton/etc) - the public mainnet endpoint
-        // rate-limits aggressively and isn't meant for production traffic.
-        private const val IS_MAINNET = false
-        private val RPC_ENDPOINT = if (IS_MAINNET) "https://api.mainnet-beta.solana.com" else "https://api.devnet.solana.com"
+        // Mainnet. MobileWalletAdapter's own `blockchain`/`rpcCluster` (which cluster the wallet
+        // app authorizes and signs against) are a separate setting from RPC_ENDPOINT and default to
+        // devnet whatever RPC_ENDPOINT says - the `walletAdapter` property below sets both from
+        // IS_MAINNET so they cannot drift apart. The 1.0.0 release candidate shipped with this
+        // still false: certificates minted on devnet, the fee went nowhere, and the SKR save
+        // record could not work at all (SKR has no devnet mint).
+        private const val IS_MAINNET = true
+        // Not a provider URL: the site's /rpc function forwards to Helius with the API key held as
+        // a Pages secret, so no key is inside the APK (see functions/rpc.js). The public mainnet
+        // endpoint rate-limits hard and is not meant for production traffic.
+        private val RPC_ENDPOINT = if (IS_MAINNET) "https://unwritages.pages.dev/rpc" else "https://api.devnet.solana.com"
         private const val MEMO_PROGRAM_ID = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"
         private const val BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 
@@ -465,6 +466,9 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
     override val isAvailable: Boolean = true
 
     override val certificateFeeUsdCents = CERTIFICATE_FEE_USD_CENTS.toInt()
+
+    override fun explorerUrl(address: String) =
+        "https://explorer.solana.com/address/$address" + (if (IS_MAINNET) "" else "?cluster=devnet")
 
     override val connectedAddress: String?
         get() = _connectedAddress

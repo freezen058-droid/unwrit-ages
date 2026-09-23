@@ -90,25 +90,16 @@ class LanguageSelectBox(
          * community project and wrong for a published game: a player opening the language list
          * should be choosing, not auditing.
          *
-         * Ten, not the fourteen that were here before. The cut was not about how complete the
-         * translations are - upstream's are done and cost us nothing - but about the strings
-         * *this fork* adds, the wallet and certificate ones above all. A fee disclosure showing
-         * in English inside a Turkish interface is worse than not offering Turkish. Every
-         * language below is one we keep our own strings current in; percentages measured
-         * 2026-09-21, and the one key missing everywhere is ConditionalsOrder, a sorting
-         * sentinel that is empty in French too.
+         * Three: English and both Chinese scripts. Every other translation needs this fork's own
+         * strings - the wallet, the certificate, the guide - kept current as they change, and a
+         * fee or a hint showing in English inside a French interface is worse than not offering
+         * French. The launch supports three well rather than ten partly; more can come back one
+         * at a time, each with its strings finished. (Was fourteen, then ten.)
          */
         val SHIPPED_LANGUAGES = setOf(
             Constants.english,
-            "Simplified_Chinese",       // 100%
-            "Traditional_Chinese",      // 100%
-            "French",                   // 99.9%
-            "Brazilian_Portuguese",     // 99.9%
-            "Russian",                  // 99.8%
-            "Spanish",                  // 99.7%
-            "Polish",                   // 99.2%
-            "German",                   // 97.9%
-            "Japanese",                 // 97.0%
+            "Simplified_Chinese",
+            "Traditional_Chinese",
         )
     }
 }

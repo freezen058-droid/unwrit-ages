@@ -185,7 +185,8 @@ internal class DisplayTab(
                 "Reset"
             ) {
                 settings.tutorialsShown.clear()
-                settings.tutorialTasksCompleted.clear()
+                // The step-by-step progress lives in the game, and only the one being played resets
+                GUI.getWorldScreenIfActive()?.gameInfo?.tutorialTasksCompleted?.clear()
                 resetTutorialsButton.setText("Done!".tr())
                 resetTutorialsButton.clearListeners()
             }.open(true)

@@ -8,8 +8,11 @@ file is its source.
 ## We collect no personal information
 
 At all, in any way. Unwrit Ages has no account system, no analytics, and no advertising or
-tracking SDKs. We operate no server that receives anything about you, and there is nothing to
-opt out of because there is no collection to begin with.
+tracking SDKs, and there is nothing to opt out of because there is no collection to begin with.
+When you use a Solana feature, the game's blockchain requests pass through a relay at
+unwritages.pages.dev/rpc (Cloudflare), which forwards them to Helius and keeps no logs. A signed
+transaction contains your public address, as every Solana transaction does. The full policy is at
+https://unwritages.pages.dev/privacy.html.
 
 ## Your saved games
 

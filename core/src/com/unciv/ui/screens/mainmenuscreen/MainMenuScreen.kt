@@ -170,7 +170,7 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
             })
 
             add(getMenuButton("Guide", "OtherIcons/Quickstart", KeyboardBinding.None) {
-                TutorialGuidePopup(stage, getCivilopediaRuleset()) { startTutorialGame() }.open(true)
+                TutorialGuidePopup(stage, getCivilopediaRuleset(), startTutorialGame = { startTutorialGame() }).open(true)
             })
 
             add(getMenuButton("Wallet", "OtherIcons/Settings", KeyboardBinding.None) {
@@ -348,7 +348,6 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
         val settings = game.settings
         settings.showTutorials = true
         settings.tutorialsShown.clear()
-        settings.tutorialTasksCompleted.clear()
         settings.save()
 
         ToastPopup(Constants.working, this)
@@ -379,6 +378,8 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
                     reseed()
                 }
                 newGame = GameStarter.startNewGame(setup)
+                // The step-by-step tasks, and their progress, belong to this game alone.
+                newGame.isTutorialGame = true
             } catch (notAPlayer: UncivShowableException) {
                 val (message) = LoadGameScreen.getLoadExceptionMessage(notAPlayer)
                 launchOnGLThread { ToastPopup(message, this@MainMenuScreen) }

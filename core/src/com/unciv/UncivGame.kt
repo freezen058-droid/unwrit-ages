@@ -13,6 +13,7 @@ import com.unciv.models.ruleset.RulesetCache
 import com.unciv.models.skins.SkinCache
 import com.unciv.models.tilesets.TileSetCache
 import com.unciv.models.translations.Translations
+import com.unciv.ui.components.widgets.LanguageSelectBox
 import com.unciv.ui.audio.MusicController
 import com.unciv.ui.audio.MusicMood
 import com.unciv.ui.audio.MusicTrackChooserFlags
@@ -111,6 +112,12 @@ open class UncivGame(val isConsoleMode: Boolean = false) : Game(), PlatformSpeci
          * - Font (hence Fonts.resetFont() inside setSkin())
          */
         settings = files.getGeneralSettings() // needed for the screen
+        // A language that is no longer shipped has no file to read, so the text would fall back to
+        // English while numbers and dates kept that language's formatting - English, then.
+        if (settings.language !in LanguageSelectBox.SHIPPED_LANGUAGES) {
+            settings.language = Constants.english
+            settings.updateLocaleFromLanguage()
+        }
         Display.setScreenMode(settings.screenMode, settings)
         setAsRootScreen(GameStartScreen())  // NOT dependent on any atlas or skin
         InputDisabling.disableInput() // We just set the game start screen, avoid ANRs until we actually load the main menu

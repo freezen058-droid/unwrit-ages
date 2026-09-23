@@ -5,6 +5,7 @@ import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.utils.Align
 import com.unciv.Constants
+import com.unciv.logic.GameInfo
 import com.unciv.models.ruleset.Ruleset
 import com.unciv.ui.components.extensions.addSeparator
 import com.unciv.ui.components.extensions.center
@@ -32,7 +33,10 @@ class TutorialGuidePopup(
     stageToShowOn: Stage,
     private val ruleset: Ruleset,
     /** Starts the teaching game. Null where there is no menu to start one from. */
-    private val startTutorialGame: (() -> Unit)? = null
+    private val startTutorialGame: (() -> Unit)? = null,
+    /** The game being played, if any. Its step-by-step progress gets a tab, but only in the
+     *  teaching game - no other game has any, and an empty checklist would read as a promise. */
+    private val gameInfo: GameInfo? = null
 ) : Popup(stageToShowOn, scrollable = Scrollability.None) {
 
     private companion object {
@@ -83,10 +87,15 @@ class TutorialGuidePopup(
 
         // Last tab: the whole list with what is done and what each undone one is waiting for.
         // The chapters say how the game works; this says where the player is in learning it.
-        tabs.addPage("Your progress", TutorialTaskBoard.build(ruleset, tabMaxWidth),
-            ImageGetter.getImage("OtherIcons/Quickstart"), 24f)
+        val game = gameInfo
+        if (game != null && game.isTutorialGame)
+            tabs.addPage("Your progress", TutorialTaskBoard.build(ruleset, game.tutorialTasksCompleted, tabMaxWidth),
+                ImageGetter.getImage("OtherIcons/Quickstart"), 24f)
 
         tabs.decorateHeader(getCloseButton { close() })
+        // A TabbedPager opens with no page selected, which showed as an empty box under the tabs
+        // until the player happened to tap one.
+        tabs.selectPage(0)
 
         pack()
         center(stageToShowOn)

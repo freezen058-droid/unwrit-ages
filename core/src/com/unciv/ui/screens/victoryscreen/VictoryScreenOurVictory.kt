@@ -3,20 +3,13 @@ package com.unciv.ui.screens.victoryscreen
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.utils.Align
-import com.unciv.Constants
-import com.unciv.logic.chain.ChainWallet
 import com.unciv.logic.chain.VictoryCertificateService
 import com.unciv.logic.civilization.Civilization
 import com.unciv.models.ruleset.Victory
-import com.unciv.models.translations.tr
 import com.unciv.ui.components.widgets.TabbedPager
 import com.unciv.ui.components.extensions.addSeparator
 import com.unciv.ui.components.extensions.equalizeColumns
-import com.unciv.ui.components.extensions.disable
-import com.unciv.ui.components.extensions.enable
 import com.unciv.ui.components.extensions.toLabel
-import com.unciv.ui.components.extensions.toTextButton
-import com.unciv.ui.components.input.onClick
 import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.screens.worldscreen.WorldScreen
 
@@ -50,67 +43,15 @@ class VictoryScreenOurVictory(
         addCertificateRow(worldScreen, victoriesToShow.size)
     }
 
-    /**
-     * The certificate offer, at the one moment it means something.
-     *
-     * Deliberately the last row and nothing more than a button: winning is the emotional peak of a
-     * game that took hours, and the worst thing to put there is a sales pitch. It is absent unless
-     * this player actually won and a wallet is available, so a player who never touches the chain
-     * never sees it.
-     */
-    private companion object {
-        /** Said only when an upload is already paid for, because it changes what a retry costs. */
-        const val RETRY_HINT = "\nThe world is stored - retrying only mints."
-    }
-
+    /** The certificate offer, kept here as well as in the popup that opens on winning, for a
+     *  player who closed that popup and came back. Absent unless this player won and a wallet is
+     *  available, so a player who never touches the chain never sees it. */
     private fun addCertificateRow(worldScreen: WorldScreen, columns: Int) {
         val gameInfo = worldScreen.gameInfo
         val civ = worldScreen.selectedGameView.civView.getCiv()
         if (!VictoryCertificateService.isAvailable(gameInfo, civ)) return
-
-        val status = "".toLabel()
-        val button = "Mint victory certificate".toTextButton()
-        button.onClick {
-            button.disable()
-            // The service connects a wallet first if there is none, so say which of the two is
-            // happening - "Preparing certificate" while a wallet dialog is coming up is a lie.
-            // .tr() on every one of these: a Label only translates the text it was built with, and
-            // these arrive later, from the platform, as the mint moves through its stages.
-            status.setText(
-                (if (ChainWallet.isConnected) "Preparing certificate..."
-                else "Waiting for your wallet...").tr()
-            )
-            VictoryCertificateService.mint(
-                gameInfo, civ,
-                imageUri = "",
-                onProgress = { status.setText(it.tr()) },
-                onSuccess = { status.setText("Certificate minted: [$it]".tr()) },
-                onError = {
-                    // The upload may already be paid for; say so, because it changes what a retry costs.
-                    val paid = VictoryCertificateService.alreadyMintedUpload(gameInfo) != null
-                    status.setText(
-                        (it.localizedMessage ?: "Could not mint the certificate") +
-                            (if (paid) RETRY_HINT else "")
-                    )
-                    button.enable()
-                }
-            )
-        }
-
         row()
-        val cell = Table()
-        cell.add(button).padBottom(6f).row()
-        // The price, before the button is pressed - not in a confirmation afterwards. A fee a
-        // player only learns about once a wallet dialog is already open is a fee they were not
-        // asked about.
-        val feeCents = ChainWallet.service.certificateFeeUsdCents
-        if (feeCents > 0) {
-            val price = "US$" + "%.2f".format(feeCents / 100.0)
-            cell.add("A [$price] fee goes towards the game's development, on top of the network's own cost."
-                .toLabel(fontSize = Constants.defaultFontSize - 4)).padBottom(6f).row()
-        }
-        cell.add(status).row()
-        add(cell).colspan(maxOf(1, columns)).padTop(16f)
+        add(VictoryCertificateOffer(gameInfo, civ)).colspan(maxOf(1, columns)).padTop(16f)
     }
 
     private fun getColumn(victory: Victory, playerCiv: Civilization): Table {

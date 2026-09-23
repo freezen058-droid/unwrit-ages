@@ -136,7 +136,7 @@ object UniqueTriggerActivation {
             }
 
             UniqueType.MarkTutorialComplete -> return {
-                UncivGame.Current.settings.addCompletedTutorialTask(unique.params[0])
+                UncivGame.Current.settings.addCompletedTutorialTask(unique.params[0], civInfo.gameInfo)
                 true
             }
 

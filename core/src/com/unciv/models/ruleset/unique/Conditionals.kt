@@ -119,8 +119,12 @@ object Conditionals {
             UniqueType.ConditionalEveryTurns -> checkOnGameInfo { turns % conditional.params[0].toInt() == 0 }
             UniqueType.ConditionalBeforeTurns -> checkOnGameInfo { turns < conditional.params[0].toInt() }
             UniqueType.ConditionalAfterTurns -> checkOnGameInfo { turns >= conditional.params[0].toInt() }
-            UniqueType.ConditionalTutorialsEnabled -> UncivGame.Current.settings.showTutorials
-            UniqueType.ConditionalTutorialCompleted -> conditional.params[0] in UncivGame.Current.settings.tutorialTasksCompleted
+            // Only the step-by-step tasks use these, and those belong to the teaching game alone,
+            // with progress kept per game - see GameInfo.isTutorialGame / tutorialTasksCompleted.
+            UniqueType.ConditionalTutorialsEnabled ->
+                UncivGame.Current.settings.showTutorials && checkOnGameInfo { isTutorialGame }
+            UniqueType.ConditionalTutorialCompleted ->
+                checkOnGameInfo { conditional.params[0] in tutorialTasksCompleted }
 
             UniqueType.ConditionalCivFilter -> checkOnCiv { matchesFilter(conditional.params[0], state) }
             UniqueType.ConditionalWar -> checkOnCiv { isAtWar() }

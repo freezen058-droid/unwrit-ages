@@ -125,6 +125,23 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
      *  Empty for any game started before this existed; nothing in an old save can rebuild it. */
     var chronicle = Chronicle()
 
+    /** The step-by-step tasks this game has completed. Per game, not in the settings: kept there,
+     *  one game's progress showed up in every other - a fresh game opened with "Found your city"
+     *  already ticked, and starting the teaching game wiped the progress of an older one. */
+    var tutorialTasksCompleted = HashSet<String>()
+
+    /** Only the teaching game started from the guide shows the step-by-step tasks; an ordinary
+     *  new game is not a lesson and should not open like one. */
+    var isTutorialGame = false
+
+    /** Whether the victory certificate has been offered in a popup yet - it opens once, as the
+     *  game is won, not every time the victory screen is looked at again. */
+    var certificateOfferShown = false
+
+    /** The minted certificate's address, once there is one - so the offer shows it instead of
+     *  a second mint button that would charge again for the same victory. */
+    var certificateAddress: String? = null
+
     /** Maps a civ to the civ they voted for - `null` on the value side means they abstained */
     var diplomaticVictoryVotesCast = HashMap<String, String?>()
     // Set to false whenever the results still need te be processed
@@ -219,6 +236,10 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
         toReturn.customSaveLocation = customSaveLocation
         toReturn.victoryData = victoryData?.copy()
         toReturn.chronicle = chronicle.copy()
+        toReturn.tutorialTasksCompleted.addAll(tutorialTasksCompleted)
+        toReturn.isTutorialGame = isTutorialGame
+        toReturn.certificateOfferShown = certificateOfferShown
+        toReturn.certificateAddress = certificateAddress
         toReturn.historyStartTurn = historyStartTurn
         toReturn.lastUnitId = lastUnitId
         toReturn.unitNamesTaken.addAll(unitNamesTaken)

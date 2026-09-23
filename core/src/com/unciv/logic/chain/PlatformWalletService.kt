@@ -22,6 +22,10 @@ interface PlatformWalletService {
      */
     val certificateFeeUsdCents: Int get() = 0
 
+    /** A block-explorer page for [address] on the cluster this service talks to, or null where
+     *  there is none - so a minted certificate can be looked at, not just named. */
+    fun explorerUrl(address: String): String? = null
+
     fun connect(
         onConnected: (address: String) -> Unit,
         onError: (Exception) -> Unit = {}
