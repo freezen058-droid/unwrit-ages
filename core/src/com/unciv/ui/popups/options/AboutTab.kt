@@ -26,7 +26,7 @@ internal class AboutTab(
                 yield(FormattedLine("{Version}: ${UncivGame.VERSION.toNiceString()}"))
                 yield(FormattedLine())
                 yield(FormattedLine("Unwrit Ages is a fork of Unciv ${UncivGame.UPSTREAM_VERSION} by Yair Morgenstern and contributors, licensed under MPL-2.0."))
-                yield(FormattedLine("Unciv", link = "https://github.com/yairm210/Unciv"))
+                // The link to upstream lives on the licence page linked below (user, 09-24).
                 // CC BY-SA 3.0 asks for attribution and for modifications to be marked, and it
                 // asks it of whoever receives the work - which means the person holding the app,
                 // not only someone reading NOTICE.md in the repository. The bulk recolour pass
@@ -35,7 +35,7 @@ internal class AboutTab(
                 // MPL-2.0 3.2: recipients of a binary must be told how to obtain the Source Code
                 // Form of the Covered Files it modifies. The licence page says how (by email, on
                 // request), so this line must stay even though the archive is no longer a download.
-                yield(FormattedLine("Licence & source code", link = Constants.licenceUrl))
+                yield(FormattedLine("Licence", link = Constants.licenceUrl))
                 yield(FormattedLine())
                 // The dApp Store developer agreement requires the privacy policy to be reachable
                 // from inside the app, so an empty value is announced rather than hidden.
