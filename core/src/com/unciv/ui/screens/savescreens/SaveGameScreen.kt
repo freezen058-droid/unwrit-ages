@@ -58,14 +58,8 @@ class SaveGameScreen(private val gameInfo: GameInfo) : LoadOrSaveScreen("Current
     private fun Table.initRightSideTable() {
         addGameNameField()
 
-        val copyJsonButton = "Copy to clipboard".toTextButton()
-        copyJsonButton.onActivation(::copyToClipboardHandler)
-        val ctrlC = KeyCharAndCode.ctrl('c')
-        copyJsonButton.keyShortcuts.add(ctrlC)
-        copyJsonButton.addTooltip(ctrlC)
-        add(copyJsonButton).row()
-
-        addSaveToCustomLocation()
+        // No "Copy to clipboard" or "Save to custom location": this fork can't load a game from
+        // either (LoadGameScreen), so a save made there could never come back (user, 09-24). Code kept.
         add(errorLabel).width(stage.width / 2).center().row()
         row() // For uniformity with LoadScreen which has a load missing mods button here
         add(deleteSaveButton).row()

@@ -16,7 +16,6 @@ import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.input.onClick
 import com.unciv.ui.components.widgets.AutoScrollPane
 import com.unciv.ui.images.IconTextButton
-import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.popups.ToastPopup
 import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.utils.Log
@@ -139,10 +138,6 @@ class CrashScreen(val exception: Throwable) : BaseScreen() {
             .maxHeight(stage.height * 0.5f)
             .minHeight(stage.height * 0.2f)
             .row()
-        layoutTable.add(makeInstructionLabel())
-            .padTop(15f)
-            .width(stage.width)
-            .row()
         layoutTable.add(makeActionButtonsTable())
             .padTop(10f)
         return layoutTable
@@ -150,7 +145,7 @@ class CrashScreen(val exception: Throwable) : BaseScreen() {
 
     /** @return Label for title at top of screen. */
     private fun makeTitleLabel() =
-        "An unrecoverable error has occurred in Unciv:".toLabel(fontSize = Constants.headingFontSize)
+        "An unrecoverable error has occurred in Unwrit Ages:".toLabel(fontSize = Constants.headingFontSize)
             .apply {
                 wrap = true
                 setAlignment(Align.center)
@@ -167,14 +162,6 @@ class CrashScreen(val exception: Throwable) : BaseScreen() {
         return AutoScrollPane(errorTable)
             .addBorder(4f, Color.DARK_GRAY)
     }
-
-    /** @return Label to give the user more information and context below the error report. */
-    private fun makeInstructionLabel() =
-        "{If this keeps happening, you can try disabling mods.}\n{You can also report this on the issue tracker.}".toLabel()
-            .apply {
-                wrap = true
-                setAlignment(Align.center)
-            }
 
     /** @return Table that displays decision buttons for the bottom of the screen. */
     private fun makeActionButtonsTable(): Table {
@@ -195,33 +182,15 @@ class CrashScreen(val exception: Throwable) : BaseScreen() {
                     )
                 }
             }
-        val reportButton = IconTextButton("Open Issue Tracker", ImageGetter.getImage("OtherIcons/Link"),
-            Constants.headingFontSize
-        )
-            .onClick {
-                if (copied) {
-                    Gdx.net.openURI("${Constants.uncivRepoURL}issues")
-                } else {
-                    ToastPopup(
-                        "Please copy the error report first.",
-                        this@CrashScreen
-                    )
-                }
-            }
-        val closeButton = IconTextButton("Close Unciv", fontSize = Constants.headingFontSize)
+        val closeButton = IconTextButton("Close Unwrit Ages", fontSize = Constants.headingFontSize)
             .onClick { Gdx.app.exit() }
 
+        // Upstream had an "Open Issue Tracker" button here and a line pointing to it. This fork
+        // names no contact on this screen: it is not upstream's to receive, and we don't offer
+        // one in the game (user, 09-24). Copy stays - the report is the player's own.
         val buttonsTable = Table()
         buttonsTable.add(copyButton)
             .pad(10f)
-        buttonsTable.add(reportButton)
-            .pad(10f)
-            .also {
-                if (isCrampedPortrait()) {
-                    it.row()
-                    buttonsTable.add()
-                }
-            }
         buttonsTable.add(closeButton)
             .pad(10f)
 

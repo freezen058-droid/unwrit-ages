@@ -76,11 +76,11 @@ class LoadGameScreen : LoadOrSaveScreen() {
     }
 
     private fun Table.initRightSideTable() {
-        add(getLoadFromClipboardButton()).row()
-        addLoadFromCustomLocationButton()
+        // No "Load copied data", "Load from custom location" or "Copy saved game to clipboard":
+        // a game may only be loaded from this app's own saves, so nobody can start from another
+        // player's near-won game and claim its victory certificate (user, 09-24). Code kept.
         add(errorLabel).width(stage.width / 2).center().row()
         add(deleteSaveButton).row()
-        add(copySavedGameToClipboardButton).row()
         add(showAutosavesCheckbox).row()
     }
 
@@ -213,9 +213,6 @@ class LoadGameScreen : LoadOrSaveScreen() {
         if (!isUserFixable) {
             val cantLoadGamePopup = Popup(this@LoadGameScreen)
             cantLoadGamePopup.addGoodSizedLabel("It looks like your saved game can't be loaded!").row()
-            cantLoadGamePopup.addGoodSizedLabel("If you could copy your game data (\"Copy saved game to clipboard\" - ").row()
-            cantLoadGamePopup.addGoodSizedLabel("  paste into an email to yairm210@hotmail.com)").row()
-            cantLoadGamePopup.addGoodSizedLabel("I could maybe help you figure out what went wrong, since this isn't supposed to happen!").row()
             cantLoadGamePopup.addCloseButton()
             cantLoadGamePopup.open()
         }

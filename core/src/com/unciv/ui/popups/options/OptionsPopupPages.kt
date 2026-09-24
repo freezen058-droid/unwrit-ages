@@ -1,10 +1,8 @@
 package com.unciv.ui.popups.options
 
-import com.badlogic.gdx.Gdx
 import com.unciv.GUI
 import com.unciv.models.metadata.BaseRuleset
 import com.unciv.models.ruleset.RulesetCache
-import com.unciv.ui.components.extensions.areSecretKeysPressed
 import com.unciv.ui.images.ImageGetter
 
 enum class OptionsPopupPages(
@@ -31,10 +29,13 @@ enum class OptionsPopupPages(
     ModCheck("Locate mod errors", "OtherIcons/Mods", { ModCheckTab(this) }) {
         override fun visible(withDebug: Boolean) = RulesetCache.size > BaseRuleset.entries.size
     },
+    // Upstream opens this on a long press of Options. It has god mode, "Unlock all techs" and a
+    // load-from-clipboard button - a victory from any of them would still be offered a
+    // certificate, so the tab is never shown in this fork (09-24). Code kept.
     Debug("Debug", "OtherIcons/SecretOptions", { DebugTab(this) }) {
-        override fun visible(withDebug: Boolean) = withDebug || Gdx.input.areSecretKeysPressed()
+        override fun visible(withDebug: Boolean) = false
     },
-    About("About", "Icons/Unciv128.png", { AboutTab(this) }),
+    About("About", "Icons/UnwritAges128.png", { AboutTab(this) }),
     ;
 
     internal open fun visible(withDebug: Boolean) = true
