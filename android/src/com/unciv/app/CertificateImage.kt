@@ -102,7 +102,7 @@ class CertificateImage(private val assets: AssetManager) {
     }
 
     /** A fact too wide for the face wraps at spaces; titles shrink instead (see [fitted]). */
-    private fun wrap(line: VictoryCertificate.InscriptionLine, width: Float): List<VictoryCertificate.InscriptionLine> {
+    private fun wrap(line: VictoryCertificate.InscriptionLine, width: Float, styles: Map<String, Style>): List<VictoryCertificate.InscriptionLine> {
         val style = styles[line.style] ?: return listOf(line)
         if (line.style != "fact") return listOf(line)
         val paint = paintFor(style, style.size)
@@ -120,17 +120,29 @@ class CertificateImage(private val assets: AssetManager) {
 
     private fun drawInscription(canvas: Canvas, allLines: List<VictoryCertificate.InscriptionLine>) {
         val width = PANEL.width() - 20f
-        val lines = allLines.flatMap { wrap(it, width) }
         val cx = PANEL.centerX()
         class Placed(val line: VictoryCertificate.InscriptionLine, val style: Style, val paint: Paint?, val height: Float)
-        val placed = lines.mapNotNull { line ->
-            val style = styles[line.style] ?: return@mapNotNull null
-            if (line.style == "rule") Placed(line, style, null, 12f)
-            else fitted(line.text, style, width).let { Placed(line, style, it, it.textSize) }
-        }
         val markStyle = styles.getValue("mark")
         val markPaint = fitted(MARK, markStyle, width)
-        val block = placed.sumOf { (it.height + it.style.after).toDouble() }.toFloat()
+        val room = PANEL.height() - markPaint.textSize - 20f
+        fun layout(factSize: Float): List<Placed> {
+            val sized = styles + ("fact" to styles.getValue("fact").let { Style(it.typeface, it.weight, factSize, it.gold, it.after) })
+            return allLines.flatMap { wrap(it, width, sized) }.mapNotNull { line ->
+                val style = sized[line.style] ?: return@mapNotNull null
+                if (line.style == "rule") Placed(line, style, null, 12f)
+                else fitted(line.text, style, width).let { Placed(line, style, it, it.textSize) }
+            }
+        }
+        fun height(placed: List<Placed>) = placed.sumOf { (it.height + it.style.after).toDouble() }.toFloat()
+        // A busy game - seven rivals, three eliminated, AutoPlay - has more lines than the tablet
+        // holds at full size: the facts shrink a point at a time until the block clears the mark.
+        var factSize = styles.getValue("fact").size
+        var placed = layout(factSize)
+        while (height(placed) > room && factSize > 14f) {
+            factSize -= 1f
+            placed = layout(factSize)
+        }
+        val block = height(placed)
         // Top of each line's em box, like PIL's text origin, so the vertical rhythm matches stele.py.
         var y = PANEL.top + (PANEL.height() - markPaint.textSize - 20f - block) / 2
         for (p in placed) {
