@@ -155,6 +155,8 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
         // hand meant one of the two cases was always lopsided - a hardcoded 3+3 became 4+3 the
         // moment a save existed, and moving Quickstart out of the list would have made the fresh
         // install 2+3 instead, which is the case a new player and a store reviewer see first.
+        lateinit var guideButton: Table
+        lateinit var walletButton: Table
         val menuButtons = buildList {
             if (game.files.autosaves.autosaveExists())
                 add(getMenuButton("Resume", "OtherIcons/Resume", KeyboardBinding.Resume) { resumeGame() })
@@ -171,11 +173,11 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
 
             add(getMenuButton("Guide", "OtherIcons/Quickstart", KeyboardBinding.None) {
                 TutorialGuidePopup(stage, getCivilopediaRuleset(), startTutorialGame = { startTutorialGame() }).open(true)
-            })
+            }.also { guideButton = it })
 
             add(getMenuButton("Wallet", "OtherIcons/Settings", KeyboardBinding.None) {
                 WalletPopup(stage, game.settings).open(true)
-            })
+            }.also { walletButton = it })
 
             add(getMenuButton("Options", "OtherIcons/Options", KeyboardBinding.MainMenuOptions) {
                 openOptionsPopup()
@@ -244,6 +246,24 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
             popup.open()
         }
         stage.addActor(versionTable)
+
+        if (!game.settings.mainMenuTourShown) startTour(guideButton, walletButton)
+    }
+
+    /** Shown once, on the first main menu after install; see [MainMenuTour]. Started after a short
+     *  delay because the buttons have no stage position until the menu has been laid out. */
+    private fun startTour(guideButton: Table, walletButton: Table) {
+        stage.addAction(Actions.delay(0.4f, Actions.run {
+            MainMenuTour(stage, listOf(
+                MainMenuTour.Step(guideButton,
+                    "New here? The Guide teaches the game in six short chapters, with a starter game to learn in."),
+                MainMenuTour.Step(walletButton,
+                    "Connect a Solana wallet here to record saves on-chain and mint victory certificates. It's optional - the whole game plays without it."),
+            )) {
+                game.settings.mainMenuTourShown = true
+                game.settings.save()
+            }.show()
+        }))
     }
 
     private fun startBackgroundMapGeneration() {

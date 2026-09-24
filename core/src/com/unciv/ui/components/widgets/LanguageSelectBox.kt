@@ -1,5 +1,6 @@
 package com.unciv.ui.components.widgets
 
+import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.scenes.scene2d.ui.SelectBox
 import com.badlogic.gdx.scenes.scene2d.utils.BaseDrawable
 import com.unciv.Constants
@@ -23,13 +24,17 @@ import com.badlogic.gdx.scenes.scene2d.ui.List as GdxList
  *  Chinese scripts are each spoken across borders that picking one flag takes a side in.
  */
 class LanguageSelectBox(
+    /** A font to draw the box and its rows in instead of the skin's; see [LanguagePickerScreen]. */
+    font: BitmapFont? = null,
     private val onSelect: (String) -> Unit
-) : SelectBox<LanguageSelectBox.Choice>(fingerSizedStyle()) {
+) : SelectBox<LanguageSelectBox.Choice>(fingerSizedStyle(font)) {
 
     /** [language] is the key as the settings and the translation files spell it; what the player
-     *  reads is the same name with its underscores opened out. */
+     *  reads is the name in its own script, then in English, so that a player who reads only one
+     *  of them can still find it - on the first launch nothing has been translated yet. */
     class Choice(val language: String) {
-        override fun toString() = language.replace("_", " ")
+        override fun toString() = nativeNames[language]?.let { "$it — ${language.replace("_", " ")}" }
+            ?: language.replace("_", " ")
         // SelectBox.selected = needs these, or setting the selection by value does nothing.
         override fun equals(other: Any?) = other is Choice && language == other.language
         override fun hashCode() = language.hashCode()
@@ -69,9 +74,13 @@ class LanguageSelectBox(
          * every other dropdown in the game, and the default rows are about 42px, which is under
          * half of what a finger needs.
          */
-        private fun fingerSizedStyle(): SelectBoxStyle {
+        private fun fingerSizedStyle(font: BitmapFont?): SelectBoxStyle {
             val style = SelectBoxStyle(BaseScreen.skin.get(SelectBoxStyle::class.java))
             style.listStyle = GdxList.ListStyle(style.listStyle)
+            if (font != null) {
+                style.font = font
+                style.listStyle.font = font
+            }
             val selection = ImageGetter.getWhiteDotDrawable()
                 .tint(BaseScreen.skinStrings.skinConfig.baseColor)
             if (selection is BaseDrawable) {
@@ -96,6 +105,12 @@ class LanguageSelectBox(
          * French. The launch supports three well rather than ten partly; more can come back one
          * at a time, each with its strings finished. (Was fourteen, then ten.)
          */
+        /** The shipped languages that are not written in Latin letters, in their own script. */
+        private val nativeNames = mapOf(
+            "Simplified_Chinese" to "简体中文",
+            "Traditional_Chinese" to "繁體中文",
+        )
+
         val SHIPPED_LANGUAGES = setOf(
             Constants.english,
             "Simplified_Chinese",

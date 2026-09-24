@@ -200,6 +200,9 @@ class GameSettings {
     // Used by launcher to recognize a first-run
     var isFreshlyCreated = false
 
+    /** Whether the main menu has walked the player through its Guide and Wallet buttons (MainMenuTour) */
+    var mainMenuTourShown = false
+
     // Controlled from ModManagementScreen
     var visualMods = HashSet<String>()
 
