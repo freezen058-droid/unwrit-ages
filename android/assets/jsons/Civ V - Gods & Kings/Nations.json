@@ -500,8 +500,8 @@
 		"hateHello": "Oh, it's you.",
 		"tradeRequest": "Does this trade work for you, my friend?",
 
-        "outerColor": [54,72,72],
-        "innerColor": [246,205,137],
+        "outerColor": [89,62,182],
+        "innerColor": [255,255,255],
 
         "favoredReligion": "Christianity",
 		"uniqueName": "The Great Warpath",
@@ -685,8 +685,8 @@
 		"neutralHello": "Hello.",
 		"hateHello": "So what now?",
 		"tradeRequest": "I am not always this generous, but we hope you take this rare opportunity we give you.",
-		"outerColor": [81,0,9],
-		"innerColor": [255,120,0],
+		"outerColor": [255,255,255],
+		"innerColor": [0,102,178],
 		"favoredReligion": "Tengriism",
 		"uniqueName": "Mongol Terror",
 		"uniques": ["[+30]% Strength <vs [City-States]>", "[+1] Movement <for [Mounted] units>"],

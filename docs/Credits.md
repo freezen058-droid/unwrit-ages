@@ -633,7 +633,7 @@ HexaRealm tileset images by legacymtgsalvationuser69544 [here](https://github.co
 
 -   [Eye of Horus](https://thenounproject.com/icon/eye%20of%20horus-92471) By Lilit Kalachyan for Egypt
 -   [Russia](https://thenounproject.com/icon/russia-64137) By Eugen Belyakoff
--   [Dragon Head](https://github.com/ravignir/5Hex-Tileset/blob/master/Images/NationIcons/China.png) By Ravignir for China
+-   Dragon, drawn for Unwrit Ages, for China (replaces Ravignir's Dragon Head, CC BY-NC-SA)
 -   [Lamassu](https://thenounproject.com/icon/lamassu-118987/) By Jason Dilworth for Babylon
 -   [Omega](https://thenounproject.com/icon/omega-1925519) By icon 54 for Greece
 -   [Shield](https://thenounproject.com/icon/American%20shield-5825) By Nathan Driskell for America
@@ -649,15 +649,18 @@ HexaRealm tileset images by legacymtgsalvationuser69544 [here](https://github.co
 -   Two [Sword](https://www.flaticon.com/free-icon/sword_812259#term=scimitar&page=1&position=2) Scimitars by Those Icons for Persia
 -   [Swirl](https://thenounproject.com/icon/swirl-4040027/) by IronSV for Polynesia
 -   [Dharmachakra](https://thenounproject.com/icon/dharmachakra-740796) by Parkjisun for Siam
--   [Inca](https://github.com/ravignir/5Hex-Tileset/blob/master/Images/NationIcons/Inca.png) by Ravignir for Inca
+-   Sun of Inti, drawn for Unwrit Ages, for Inca (replaces Ravignir's Inca, CC BY-NC-SA)
+-   Longship, drawn for Unwrit Ages, for Denmark
+-   Soyombo, drawn for Unwrit Ages, for Mongolia
+-   Castle of Castile, drawn for Unwrit Ages, for Spain
 -   [Sun symbol black](https://en.wikiquote.org/wiki/File:Sun_symbol_black.svg) by Eddo for The Huns
 -   [Lion](https://thenounproject.com/icon/lion-76154) by Nikki Rodriguez for The Netherlands
 -   [Three Crowns](https://thenounproject.com/icon/three+crowns-1155972) by Daniel Falk for Sweden
 -   [Flag of Austria](https://thenounproject.com/term/flag-of-austria/3292053/) by Olena Panasovska, UA for Austria. The original work has been modified.
 -   [Elephant](https://thenounproject.com/term/elephant/564421/) by Hea Poh Lin for Carthage. The original work has been modified.
 -   [Orthodox Cross](https://thenounproject.com/icon/orthodox-2069822) by Avana Vana for Byzantium
--   [Iroquois](https://github.com/ravignir/5Hex-Tileset/blob/master/Images/NationIcons/Iroquois.png) by Ravignir for Iroquois
--   [Songhai](https://github.com/ravignir/5Hex-Tileset/blob/master/Images/NationIcons/Songhai.png) by Ravignir for Songhai
+-   Hiawatha Belt, from the Haudenosaunee flag, for Iroquois (replaces Ravignir's Iroquois, CC BY-NC-SA)
+-   Tomb of Askia, drawn for Unwrit Ages, for Songhai (replaces Ravignir's Songhai, CC BY-NC-SA)
 -   [Celtic Knot](https://thenounproject.com/term/celtic/168483/) by Ervin Bolat for the Celts
 -   Ethiopian Icon created in Gimp by Unciv team from the following:
     -   [Lion](https://thenounproject.com/term/lion/4074339/) by IronSV

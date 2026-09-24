@@ -65,13 +65,14 @@ art.
   (`OFL-Cinzel.txt` beside it).
 - `EBGaramond.ttf` — EB Garamond, © 2017 The EB Garamond Project Authors, SIL Open Font
   License 1.1 (`OFL-EBGaramond.txt` beside it).
-- `emblems/` — 27 of upstream Unciv's nation icons, copied unmodified so the platform code
-  can draw them outside the texture atlas. Only icons under licences that allow commercial use
-  with attribution (CC BY 3.0, Flaticon's free licence) are included, since certificates carry a
-  fee; each certificate names its emblem's author in its metadata
-  (`VictoryCertificate.EMBLEM_CREDITS`). Left out: China, Inca, Iroquois and Songhai (Ravignir's
-  5Hex-Tileset, CC BY-NC-SA 4.0 — non-commercial) and Denmark, Mongolia and Spain (no recorded
-  source); their certificates show the nation's colours without an icon.
+- `emblems/` — the nation icons, copied so the platform code can draw them outside the texture
+  atlas: 27 of upstream Unciv's, unmodified, under licences that allow commercial use with
+  attribution (CC BY 3.0, Flaticon's free licence), since certificates carry a fee; and seven
+  made for this project, which replace the in-game icons too - China's dragon, the Inca's sun of
+  Inti, Songhai's tomb of Askia, Denmark's longship, Mongolia's Soyombo and Spain's castle of
+  Castile, drawn here, and the Iroquois' Hiawatha Belt, the Haudenosaunee flag. They replace
+  Ravignir's CC BY-NC-SA icons (non-commercial) and three with no recorded source. Each
+  certificate names its emblem's author in its metadata (`VictoryCertificate.EMBLEM_CREDITS`).
 
 ## Trademark / IP boundaries
 

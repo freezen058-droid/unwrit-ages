@@ -451,8 +451,8 @@
 		"hateHello": "Oh, it's you.",
 		"tradeRequest": "Does this trade work for you, my friend?",
 
-        "outerColor": [54,72,72],
-        "innerColor": [246,205,137],
+        "outerColor": [89,62,182],
+        "innerColor": [255,255,255],
 
 		"uniqueName": "The Great Warpath",
 		"uniques": ["All units move through Forest and Jungle Tiles in friendly territory as if they have roads. These tiles can be used to establish City Connections upon researching the Wheel."],
@@ -618,8 +618,8 @@
 		"neutralHello": "Hello.",
 		"hateHello": "So what now?",
 		"tradeRequest": "I am not always this generous, but we hope you take this rare opportunity we give you.",
-		"outerColor": [81,0,9],
-		"innerColor": [255,120,0],
+		"outerColor": [255,255,255],
+		"innerColor": [0,102,178],
 		"uniqueName": "Mongol Terror",
 		"uniques": ["[+30]% Strength <vs [City-States]>", "[+1] Movement <for [Mounted] units>"],
 		"cities": ["Karakorum","Beshbalik","Turfan","Hsia","Old Sarai","New Sarai","Tabriz","Tiflis","Otrar","Sanchu","Kazan",
