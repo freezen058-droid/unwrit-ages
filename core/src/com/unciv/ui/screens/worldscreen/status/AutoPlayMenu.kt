@@ -45,6 +45,7 @@ class AutoPlayMenu(
         val endTurnFunction = {
             nextTurnButton.update()
             TurnManager(worldScreen.selectedGameView.civView.getCiv()).automateTurn()
+            worldScreen.gameInfo.autoPlayedTurns++  // before nextTurn() clones the game
             worldScreen.autoPlay.stopAutoPlay()
             worldScreen.nextTurn()
         }

@@ -138,6 +138,11 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
      *  game is won, not every time the victory screen is looked at again. */
     var certificateOfferShown = false
 
+    /** Turns the game's AI ended for the player - multi-turn AutoPlay and "AutoPlay End Turn",
+     *  not the "... Once" helpers, which end no turn. Counted rather than flagged so repeated
+     *  single-turn AutoPlay can't hide a whole game; the certificate states the number (user, 09-24). */
+    var autoPlayedTurns = 0
+
     /** The minted certificate's address, once there is one - so the offer shows it instead of
      *  a second mint button that would charge again for the same victory. */
     var certificateAddress: String? = null
@@ -239,6 +244,7 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
         toReturn.tutorialTasksCompleted.addAll(tutorialTasksCompleted)
         toReturn.isTutorialGame = isTutorialGame
         toReturn.certificateOfferShown = certificateOfferShown
+        toReturn.autoPlayedTurns = autoPlayedTurns
         toReturn.certificateAddress = certificateAddress
         toReturn.historyStartTurn = historyStartTurn
         toReturn.lastUnitId = lastUnitId

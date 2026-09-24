@@ -28,4 +28,19 @@ class CertificateMetadataTests {
         Assert.assertEquals(listOf(image, "https://arweave.net/_TzpZ6Hp9WuE7BvSpz-9UXHevLVO99yODNqGyrEh0LA"), uris)
         Assert.assertTrue(json["attributes"]!!.jsonArray.isNotEmpty())
     }
+
+    private fun traits(r: VictoryCertificate.Record) =
+        Json.parseToJsonElement(VictoryCertificate.metadataJson(r, "https://x/y", "")).jsonObject["attributes"]!!
+            .jsonArray.associate { it.jsonObject["trait_type"]!!.jsonPrimitive.content to it.jsonObject["value"]!!.jsonPrimitive.content }
+
+    @Test
+    fun autoPlayIsStatedOnlyWhenItRan() {
+        Assert.assertNull(traits(record)["AutoPlay"])
+        Assert.assertTrue(VictoryCertificate.inscription(record).none { it.text.startsWith("AutoPlay") })
+
+        val autoPlayed = record.copy(autoPlayedTurns = 37)
+        Assert.assertEquals("37 turns", traits(autoPlayed)["AutoPlay"])
+        Assert.assertEquals("AutoPlay: 37 turns", VictoryCertificate.inscription(autoPlayed).last().text)
+        Assert.assertEquals("AutoPlay: 1 turn", VictoryCertificate.inscription(record.copy(autoPlayedTurns = 1)).last().text)
+    }
 }

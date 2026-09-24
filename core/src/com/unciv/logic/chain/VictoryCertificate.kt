@@ -55,7 +55,9 @@ object VictoryCertificate {
         val emblemInner: List<Int>,
         /** Turn -> value, sampled. */
         val curves: Map<String, Map<Int, Int>>,
-        val chronicle: List<ChronicleEntry>
+        val chronicle: List<ChronicleEntry>,
+        /** Turns the game's AI played for the player ([GameInfo.autoPlayedTurns]); 0 = none. */
+        val autoPlayedTurns: Int = 0
     )
 
     fun record(gameInfo: GameInfo, winner: Civilization): Record {
@@ -87,7 +89,8 @@ object VictoryCertificate {
             curves = CURVES.associate { type ->
                 type.name to sample(winner.statsHistory.mapValues { it.value[type] ?: 0 })
             },
-            chronicle = gameInfo.chronicle.toList()
+            chronicle = gameInfo.chronicle.toList(),
+            autoPlayedTurns = gameInfo.autoPlayedTurns
         )
     }
 
@@ -159,6 +162,8 @@ object VictoryCertificate {
         // The game's settings last: who was there and who fell read first.
         lines += InscriptionLine("fact", "${record.gameSpeed} speed")
         lines += InscriptionLine("fact", "${record.mapType} · ${record.mapSize}")
+        // Stated, not judged: the certificate is issued either way (user, 09-24).
+        if (record.autoPlayedTurns > 0) lines += InscriptionLine("fact", autoPlay(record.autoPlayedTurns))
         return lines
     }
 
@@ -213,6 +218,7 @@ object VictoryCertificate {
             "Speed" to record.gameSpeed,
             "Map" to "${record.mapType} ${record.mapSize}",
             "Rivals eliminated" to record.eliminated.size.toString()
+        ) + (if (record.autoPlayedTurns > 0) listOf("AutoPlay" to autoPlay(record.autoPlayedTurns).removePrefix("AutoPlay: ")) else emptyList()
         ) + (EMBLEM_CREDITS[record.nation]?.let { listOf("Emblem" to it) } ?: emptyList())
         attributes.forEachIndexed { i, (trait, value) ->
             if (i > 0) sb.append(',')
@@ -275,6 +281,8 @@ object VictoryCertificate {
 
     private fun describe(victoryType: String) =
         if (victoryType.isEmpty()) "Victory" else "$victoryType Victory"
+
+    private fun autoPlay(turns: Int) = "AutoPlay: $turns turn" + if (turns == 1) "" else "s"
 
     private fun year(year: Int) = if (year < 0) "${-year} BC" else "$year AD"
 

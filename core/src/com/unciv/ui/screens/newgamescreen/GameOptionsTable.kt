@@ -537,6 +537,13 @@ class GameOptionsTable(
             if ((i + 1) % 2 == 0) victoryConditionsTable.row()
         }
         add(victoryConditionsTable).colspan(2).row()
+        // Without Time there is no turn limit, and an AI that only defends never ends the game:
+        // say so before the game starts, since a started game can't change it (user, 09-24).
+        if (gameParameters.victoryTypes.none { ruleset.victories[it]?.enablesMaxTurns() == true })
+            add("No turn limit: the game ends only when someone achieves a victory chosen above.".toLabel(fontSize = 16).apply {
+                wrap = true
+                setAlignment(Align.center)
+            }).colspan(2).width(victoryConditionsTable.prefWidth).row()
     }
 
     fun updateRuleset(ruleset: Ruleset) {
