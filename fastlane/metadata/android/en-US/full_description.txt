@@ -1,26 +1,36 @@
-It starts with one settler and an empty map.
+One settler at the edge of an unwritten world. Six thousand years to make it yours.
 
-Where you plant that first city decides the next six thousand years. Work the land around it. Raise wonders your neighbours will envy and then besiege. Push your people from the ancient world to the modern age across a full technology tree, and shape who they become along the way — with social policy, with religion, with spies in other people's capitals.
+Drop your first city on a river, on a hill, or right on the border of a neighbour who's going to regret it. Everything that follows — every war, every wonder, every betrayal — grows out of that first move.
 
-Then take the world the way that suits the empire you actually built. By conquest. By culture. By science. Or by never firing a shot.
+EVERY TURN IS A DECISION
+Spread wide and risk thin walls, or build tall and dare the world to come for you. Beeline Bronze Working, or gamble on Writing. Found a religion before your rival does. Slip a spy into their capital and walk off with the technology they spent forty turns on. Buy a city-state's loyalty, tear up an alliance, and march your longswordsmen over the hill at exactly the wrong moment — for them.
 
-NOBODY IS SELLING YOU ANYTHING
-No ads. No accounts. No analytics. No energy timers. No storefront behind a menu, no second currency, nothing that finishes faster if you pay. You install it and you play all of it.
+FOUR WAYS TO WIN. THE EMPIRE YOU BUILD PICKS ONE.
+Take every capital on the map. Out-culture the planet. Launch the first ship to the stars. Or win the world's vote without ever firing a shot.
 
-WHAT YOU GET
-- A full 4X campaign: cities and citizens, tiles and yields, a complete technology tree, social policies, religion, espionage, city-states, great people, diplomacy and war.
-- Terrain drawn for this game and nothing else, rendered as lit relief with several variants of every tile — from the grassland under your first settler to all seventeen natural wonders.
-- Ten languages: English, 简体中文, 繁體中文, 日本語, Deutsch, Français, Español, Português (Brasil), Русский, Polski.
-- A guide for new players that gathers sixty tutorials into six readable chapters, and a small starter game to try them in.
+You'll tell yourself "one more turn". You'll mean it every single time.
 
-AND WHEN YOU WIN, YOU KEEP IT
-Save files get lost. Phones get replaced. The victory doesn't have to live in one.
+THE WHOLE GAME. NOTHING LOCKED.
+- Cities that grow, starve, riot and boom depending on which tiles you work
+- A technology tree that runs from pottery to the space age
+- Wonders, great people, social policies, religion, espionage, city-states, diplomacy and all-out war
+- Seventeen natural wonders on terrain hand-drawn for this game, lit like a relief map
+- Three languages: English, 简体中文, 繁體中文
+- New to strategy games? A built-in guide turns sixty tutorials into six short chapters, with a starter game to learn in
 
-Connect a Solana wallet — Phantom, Solflare, anything speaking Mobile Wallet Adapter — and mint a certificate of that victory: who won, by which victory, on which turn and in which year, held in your own wallet and readable by anyone. It carries its record inside itself rather than pointing at some website, so it doesn't go blank the day a server does.
+ZERO ADS. ZERO ACCOUNTS. ZERO PAYWALLS.
+No energy timers. No gem shop. No second currency. Nothing that finishes faster if you pay. Install it, and every era, every victory and every language is already yours.
+
+WIN IT. THEN OWN IT.
+Saves get lost. Phones get replaced. Your greatest victory shouldn't disappear with them.
+
+Connect a Solana wallet — Phantom, Solflare, or anything that speaks Mobile Wallet Adapter — and mint your win as an on-chain certificate: who won, how, on which turn, in which year. The record lives inside the certificate itself, in your own wallet, so there's no website to go dark and no link to break.
 
 US$0.75, converted to SOL at the moment you mint, plus roughly US$0.17 the network charges to keep it.
 
-You can also put a save on-chain: its name and its cryptographic fingerprint, timestamped, so you can prove later that exactly that game existed at exactly that moment. The save file itself never leaves your phone. 1 SKR, and only ever for a save you named yourself — autosaves are never charged.
+Played a game you'll want to prove happened? Stamp a save on-chain — its fingerprint and a timestamp, never the file itself — for 1 SKR. Autosaves are recorded only if you switch that on, and every record asks you first.
 
-THE HONEST PART
-Those two are the only charges this game will ever ask you for, and neither happens without your wallet asking you first. Your seed phrase never touches this app. The whole campaign — every victory, every era, every language — is playable start to finish without ever opening the Wallet screen.
+OUR PROMISE
+Those two are the only things this game will ever charge for. Both are optional, and your wallet asks you before either one happens. Your seed phrase never touches this app, and you can play the whole game start to finish without opening the Wallet screen once.
+
+Your settler is waiting. Where will you build?
