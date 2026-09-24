@@ -32,13 +32,10 @@ internal class AboutTab(
                 // not only someone reading NOTICE.md in the repository. The bulk recolour pass
                 // made this fork's tiles derivatives of that art, so the credit ships with them.
                 yield(FormattedLine("Tileset art by The Bucketeer / @GeneralWadaling, CC BY-SA 3.0, modified."))
-                // MPL-2.0 3.2: a binary may be distributed only if the Source Code Form of
-                // the Covered Files it modifies is made available to its recipients.
-                if (Constants.sourceOfferUrl.isEmpty())
-                    yield(FormattedLine("Source offer not configured - see MPL-NOTICE.md"))
-                else
-                    yield(FormattedLine("Source for the modified MPL files",
-                        link = Constants.sourceOfferUrl))
+                // MPL-2.0 3.2: recipients of a binary must be told how to obtain the Source Code
+                // Form of the Covered Files it modifies. The licence page says how (by email, on
+                // request), so this line must stay even though the archive is no longer a download.
+                yield(FormattedLine("Licence & source code", link = Constants.licenceUrl))
                 yield(FormattedLine())
                 // The dApp Store developer agreement requires the privacy policy to be reachable
                 // from inside the app, so an empty value is announced rather than hidden.

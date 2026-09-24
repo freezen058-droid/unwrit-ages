@@ -105,7 +105,9 @@ class Nation : RulesetObject() {
     override fun getSubCategory(ruleset: Ruleset): String? = when {
         isCityState -> "City-States"
         isBarbarian -> "Other"
-        else -> "Civilizations"
+        // "Nations", not "Civilizations": the category is already called Nations, and the rule
+        // for this game's text keeps the predecessor's name off the screen (ROADMAP.md).
+        else -> "Nations"
     }
     override fun getCivilopediaTextLines(ruleset: Ruleset) = getCivilopediaTextLinesImpl(ruleset)
     // endregion

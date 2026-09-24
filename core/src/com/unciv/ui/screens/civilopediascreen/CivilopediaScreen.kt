@@ -215,7 +215,9 @@ class CivilopediaScreen(
     private fun selectDefaultEntry() {
         val name = ruleset.mods.asSequence()
                 .filter { RulesetCache[it]?.modOptions?.isBaseRuleset == true }
-                .plus("Civilopedia")
+                // "New Game" since the "Civilopedia" article went: it explained rulesets and mods,
+                // which this game does not let the player choose.
+                .plus("New Game")
                 .firstOrNull { it in entryIndex.keys }
                 ?: return
         selectEntry(name , noScrollAnimation = true)

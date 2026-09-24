@@ -116,16 +116,12 @@ object Constants {
     const val dropboxMultiplayerServer = "Dropbox"
     const val uncivXyzServer = "https://uncivserver.xyz"
 
-    /** Where a recipient of a published build can obtain the Source Code Form of the
-     *  MPL-2.0 covered files this fork modified - the list is in MPL-NOTICE.md.
-     *  MPL-2.0 section 3.2 requires this to be offered alongside any distributed binary.
-     *  A repository URL or a contact address; shown under Options - About.
-     *  MUST be filled in before a public release: left empty, the About tab says so out
-     *  loud rather than quietly omitting the offer.
-     *  Same string as the download link on https://unwritages.pages.dev/license - one
-     *  place per release, so the two cannot drift. Regenerate the archive with
-     *  tools/mpl_source_bundle.py --stage-website and redeploy the site. */
-    const val sourceOfferUrl = "https://unwritages.pages.dev/mpl-source-1.0.0.tar.gz"
+    /** Where a recipient of a published build learns how to obtain the Source Code Form of the
+     *  MPL-2.0 covered files this fork modified - the list is in MPL-NOTICE.md. MPL-2.0 section
+     *  3.2 requires recipients to be told this; shown under Options - About.
+     *  The page offers the source by email on request (user, 09-24: no public archive download).
+     *  The archive itself is made with tools/mpl_source_bundle.py and sent to whoever asks. */
+    const val licenceUrl = "https://unwritages.pages.dev/license.html"
 
     /** Where the published privacy policy lives - shown under Options - About, and the same URL
      *  given to the store as privacy_policy_url. The dApp Store developer agreement requires the

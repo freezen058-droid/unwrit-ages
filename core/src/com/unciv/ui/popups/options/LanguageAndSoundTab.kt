@@ -2,20 +2,37 @@ package com.unciv.ui.popups.options
 
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.ui.Table
+import com.unciv.Constants
 import com.unciv.ui.audio.MusicTrackChooserFlags
 import com.unciv.ui.components.extensions.MusicControls
+import com.unciv.ui.components.extensions.addSeparator
 import com.unciv.ui.components.extensions.disable
 import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.extensions.toTextButton
 import com.unciv.ui.components.input.onClick
+import com.unciv.ui.components.widgets.LanguageSelectBox
+import com.unciv.ui.components.widgets.TabbedPager
 import com.unciv.utils.Concurrency
 import com.unciv.utils.launchOnGLThread
 
-internal class SoundTab(
+/**
+ *  The language dropdown and the sound controls on one page. Each used to have a tab of its own,
+ *  and each tab was nearly empty: one dropdown, and three or four sliders.
+ */
+internal class LanguageAndSoundTab(
     optionsPopup: OptionsPopup
 ) : OptionsPopupTab(optionsPopup), MusicControls {
+    private val languageSelectBox by lazy { LanguageSelectBox { onLanguageChoice(it) } }
+
     override fun lateInitialize() {
         val music = game.musicController
+
+        add("Language".toLabel(fontSize = Constants.headingFontSize)).colspan(2).row()
+        add(languageSelectBox).width(420f).colspan(2).padBottom(10f).row()
+        languageSelectBox.showSelected(settings.language)
+
+        addSeparator()
+        add("Sound".toLabel(fontSize = Constants.headingFontSize)).colspan(2).row()
 
         addSoundEffectsVolumeSlider(settings)
         addCitySoundsVolumeSlider(settings)
@@ -30,6 +47,19 @@ internal class SoundTab(
             addDownloadMusic()
 
         super.lateInitialize()
+    }
+
+    private fun onLanguageChoice(language: String) {
+        if (language == settings.language) return
+        settings.language = language
+        settings.updateLocaleFromLanguage()
+        game.translations.tryReadTranslationForCurrentLanguage()
+        reloadWorldAndOptions()
+    }
+
+    override fun activated(index: Int, caption: String, pager: TabbedPager) {
+        super.activated(index, caption, pager)
+        languageSelectBox.showSelected(settings.language)
     }
 
     private fun addDownloadMusic() {
@@ -48,7 +78,7 @@ internal class SoundTab(
                 try {
                     game.musicController.downloadDefaultFile()
                     launchOnGLThread {
-                        replacePage { optionsPopup -> SoundTab(optionsPopup) }
+                        replacePage { optionsPopup -> LanguageAndSoundTab(optionsPopup) }
                         game.musicController.chooseTrack(flags = MusicTrackChooserFlags.setPlayDefault)
                     }
                 } catch (_: Exception) {

@@ -16,17 +16,14 @@ from upstream Unciv at the commit named below.
 
 ## How the source is offered
 
-The modified Covered Files are published as a source archive on this fork's website:
+The modified Covered Files are offered on request, by email, free of charge, to anyone who
+has a build (user, 2026-09-24: no public download). <https://unwritages.pages.dev/license.html>
+says so and gives the address; the app links that page under **Options → About**
+(`Constants.licenceUrl`, `core/src/com/unciv/Constants.kt`). That line is what satisfies
+§3.2(a) - telling recipients how to obtain the source - so it must stay in every build.
 
-**<https://unwritages.pages.dev/mpl-source-1.0.0.tar.gz>**
-
-That is the same URL as `Constants.sourceOfferUrl`
-(`core/src/com/unciv/Constants.kt`) and the same URL as the download link on
-<https://unwritages.pages.dev/license>, deliberately: one place to change per release.
-The app shows it under **Options → About**. While `sourceOfferUrl` is empty the About
-page says `Source offer not configured - see MPL-NOTICE.md`, which means the binary is
-being distributed without the offer §3.2 requires, so it must be filled in before a
-build is published.
+Make the archive with `tools/mpl_source_bundle.py` and send it to whoever asks; the 1.0.0
+archive is kept at `store/mpl-source-1.0.0.tar.gz` (not in git, not on the website).
 
 The archive holds every modified Covered File at its path in this fork, plus `LICENSE`,
 a `MANIFEST` listing all of them with sha256 and byte size, and a `DELETIONS` list of

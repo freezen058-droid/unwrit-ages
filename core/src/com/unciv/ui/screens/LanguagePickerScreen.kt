@@ -57,13 +57,10 @@ class LanguagePickerScreen : PickerScreen() {
         val textWidth = minOf(720f, stage.width - 64f)
 
         topTable.add("Unwrit Ages".toLabel(fontSize = 34)).padBottom(12f).row()
-        // All three at once: nothing has been translated yet, and the player we are telling to
-        // pick a language is exactly the one who may not read English.
-        for (text in introductions) {
-            val label = text.toLabel(fontSize = 22, alignment = Align.center)
-            label.wrap = true
-            topTable.add(label).width(textWidth).padBottom(10f).row()
-        }
+        // English only (user, 09-24): the dropdown already names each language in its own script.
+        val intro = introduction.toLabel(fontSize = 22, alignment = Align.center)
+        intro.wrap = true
+        topTable.add(intro).width(textWidth).padBottom(10f).row()
         topTable.add(selectBox).width(controlWidth).height(72f).padTop(18f).row()
         selectBox.showSelected(chosenLanguage)
 
@@ -91,14 +88,11 @@ class LanguagePickerScreen : PickerScreen() {
     private companion object {
         const val dropdownFontSize = 28f
 
-        /** Written here rather than in the translation files: they are shown before any of those
-         *  is loaded, and each is only ever shown in its own language. */
-        val introductions = listOf(
+        /** Written here rather than in the translation files: it is shown before any of those is
+         *  loaded. */
+        const val introduction =
             "A turn-based strategy game: lead one settler to an empire across six thousand years.\n" +
-                "First, choose your language. You can change it later in Options.",
-            "回合制策略游戏：从一位移民起步，用六千年建立你的帝国。\n请先选择语言，之后可在“选项”中更改。",
-            "回合制策略遊戲：從一位移民起步，用六千年建立你的帝國。\n請先選擇語言，之後可在「選項」中更改。",
-        )
+                "First, choose your language. You can change it later in Options."
 
         val confirmText = mapOf(
             Constants.english to "Continue",

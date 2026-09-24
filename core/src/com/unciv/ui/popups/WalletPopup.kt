@@ -28,6 +28,8 @@ class WalletPopup(
     private val settings: GameSettings
 ) : Popup(stageToShowOn, scrollable = Scrollability.None) {
 
+    private val tabs: TabbedPager
+
     init {
         clickBehindToClose = true
         innerTable.pad(0f)
@@ -36,7 +38,7 @@ class WalletPopup(
         val tabMinWidth = 0.6f * stageToShowOn.width
         val tabMaxHeight = 0.8f * stageToShowOn.height
 
-        val tabs = TabbedPager(
+        tabs = TabbedPager(
             tabMinWidth, tabMaxWidth, tabMaxHeight, tabMaxHeight,
             headerFontSize = 21, backgroundColor = Color.CLEAR
         )
@@ -49,6 +51,14 @@ class WalletPopup(
 
         pack()
         center(stageToShowOn)
+    }
+
+    /** Open on the Wallet tab. A TabbedPager starts with no page selected, which showed an empty
+     *  popup until a tab was tapped; like OptionsPopup, select once the popup is on the stage. */
+    override fun setVisible(visible: Boolean) {
+        super.setVisible(visible)
+        if (!visible || tabs.activePage >= 0) return
+        tabs.selectPage(0)
     }
 }
 
@@ -73,9 +83,9 @@ private class WalletPage(
 
         addHeader("Wallet")
 
-        add(("Put a named save's fingerprint on the blockchain - a permanent record that your "
-            + "civilization reached that point - for 1 SKR.\nManual saves only; autosaves are never "
-            + "charged, see the Auto-Save tab.").toLabel()
+        add(("Put a save's fingerprint on the blockchain - a permanent record that your "
+            + "empire reached that point - for 1 SKR.\nYour wallet asks before every one. Autosaves "
+            + "are recorded only if you turn that on in the Auto-Save tab.").toLabel()
             .apply { wrap = true }).colspan(2).fillX().row()
 
         addSeparator()

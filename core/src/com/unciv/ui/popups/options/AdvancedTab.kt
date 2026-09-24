@@ -17,7 +17,6 @@ import com.unciv.logic.map.HexCoord
 import com.unciv.models.metadata.BaseRuleset
 import com.unciv.models.metadata.GameSettings
 import com.unciv.models.metadata.GameSettings.ScreenSize
-import com.unciv.models.metadata.ModCategories
 import com.unciv.models.ruleset.RulesetCache
 import com.unciv.models.translations.TranslationFileWriter
 import com.unciv.models.translations.tr
@@ -26,7 +25,6 @@ import com.unciv.ui.components.extensions.addSeparator
 import com.unciv.ui.components.extensions.disable
 import com.unciv.ui.components.extensions.enable
 import com.unciv.ui.components.extensions.isEnabled
-import com.unciv.ui.components.extensions.setFontColor
 import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.extensions.toTextButton
 import com.unciv.ui.components.fonts.FontFamilyData
@@ -40,12 +38,10 @@ import com.unciv.ui.components.input.onClick
 import com.unciv.ui.components.widgets.TranslatedSelectBox
 import com.unciv.ui.components.widgets.UncivTextField
 import com.unciv.ui.components.widgets.WrappableLabel
-import com.unciv.ui.popups.ConfirmPopup
 import com.unciv.ui.popups.Popup
 import com.unciv.utils.Concurrency
 import com.unciv.utils.Display
 import com.unciv.utils.isRunFromJar
-import com.unciv.utils.isUUID
 import com.unciv.utils.launchOnGLThread
 import com.unciv.utils.withoutItem
 import java.nio.file.Path
@@ -93,10 +89,10 @@ internal class AdvancedTab(
 
         addSeparator()
 
-        addSetUserId()
-
+        // No "Take user ID from clipboard" and no "Update Mod categories": the ID only ties
+        // multiplayer games to a player and the categories only sort the mod browser, and both
+        // of those are off in this game (ROADMAP.md).
         addTranslationGeneration()
-        addUpdateModCategories()
         addScreenhotGeneration()
 
         super.lateInitialize()
@@ -290,21 +286,6 @@ internal class AdvancedTab(
         }
     }
 
-    private fun addUpdateModCategories() {
-        val updateModCategoriesButton = "Update Mod categories".toTextButton()
-        updateModCategoriesButton.onActivation {
-            updateModCategoriesButton.setText(Constants.working.tr())
-            Concurrency.run("GithubTopicQuery") {
-                val result = ModCategories.mergeOnline()
-                launchOnGLThread {
-                    updateModCategoriesButton.setText(result)
-                }
-            }
-        }
-        add(updateModCategoriesButton).colspan(2).row()
-
-    }
-
     private fun addScreenhotGeneration() {
         if (!UncivGame.Current.files.getSave("ScreenshotGenerationGame").exists()) return
 
@@ -381,28 +362,5 @@ internal class AdvancedTab(
                 }
             }
         }
-    }
-
-    private fun addSetUserId() {
-        val idSetLabel = "".toLabel()
-        val takeUserIdFromClipboardButton = "Take user ID from clipboard".toTextButton().onClick {
-            val clipboardContents = Gdx.app.clipboard.contents.trim()
-            if (clipboardContents.isUUID()) {
-                ConfirmPopup(
-                    stage,
-                    "Doing this will reset your current user ID to the clipboard contents - are you sure?",
-                    "Take user ID from clipboard"
-                ) {
-                    settings.multiplayer.setUserId(clipboardContents)
-                    idSetLabel.setFontColor(Color.WHITE).setText("ID successfully set!".tr())
-                }.open(true)
-                idSetLabel.isVisible = true
-            } else {
-                idSetLabel.isVisible = true
-                idSetLabel.setFontColor(Color.RED).setText("Invalid ID!".tr())
-            }
-        }
-        add(takeUserIdFromClipboardButton).pad(5f).colspan(2).row()
-        add(idSetLabel).colspan(2).row()
     }
 }
