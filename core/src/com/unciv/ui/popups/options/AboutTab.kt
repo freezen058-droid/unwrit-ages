@@ -25,8 +25,9 @@ internal class AboutTab(
                 yield(FormattedLine())
                 yield(FormattedLine("{Version}: ${UncivGame.VERSION.toNiceString()}"))
                 yield(FormattedLine())
-                yield(FormattedLine("Unwrit Ages is a fork of Unciv ${UncivGame.UPSTREAM_VERSION} by Yair Morgenstern and contributors, licensed under MPL-2.0."))
-                // The link to upstream lives on the licence page linked below (user, 09-24).
+                // No "fork of Unciv" sentence or upstream link here (user, 09-24): the licence page
+                // linked below credits upstream and explains the licence in full. MPL-2.0 asks the
+                // app to say where the source is, not to carry the credit itself.
                 // CC BY-SA 3.0 asks for attribution and for modifications to be marked, and it
                 // asks it of whoever receives the work - which means the person holding the app,
                 // not only someone reading NOTICE.md in the repository. The bulk recolour pass
