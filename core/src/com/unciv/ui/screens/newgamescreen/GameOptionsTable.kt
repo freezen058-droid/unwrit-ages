@@ -87,7 +87,7 @@ class GameOptionsTable(
 
         add(Table().apply {
             defaults().pad(5f)
-            addBaseRulesetSelectBox()
+            // No base ruleset choice: every game is Expanded (G&K); see NewGameScreen init
             addDifficultySelectBox()
             addGameSpeedSelectBox()
             addEraSelectBox()

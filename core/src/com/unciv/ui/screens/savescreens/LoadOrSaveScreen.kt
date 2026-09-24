@@ -144,7 +144,7 @@ abstract class LoadOrSaveScreen(
                 // Format result for textToSet
                 "${saveGameFile.name()}\n{Saved at}: ${savedAt.formatDate()}\n" +
                 "$playerCivNames, ${game.difficulty.tr()}, ${Fonts.turn}${game.turns}\n" +
-                "{Base ruleset:} ${game.gameParameters.baseRuleset}$mods"
+                "{Base ruleset:} {${game.gameParameters.baseRuleset}}$mods"
             } catch (_: Exception) {
                 "Could not load game!"
             }

@@ -64,6 +64,8 @@ class NewGameScreen(
     init {
         val isPortrait = isNarrowerThan4to3()
 
+        // One ruleset for everyone: an older setup may still remember Classic (Vanilla)
+        gameSetupInfo.gameParameters.baseRuleset = BaseRuleset.Civ_V_GnK.fullName
         tryUpdateRuleset(updateUI = false)  // must come before playerPickerTable so mod nations from fromSettings
 
         // remove the victory types which are not in the rule set (e.g. were in the recently disabled mod)

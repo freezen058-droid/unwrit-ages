@@ -7,6 +7,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.SelectBox
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton
 import com.badlogic.gdx.utils.Align
 import com.unciv.UncivGame
+import com.unciv.models.metadata.BaseRuleset
 import com.unciv.models.ruleset.BeliefType
 import com.unciv.models.ruleset.Ruleset
 import com.unciv.models.ruleset.RulesetCache
@@ -180,7 +181,8 @@ class CivilopediaSearchPopup(
             entries.add(ModSelectEntry("-Combined-", true))
             // This intersect is needed when pedia was called from the MainMenuScreen with an easter egg ruleset active -
             // they are not in the cache and have their elements not marked with originRuleset anyway.
-            for (mod in mods.intersect(RulesetCache.keys)) entries.add(ModSelectEntry(mod))
+            for (mod in mods.intersect(RulesetCache.keys))
+                entries.add(ModSelectEntry(mod, BaseRuleset.entries.any { it.fullName == mod }))
             items = entries
             selectedIndex = 0
         }
