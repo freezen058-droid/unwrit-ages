@@ -23,7 +23,10 @@ import com.solana.transaction.LegacyMessage
 import com.solana.transaction.Message
 import com.solana.transaction.Transaction
 import com.solana.transaction.TransactionInstruction
+import com.unciv.logic.chain.Ans104
+import com.unciv.logic.chain.CertificateEmblem
 import com.unciv.logic.chain.PlatformWalletService
+import com.unciv.logic.chain.VictoryCertificate
 import com.unciv.utils.Concurrency
 import com.unciv.utils.Log
 import com.unciv.utils.launchOnGLThread
@@ -140,32 +143,19 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
         // is fixed-size, so this is the only part that could push it over.
         private const val CERTIFICATE_NAME_MAX_CHARS = 96
 
-        // The certificate carries its own metadata, as a `data:` URI written into the asset by the
-        // mint itself - no upload, no bundler, no host whose disappearance empties the
-        // certificate. What fits is the subset a wallet renders (see
-        // VictoryCertificate.compactMetadataJson); the full record - chronicle and ranking curves -
-        // and the save file are several KB and still want permanent storage. Core's `uri` is
-        // mutable by the update authority, which defaults to the payer, so a later UpdateV1 can
-        // repoint a certificate at an Arweave copy without re-minting it.
-        private const val INLINE_METADATA_PREFIX = "data:application/json;base64,"
-        /** One shared illustration for every certificate - the per-game detail is in the attributes.
-         *
-         *  An Arweave transaction rather than a URL on our own site, because this string is written
-         *  into every certificate ever minted and cannot be repointed for the ones already out
-         *  there: it must not depend on a domain or a host outliving the keepsake. Uploaded
-         *  2026-09-22 from `store/certificate.jpg` (36.8 KiB, inside Turbo's free tier) and fetched
-         *  back byte-identical through arweave.net before being written here. Turbo's own gateway
-         *  served it ten minutes before arweave.net did, and shipping that gateway's URL instead
-         *  would have tied every certificate to one gateway - so the wait was the point.
-         *
-         *  It costs 25 characters against [TRANSACTION_SIZE_LIMIT]. Measured with
-         *  `pic/batch_review/_sd/chaincost/fit.mjs`: the longest civilization name that still keeps
-         *  its description goes from 37 characters to 30. The longest name in any shipped ruleset is
-         *  "The Netherlands" at 15, so the description-dropping fallback below is still reached only
-         *  by mods, never by the base game - with twice the headroom it needs. */
-        private const val CERTIFICATE_IMAGE_URI = "https://arweave.net/vdY2Pjns9oLNWn2GqAR4k2Kj8rc4N3ouD91ndzwieNg"
+        // Each certificate's picture and metadata are uploaded to Arweave before the mint, and the
+        // asset's uri is the metadata's address on Turbo's own gateway. The 1.0.0 candidate put the
+        // metadata inline as a `data:` URI instead, to avoid the upload - and wallets fetch the uri
+        // over HTTPS, so the Seeker wallet showed that certificate with no picture at all.
+        //
+        // Not arweave.net: on 09-24 it answered 404 for ten minutes after the mint, while Turbo's
+        // gateway served the same items at once - and the wallet's indexer read the uri in those
+        // ten minutes and kept the empty result. The data is the same permanent Arweave item either
+        // way; any gateway serves it by id, and the metadata lists the arweave.net address too.
+        private const val ARWEAVE_GATEWAY = "https://turbo-gateway.com/"
         /** https://solana.com/docs/core/transactions - the whole signed transaction, not the message. */
         private const val TRANSACTION_SIZE_LIMIT = 1232
+        private const val TURBO_UPLOAD_ENDPOINT = "https://upload.ardrive.io/v1/tx"
     }
 
     /**
@@ -208,6 +198,9 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
     // JSON-RPC call using the ktor-client bundle this project already depends on (see core's
     // `api(rootProject.libs.bundles.ktor.client)`), following the JSON-RPC shape documented at
     // https://solana.com/docs/rpc/http/getlatestblockhash.
+    @Serializable
+    private data class TurboUploadResponse(val id: String = "")
+
     @Serializable
     private data class CommitmentParam(val commitment: String = "finalized")
 
@@ -401,6 +394,29 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
      * rather than as a transaction that is accepted and silently never lands. JSON-RPC shape per
      * https://solana.com/docs/rpc/http/sendtransaction.
      */
+    /**
+     * Stores [data] on Arweave through Turbo and returns its address on Turbo's gateway, which
+     * serves an upload as soon as it is accepted (see [ARWEAVE_GATEWAY]).
+     *
+     * Signed with a key made for this one upload: Turbo stores items up to 100 KiB without charge,
+     * so the key needs no funds and the player is not asked to sign anything for it. The id Turbo
+     * reports must be the one computed from our own signature - anything else is not our upload.
+     */
+    private suspend fun uploadToArweave(data: ByteArray, contentType: String): String {
+        val key = AssetKeypair()
+        val item = Ans104.create(
+            data,
+            listOf(Ans104.Tag("Content-Type", contentType), Ans104.Tag("App-Name", "Unwrit Ages")),
+            key.publicKeyBytes, key::sign
+        )
+        val response: TurboUploadResponse = httpClient.post(TURBO_UPLOAD_ENDPOINT) {
+            contentType(ContentType.Application.OctetStream)
+            setBody(item.raw)
+        }.body()
+        check(response.id == item.id) { "The storage service returned an unexpected id (${response.id})" }
+        return ARWEAVE_GATEWAY + item.id
+    }
+
     private suspend fun sendSignedTransaction(signedTransaction: ByteArray): String {
         val requestBody = kotlinx.serialization.json.buildJsonObject {
             put("jsonrpc", kotlinx.serialization.json.JsonPrimitive("2.0"))
@@ -420,10 +436,14 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
             contentType(ContentType.Application.Json)
             setBody(requestBody)
         }.body()
+        val reason = response.error?.message ?: "no reason given"
+        // Seen 2026-09-24 with the wallet still on devnet; a blockhash that expired while the player
+        // was approving reads the same. Either way the transaction never ran, so nothing is charged.
+        val hint = if ("Blockhash not found" in reason)
+            " - check that your wallet is on Mainnet (nothing was charged)"
+        else ""
         return response.result
-            ?: throw IllegalStateException(
-                "The network rejected the certificate mint: ${response.error?.message ?: "no reason given"}"
-            )
+            ?: throw IllegalStateException("The network rejected the certificate mint: $reason$hint")
     }
 
     private val walletAdapter: MobileWalletAdapter by lazy {
@@ -466,6 +486,9 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
     override val isAvailable: Boolean = true
 
     override val certificateFeeUsdCents = CERTIFICATE_FEE_USD_CENTS.toInt()
+
+    override fun renderCertificate(inscription: List<VictoryCertificate.InscriptionLine>, emblem: CertificateEmblem) =
+        CertificateImage(activity.assets).render(inscription, emblem)
 
     override fun explorerUrl(address: String) =
         "https://explorer.solana.com/address/$address" + (if (IS_MAINNET) "" else "?cluster=devnet")
@@ -586,21 +609,19 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
      *     key, and CreateV1 lists the asset before the payer, so the message's account list cannot
      *     simply follow the instruction's. [buildLegacyMessage] pins the payer first.
      *
-     * The certificate's metadata rides *inside* this transaction as a `data:` URI, so nothing is
-     * uploaded and nothing has to stay hosted - see INLINE_METADATA_PREFIX. The full record and the
-     * save file still want permanent storage eventually; [buildMetadata] is called and its size
-     * logged so that JSON stays exercised, and [alreadyUploadedSaveUri] is passed straight back
-     * through [onSuccess], so when an uploader does land a half-finished attempt still only pays
-     * for storage once.
+     * Before any of that, the certificate is drawn ([CertificateImage]) and it and its metadata are
+     * stored on Arweave ([uploadToArweave]); the metadata URI goes back through [onUploaded] at
+     * once, so a retry after a failed mint arrives with [alreadyUploadedMetadataUri] and skips it.
      */
     override fun mintVictoryCertificate(
         certificateName: String,
-        saveData: ByteArray,
-        alreadyUploadedSaveUri: String?,
-        buildMetadata: (saveUri: String, imageUri: String) -> String,
-        buildInlineMetadata: (imageUri: String, withDescription: Boolean) -> String,
+        inscription: List<VictoryCertificate.InscriptionLine>,
+        emblem: CertificateEmblem,
+        alreadyUploadedMetadataUri: String?,
+        buildMetadata: (imageUri: String) -> String,
+        onUploaded: (metadataUri: String) -> Unit,
         onProgress: (String) -> Unit,
-        onSuccess: (assetAddress: String, saveUri: String) -> Unit,
+        onSuccess: (assetAddress: String) -> Unit,
         onError: (Exception) -> Unit
     ) {
         val payerAddress = _connectedAddress
@@ -611,15 +632,19 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
 
         Concurrency.run("WalletMintCertificate") {
             try {
-                val saveUri = alreadyUploadedSaveUri ?: ""
-                // Built but not yet uploaded - the size is worth logging because it is what the
-                // eventual bundler upload will be billed on.
-                val metadataJson = buildMetadata(saveUri, "")
-                Log.debug(
-                    "Victory certificate: metadata %d bytes, save %d bytes, save uri %s",
-                    metadataJson.toByteArray(Charsets.UTF_8).size, saveData.size,
-                    if (saveUri.isEmpty()) "(not uploaded)" else saveUri
-                )
+                // The picture and the metadata go to Arweave first, and the metadata's URI is handed
+                // back at once: a mint that fails after this point retries against it for free.
+                val metadataUri = alreadyUploadedMetadataUri ?: run {
+                    launchOnGLThread { onProgress("Carving the certificate...") }
+                    val jpeg = CertificateImage(activity.assets).render(inscription, emblem)
+                    Log.debug("Victory certificate: picture %d bytes", jpeg.size)
+                    launchOnGLThread { onProgress("Storing the certificate...") }
+                    val imageUri = uploadToArweave(jpeg, "image/jpeg")
+                    val json = buildMetadata(imageUri).toByteArray(Charsets.UTF_8)
+                    Log.debug("Victory certificate: metadata %d bytes", json.size)
+                    uploadToArweave(json, "application/json").also { uri -> launchOnGLThread { onUploaded(uri) } }
+                }
+                Log.debug("Victory certificate: metadata at %s", metadataUri)
 
                 launchOnGLThread { onProgress("Preparing certificate...") }
 
@@ -634,33 +659,14 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
 
                 val blockhash = fetchLatestBlockhash()
                 val name = certificateName.take(CERTIFICATE_NAME_MAX_CHARS)
-                fun build(withDescription: Boolean) = buildLegacyMessage(
+                val message = buildLegacyMessage(
                     feePayer = payer,
                     instructions = listOf(
-                        createV1Instruction(
-                            asset = assetKeypair.publicKey,
-                            payer = payer,
-                            name = name,
-                            uri = INLINE_METADATA_PREFIX + Base64.encodeToString(
-                                buildInlineMetadata(CERTIFICATE_IMAGE_URI, withDescription)
-                                    .toByteArray(Charsets.UTF_8),
-                                Base64.NO_WRAP
-                            )
-                        ),
+                        createV1Instruction(asset = assetKeypair.publicKey, payer = payer, name = name, uri = metadataUri),
                         SystemProgram.transfer(payer, SolanaPublicKey.from(TREASURY_ADDRESS), feeLamports)
                     ),
                     blockhash = blockhash
                 )
-
-                // The metadata rides inside the transaction, so "does it fit" is a real question
-                // and gets a real answer: serialize the whole thing and measure it, rather than
-                // estimating from field lengths. The description is the one droppable field - it
-                // is prose, and everything else is fact the certificate exists to record.
-                var message = build(withDescription = true)
-                if (transactionSize(message) > TRANSACTION_SIZE_LIMIT) {
-                    Log.debug("Victory certificate: %d bytes with the description, dropping it", transactionSize(message))
-                    message = build(withDescription = false)
-                }
                 check(transactionSize(message) <= TRANSACTION_SIZE_LIMIT) {
                     "The certificate does not fit in one transaction (${transactionSize(message)} of $TRANSACTION_SIZE_LIMIT bytes)"
                 }
@@ -713,7 +719,7 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
                             launchOnGLThread { onProgress("Minting certificate...") }
                             val txSignature = sendSignedTransaction(fullySigned)
                             Log.debug("Victory certificate minted: asset=%s tx=%s", assetAddress, txSignature)
-                            launchOnGLThread { onSuccess(assetAddress, saveUri) }
+                            launchOnGLThread { onSuccess(assetAddress) }
                         }
                     }
                     is TransactionResult.NoWalletFound -> launchOnGLThread {
@@ -1045,6 +1051,9 @@ private class AssetKeypair {
 
     /** The asset's on-chain address: an Ed25519 public key, which is what a Solana address is. */
     val publicKey: SolanaPublicKey = SolanaPublicKey(privateKey.abyte)
+
+    /** The same key as raw bytes, as an Arweave data item's owner field wants it. */
+    val publicKeyBytes: ByteArray get() = privateKey.abyte
 
     /** Detached 64-byte signature over [message] - here, the serialized transaction message. */
     fun sign(message: ByteArray): ByteArray =

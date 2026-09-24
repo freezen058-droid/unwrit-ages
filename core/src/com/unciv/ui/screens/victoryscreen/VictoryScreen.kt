@@ -34,7 +34,9 @@ import java.util.EnumSet
 
 class VictoryScreen(
     private val worldScreen: WorldScreen,
-    pageNumber: Int = 0
+    pageNumber: Int = 0,
+    /** The certificate popup was open on the screen this one replaces - see [recreate]. */
+    reopenCertificatePopup: Boolean = false
 ) : PickerScreen(), RecreateOnResize {
     private val music get() = UncivGame.Current.musicController
     private val gameInfo = worldScreen.gameInfo
@@ -145,7 +147,7 @@ class VictoryScreen(
             certificateButton.onClick { VictoryCertificatePopup(this, gameInfo, playerCiv).open() }
             rightSideGroup.space(10f)
             rightSideGroup.addActorAt(0, certificateButton)
-            if (!gameInfo.certificateOfferShown) {
+            if (!gameInfo.certificateOfferShown || reopenCertificatePopup) {
                 gameInfo.certificateOfferShown = true
                 VictoryCertificatePopup(this, gameInfo, playerCiv).open()
             }
@@ -228,7 +230,10 @@ class VictoryScreen(
         super.dispose()
     }
 
-    override fun recreate(): BaseScreen = VictoryScreen(worldScreen, tabs.activePage)
+    /** Coming back from the wallet app resizes the window, which rebuilds this screen - and took
+     *  the certificate popup with it, mid-mint, so the player never saw it succeed (09-24). */
+    override fun recreate(): BaseScreen =
+        VictoryScreen(worldScreen, tabs.activePage, reopenCertificatePopup = stage.actors.any { it is VictoryCertificatePopup })
 
     companion object {
         @Readonly

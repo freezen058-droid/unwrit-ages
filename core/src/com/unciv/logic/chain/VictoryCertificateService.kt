@@ -3,16 +3,14 @@ package com.unciv.logic.chain
 import com.unciv.UncivGame
 import com.unciv.logic.GameInfo
 import com.unciv.logic.civilization.Civilization
-import com.unciv.logic.files.UncivFiles
 
 /**
- * Turns a won game into a certificate: assemble the record, hand the save and a metadata builder to
- * the platform's wallet, remember what got uploaded.
+ * Turns a won game into a certificate: assemble the record and its inscription, hand them to the
+ * platform's wallet, remember what got uploaded.
  *
- * The remembering is the point. Storage and minting are paid for separately, so an upload that
- * succeeded before a mint that failed is money already spent. The URI is written to settings the
- * moment it comes back, keyed by `gameId`, and a retry reuses it - so a player who loses signal
- * halfway through pays once, not twice.
+ * The remembering is the point: the picture and metadata are stored before the mint, and a mint
+ * that then fails is retried against the same stored metadata rather than uploading again. The
+ * URI is written to settings the moment it comes back, keyed by `gameId`.
  */
 object VictoryCertificateService {
 
@@ -32,7 +30,6 @@ object VictoryCertificateService {
     fun mint(
         gameInfo: GameInfo,
         civ: Civilization,
-        imageUri: String,
         onProgress: (String) -> Unit,
         onSuccess: (assetAddress: String) -> Unit,
         onError: (Exception) -> Unit
@@ -51,61 +48,46 @@ object VictoryCertificateService {
             ChainWallet.service.connect(
                 onConnected = {
                     onProgress("Wallet connected")
-                    mintConnected(gameInfo, imageUri, record, onProgress, onSuccess, onError)
+                    mintConnected(gameInfo, record, onProgress, onSuccess, onError)
                 },
                 onError = onError
             )
             return
         }
-        mintConnected(gameInfo, imageUri, record, onProgress, onSuccess, onError)
+        mintConnected(gameInfo, record, onProgress, onSuccess, onError)
     }
 
     /** The mint itself, with a connected wallet guaranteed and the record already assembled. */
     private fun mintConnected(
         gameInfo: GameInfo,
-        imageUri: String,
         record: VictoryCertificate.Record,
         onProgress: (String) -> Unit,
         onSuccess: (assetAddress: String) -> Unit,
         onError: (Exception) -> Unit
     ) {
-        // Force the zipped form regardless of the player's setting: this is the copy that has to
-        // travel and be paid for by the byte, not the one they read in a text editor.
-        val saveData = UncivFiles.gameInfoToString(gameInfo, forceZip = true)
-            .toByteArray(Charsets.UTF_8)
-
         val name = "${record.winner} - ${record.victoryType} T${record.victoryTurn}"
-
         ChainWallet.service.mintVictoryCertificate(
             certificateName = name,
-            saveData = saveData,
-            alreadyUploadedSaveUri = alreadyMintedUpload(gameInfo),
-            buildMetadata = { saveUri, image ->
-                VictoryCertificate.metadataJson(record, image.ifEmpty { imageUri }, saveUri)
-            },
-            buildInlineMetadata = { image, withDescription ->
-                VictoryCertificate.compactMetadataJson(record, image.ifEmpty { imageUri }, withDescription)
-            },
+            inscription = VictoryCertificate.inscription(record),
+            emblem = CertificateEmblem(record.nation, record.emblemOuter, record.emblemInner),
+            alreadyUploadedMetadataUri = alreadyMintedUpload(gameInfo),
+            buildMetadata = { imageUri -> VictoryCertificate.metadataJsonWithin(record, imageUri, METADATA_MAX_BYTES) },
+            onUploaded = { remember(gameInfo.gameId, it) },
             onProgress = onProgress,
-            onSuccess = { assetAddress, saveUri ->
-                remember(gameInfo.gameId, saveUri)
-                onSuccess(assetAddress)
-            },
-            onError = { ex ->
-                // The upload may well have succeeded before the mint failed; the platform reports
-                // the URI through onSuccess only, so nothing to record here - but do not clear what
-                // is already remembered, which is what makes the retry cheap.
-                onError(ex)
-            }
+            onSuccess = onSuccess,
+            onError = onError
         )
     }
 
-    /** Called by the platform as soon as an upload lands, so a later failure cannot lose it. */
-    fun remember(gameId: String, saveUri: String) {
-        if (saveUri.isEmpty()) return
+    /** Turbo stores uploads up to 100 KiB free; a little under, for the envelope around the data. */
+    const val METADATA_MAX_BYTES = 95 * 1024
+
+    /** Called by the platform as soon as the metadata is stored, so a later failure cannot lose it. */
+    fun remember(gameId: String, metadataUri: String) {
+        if (metadataUri.isEmpty()) return
         val settings = UncivGame.Current.settings
-        if (settings.uploadedCertificateSaves[gameId] == saveUri) return
-        settings.uploadedCertificateSaves[gameId] = saveUri
+        if (settings.uploadedCertificateSaves[gameId] == metadataUri) return
+        settings.uploadedCertificateSaves[gameId] = metadataUri
         settings.save()
     }
 }

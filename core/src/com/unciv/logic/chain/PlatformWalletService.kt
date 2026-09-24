@@ -26,6 +26,10 @@ interface PlatformWalletService {
      *  there is none - so a minted certificate can be looked at, not just named. */
     fun explorerUrl(address: String): String? = null
 
+    /** The certificate picture exactly as a mint would draw it, without uploading or minting -
+     *  for checking the look on a device. Null where the platform cannot draw one. */
+    fun renderCertificate(inscription: List<VictoryCertificate.InscriptionLine>, emblem: CertificateEmblem): ByteArray? = null
+
     fun connect(
         onConnected: (address: String) -> Unit,
         onError: (Exception) -> Unit = {}
@@ -49,34 +53,28 @@ interface PlatformWalletService {
     )
 
     /**
-     * Stores [saveData] permanently, mints a victory certificate owned by the connected wallet, and
-     * reports the asset's address.
+     * Draws the certificate - the stele with this game's inscription and emblem - stores the picture
+     * and its metadata permanently, then mints the asset, owned by the connected wallet and pointing
+     * at that metadata.
      *
-     * The order is fixed and the reason is money: the storage upload and the mint are paid for
-     * separately, so the upload must complete and its URI be handed back through
-     * [alreadyUploadedSaveUri] / [buildMetadata] before the mint is attempted. A mint that fails can
-     * then be retried without paying to store the same save again.
+     * The storage comes first and is remembered: a mint that fails is retried with
+     * [alreadyUploadedMetadataUri] and must not upload again.
      *
-     * @param alreadyUploadedSaveUri set when a previous attempt got as far as uploading; the
-     *        implementation must skip the upload and reuse it.
-     * @param buildMetadata called once the save's URI is known - returns the metadata JSON to store
-     *        and point the asset at.
-     * @param buildInlineMetadata the same certificate cut down to what fits *inside* the mint
-     *        transaction, for a platform that writes the metadata into the asset as a `data:` URI
-     *        rather than uploading it. Takes the image URI and whether to include the description,
-     *        which is the one field a caller can drop to get back under the size limit.
-     * @param onProgress a short user-facing line: uploading, minting, done.
-     * @param onSuccess the minted asset's address, and the save URI, which the caller records so a
-     *        later retry can skip the upload.
+     * @param inscription the lines to carve, top to bottom; see [VictoryCertificate.inscription].
+     * @param emblem the winner's nation name and its two colours, for the medallion.
+     * @param buildMetadata called with the picture's permanent URI - returns the metadata JSON.
+     * @param onUploaded the metadata's permanent URI, as soon as it exists, so the caller can record it.
+     * @param onSuccess the minted asset's address.
      */
     fun mintVictoryCertificate(
         certificateName: String,
-        saveData: ByteArray,
-        alreadyUploadedSaveUri: String?,
-        buildMetadata: (saveUri: String, imageUri: String) -> String,
-        buildInlineMetadata: (imageUri: String, withDescription: Boolean) -> String,
+        inscription: List<VictoryCertificate.InscriptionLine>,
+        emblem: CertificateEmblem,
+        alreadyUploadedMetadataUri: String?,
+        buildMetadata: (imageUri: String) -> String,
+        onUploaded: (metadataUri: String) -> Unit,
         onProgress: (String) -> Unit = {},
-        onSuccess: (assetAddress: String, saveUri: String) -> Unit,
+        onSuccess: (assetAddress: String) -> Unit,
         onError: (Exception) -> Unit = {}
     )
 
@@ -99,12 +97,13 @@ interface PlatformWalletService {
             }
             override fun mintVictoryCertificate(
                 certificateName: String,
-                saveData: ByteArray,
-                alreadyUploadedSaveUri: String?,
-                buildMetadata: (saveUri: String, imageUri: String) -> String,
-                buildInlineMetadata: (imageUri: String, withDescription: Boolean) -> String,
+                inscription: List<VictoryCertificate.InscriptionLine>,
+                emblem: CertificateEmblem,
+                alreadyUploadedMetadataUri: String?,
+                buildMetadata: (imageUri: String) -> String,
+                onUploaded: (metadataUri: String) -> Unit,
                 onProgress: (String) -> Unit,
-                onSuccess: (assetAddress: String, saveUri: String) -> Unit,
+                onSuccess: (assetAddress: String) -> Unit,
                 onError: (Exception) -> Unit
             ) {
                 onError(UnsupportedOperationException("Wallet integration is not available on this platform"))
@@ -112,3 +111,6 @@ interface PlatformWalletService {
         }
     }
 }
+
+/** The winner's nation for the stele's medallion: its name finds the icon, the colours paint it. */
+data class CertificateEmblem(val nation: String, val outer: List<Int>, val inner: List<Int>)

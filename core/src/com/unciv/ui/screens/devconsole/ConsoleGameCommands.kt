@@ -36,6 +36,20 @@ internal class ConsoleGameCommands : ConsoleCommandNode {
             DevConsoleResponse.hint("[${civ.civName}] wins by [$victoryType] - close the console to see it")
         },
 
+        // Draws this game's certificate as the mint would, into the save folder, without spending
+        // anything - the way to check the picture on a real device.
+        "certificate" to ConsoleAction("game certificate") { console, _ ->
+            val civ = console.screen.selectedCiv
+            val record = com.unciv.logic.chain.VictoryCertificate.record(console.gameInfo, civ)
+            val jpeg = com.unciv.logic.chain.ChainWallet.service.renderCertificate(
+                com.unciv.logic.chain.VictoryCertificate.inscription(record),
+                com.unciv.logic.chain.CertificateEmblem(record.nation, record.emblemOuter, record.emblemInner)
+            ) ?: throw ConsoleErrorException("This platform cannot draw a certificate")
+            val file = com.unciv.UncivGame.Current.files.getSave("certificate-preview.jpg")
+            file.writeBytes(jpeg, false)
+            DevConsoleResponse.hint("[${jpeg.size}] bytes written to [${file.path()}]")
+        },
+
         "setturn" to ConsoleAction("game setturn <nonNegativeAmount>") { console, params ->
             val turn = params[0].toInt()
             console.gameInfo.turns = turn

@@ -1,5 +1,7 @@
 package com.unciv.app.desktop
 
+import com.unciv.logic.chain.CertificateEmblem
+import com.unciv.logic.chain.VictoryCertificate
 import com.unciv.logic.chain.PlatformWalletService
 
 /**
@@ -31,12 +33,13 @@ class DesktopWalletService : PlatformWalletService {
 
     override fun mintVictoryCertificate(
         certificateName: String,
-        saveData: ByteArray,
-        alreadyUploadedSaveUri: String?,
-        buildMetadata: (saveUri: String, imageUri: String) -> String,
-        buildInlineMetadata: (imageUri: String, withDescription: Boolean) -> String,
+        inscription: List<VictoryCertificate.InscriptionLine>,
+        emblem: CertificateEmblem,
+        alreadyUploadedMetadataUri: String?,
+        buildMetadata: (imageUri: String) -> String,
+        onUploaded: (metadataUri: String) -> Unit,
         onProgress: (String) -> Unit,
-        onSuccess: (assetAddress: String, saveUri: String) -> Unit,
+        onSuccess: (assetAddress: String) -> Unit,
         onError: (Exception) -> Unit
     ) {
         onError(UnsupportedOperationException("Wallet login is only available on Android for now"))

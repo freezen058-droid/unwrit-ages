@@ -46,9 +46,9 @@ class GameSettings {
     /** If true and a wallet is connected, save games get their hash recorded on-chain as a Memo transaction */
     var recordSavesOnChain = false
 
-    /** gameId -> the permanent-storage URI of a save already uploaded for a victory certificate.
-     *  Uploading is paid for separately from minting, so if a mint fails the player must be able to
-     *  retry without paying to store the same save a second time. */
+    /** gameId -> the Arweave URI of a victory certificate's metadata already stored, so a mint
+     *  that fails after the upload retries against it instead of uploading again. (The name is
+     *  from when it held an uploaded save; kept so existing settings files still load.) */
     var uploadedCertificateSaves = HashMap<String, String>()
     /** If true and a wallet is connected, every [turnsBetweenAutosaves] turns the player is asked
      *  (never charged silently) whether to also record that point on-chain for 1 SKR. */

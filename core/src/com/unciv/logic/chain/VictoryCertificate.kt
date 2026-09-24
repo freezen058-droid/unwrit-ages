@@ -46,6 +46,13 @@ object VictoryCertificate {
         val mapSeed: Long,
         val mapType: String,
         val mapSize: String,
+        /** Major civilizations in the game, the winner included. */
+        val players: Int,
+        /** The winner's nation - its emblem goes in the stele's medallion - and its two colours,
+         *  as the game draws them: [emblemOuter] fills the disc, [emblemInner] draws the icon. */
+        val nation: String,
+        val emblemOuter: List<Int>,
+        val emblemInner: List<Int>,
         /** Turn -> value, sampled. */
         val curves: Map<String, Map<Int, Int>>,
         val chronicle: List<ChronicleEntry>
@@ -73,11 +80,79 @@ object VictoryCertificate {
             mapSeed = mapParams.seed,
             mapType = mapParams.type,
             mapSize = mapParams.mapSize.name,
+            players = gameInfo.civilizations.count { it.isMajorCiv() },
+            nation = winner.nation.name,
+            emblemOuter = winner.nation.getOuterColor().let { c -> listOf(c.r, c.g, c.b).map { Math.round(it * 255) } },
+            emblemInner = winner.nation.getInnerColor().let { c -> listOf(c.r, c.g, c.b).map { Math.round(it * 255) } },
             curves = CURVES.associate { type ->
                 type.name to sample(winner.statsHistory.mapValues { it.value[type] ?: 0 })
             },
             chronicle = gameInfo.chronicle.toList()
         )
+    }
+
+    /**
+     * Who drew each emblem the certificate can carry, as upstream's docs/Credits.md records it.
+     * These are attribution licences (CC BY 3.0, Flaticon's free licence), which allow a paid
+     * certificate but require the credit to travel with it - so it goes into the metadata.
+     * Nations missing here have no emblem on the stele: China, Inca, Iroquois and Songhai are
+     * CC BY-NC-SA (non-commercial), and Denmark, Mongolia and Spain have no recorded source.
+     * android/assets/certificate/emblems/ holds exactly the icons listed here.
+     */
+    val EMBLEM_CREDITS = mapOf(
+        "America" to "Shield by Nathan Driskell",
+        "Arabia" to "Star and Crescent, the Noun Project",
+        "Austria" to "Flag of Austria by Olena Panasovska (modified)",
+        "Aztecs" to "Aztec icon by Kāne",
+        "Babylon" to "Lamassu by Jason Dilworth",
+        "Byzantium" to "Orthodox Cross by Avana Vana",
+        "Carthage" to "Elephant by Hea Poh Lin (modified)",
+        "Celts" to "Celtic Knot by Ervin Bolat",
+        "Egypt" to "Eye of Horus by Lilit Kalachyan",
+        "England" to "Crown by Peter van Driel",
+        "Ethiopia" to "Lion by IronSV, royal crown by Vectors Market, Spear by Firza Alamsyah, pennant by Sara Jeffries",
+        "France" to "Fleur de Lis by Jessika Gadoury",
+        "Germany" to "Iron Cross by Souvik Maity",
+        "Greece" to "Omega by icon 54",
+        "India" to "Ashoka Chakra by sahua d",
+        "Japan" to "Family Crest Komon by sahua d",
+        "Korea" to "Korea by CJS",
+        "Persia" to "Sword by Those Icons (Flaticon)",
+        "Polynesia" to "Swirl by IronSV",
+        "Rome" to "Laurel by VectorBakery",
+        "Russia" to "Russia by Eugen Belyakoff",
+        "Siam" to "Dharmachakra by Parkjisun",
+        "Sweden" to "Three Crowns by Daniel Falk",
+        "The Huns" to "Sun symbol by Eddo",
+        "The Maya" to "Maya civilization by Olena Panasovska",
+        "The Netherlands" to "Lion by Nikki Rodriguez",
+        "The Ottomans" to "crescents by Estu Suhartono (modified)"
+    )
+
+    /** One line of the stele's inscription; [style] names an entry in the renderer's style table
+     *  (pic/batch_review/_sd/stele.py STYLES, mirrored in the Android CertificateImage). */
+    data class InscriptionLine(val style: String, val text: String)
+
+    /** What is carved into the stele, top to bottom - in English whatever the game's language, so
+     *  every certificate reads the same in a wallet or a marketplace. Mirrors stele.py lines_for. */
+    fun inscription(record: Record): List<InscriptionLine> {
+        // One fact per line: the stele's face is tall and narrow. The map seed is in the metadata,
+        // not here - it matters to someone replaying the map, not to someone looking at the stone.
+        val lines = mutableListOf(
+            InscriptionLine("civ", record.winner.uppercase()),
+            InscriptionLine("victory", describe(record.victoryType).uppercase()),
+            InscriptionLine("when", "Turn ${record.victoryTurn}"),
+            InscriptionLine("when", year(record.victoryYear)),
+            InscriptionLine("rule", ""),
+            InscriptionLine("fact", "${record.difficulty} difficulty"),
+            InscriptionLine("fact", "${record.players} players"),
+        )
+        if (record.rivals.isNotEmpty()) lines += InscriptionLine("fact", "Rivals: " + record.rivals.joinToString(", "))
+        if (record.eliminated.isNotEmpty()) lines += InscriptionLine("fact", "Eliminated: " + record.eliminated.joinToString(", "))
+        // The game's settings last: who was there and who fell read first.
+        lines += InscriptionLine("fact", "${record.gameSpeed} speed")
+        lines += InscriptionLine("fact", "${record.mapType} · ${record.mapSize}")
+        return lines
     }
 
     /** Every turn if the game was short, otherwise an even spread that always keeps the last turn. */
@@ -91,7 +166,7 @@ object VictoryCertificate {
 
     /**
      * The asset's off-chain metadata, in the shape wallets and marketplaces expect: `name`,
-     * `description`, `image`, `attributes`, plus our own `civilwars` payload for anything that
+     * `description`, `image`, `attributes`, plus our own `unwritAges` payload for anything that
      * wants to render the game rather than just list it.
      *
      * [imageUri] and [saveUri] are permanent-storage URIs; both are filled in *after* the upload,
@@ -107,6 +182,20 @@ object VictoryCertificate {
         sb.field("description", description(record))
         sb.append(',')
         sb.field("image", imageUri)
+        // The picture again with its type - some wallets read only this - and at arweave.net as
+        // well, the canonical gateway, in case the one [imageUri] names is ever gone.
+        sb.append(",\"properties\":{")
+        sb.field("category", "image")
+        sb.append(",\"files\":[")
+        listOf(imageUri, "https://arweave.net/" + imageUri.substringAfterLast('/')).distinct().forEachIndexed { i, uri ->
+            if (i > 0) sb.append(',')
+            sb.append('{')
+            sb.field("uri", uri)
+            sb.append(',')
+            sb.field("type", "image/jpeg")
+            sb.append('}')
+        }
+        sb.append("]}")
         sb.append(",\"attributes\":[")
         val attributes = listOf(
             "Victory" to describe(record.victoryType),
@@ -117,7 +206,7 @@ object VictoryCertificate {
             "Speed" to record.gameSpeed,
             "Map" to "${record.mapType} ${record.mapSize}",
             "Rivals eliminated" to record.eliminated.size.toString()
-        )
+        ) + (EMBLEM_CREDITS[record.nation]?.let { listOf("Emblem" to it) } ?: emptyList())
         attributes.forEachIndexed { i, (trait, value) ->
             if (i > 0) sb.append(',')
             sb.append("{")
@@ -126,7 +215,7 @@ object VictoryCertificate {
             sb.field("value", value)
             sb.append("}")
         }
-        sb.append("],\"civilwars\":{")
+        sb.append("],\"unwritAges\":{")
         sb.field("gameId", record.gameId)
         sb.append(',')
         sb.field("saveUri", saveUri)
@@ -157,59 +246,20 @@ object VictoryCertificate {
         return sb.toString()
     }
 
-    /**
-     * The same certificate, small enough to live *inside* the asset instead of behind a URL.
-     *
-     * [metadataJson] is a few kilobytes - the chronicle and five ranking curves - and has to be
-     * uploaded somewhere and pointed at. This one is the subset a wallet actually renders, written
-     * to fit in the `uri` field of the mint transaction itself as a `data:` URI. Nothing to upload,
-     * nothing to keep paying for, and no host whose disappearance empties the certificate.
-     *
-     * Everything variable in it is bounded, because the budget is a hard one: a Solana transaction
-     * is 1232 bytes and this shares them with two signatures, five account keys and two
-     * instructions. [withDescription] is the one thing the caller can turn off, because it is the
-     * longest field and the only one that is prose rather than fact.
-     */
-    fun compactMetadataJson(record: Record, imageUri: String, withDescription: Boolean = true): String {
-        val sb = StringBuilder(640)
-        sb.append('{')
-        sb.field("name", "${record.winner} - ${describe(record.victoryType)}, turn ${record.victoryTurn}")
-        if (withDescription) {
-            sb.append(',')
-            sb.field("description", description(record, short = true))
-        }
-        if (imageUri.isNotEmpty()) {
-            sb.append(',')
-            sb.field("image", imageUri)
-        }
-        sb.append(",\"attributes\":[")
-        val attributes = listOf(
-            "Victory" to describe(record.victoryType),
-            "Civilization" to record.winner,
-            "Turn" to record.victoryTurn.toString(),
-            "Year" to year(record.victoryYear),
-            "Difficulty" to record.difficulty,
-            "Speed" to record.gameSpeed
-        )
-        attributes.forEachIndexed { i, (trait, value) ->
-            if (i > 0) sb.append(',')
-            sb.append('{')
-            sb.field("trait_type", trait)
-            sb.append(',')
-            sb.field("value", value)
-            sb.append('}')
-        }
-        sb.append("]}")
-        return sb.toString()
+    /** [metadataJson], cut down only if it would not fit the free upload tier: the chronicle is
+     *  the one part whose length the game controls, so a very long game loses it before the
+     *  certificate loses the free upload. Everything a wallet shows is kept either way. */
+    fun metadataJsonWithin(record: Record, imageUri: String, maxBytes: Int): String {
+        val full = metadataJson(record, imageUri, "")
+        if (full.toByteArray(Charsets.UTF_8).size <= maxBytes) return full
+        return metadataJson(record.copy(chronicle = emptyList()), imageUri, "")
     }
 
-    /** @param short drops the parts whose length the player controls - see [compactMetadataJson]. */
-    private fun description(record: Record, short: Boolean = false): String {
+    private fun description(record: Record): String {
         val lines = StringBuilder()
         lines.append("${record.winner} achieved a ${describe(record.victoryType).lowercase()} ")
             .append("on turn ${record.victoryTurn}, ${year(record.victoryYear)}, ")
             .append("at ${record.difficulty} difficulty.")
-        if (short) return lines.toString()
         if (record.eliminated.isNotEmpty())
             lines.append(" Eliminated: ${record.eliminated.joinToString(", ")}.")
         lines.append(" The final world is stored permanently and can be reopened from this certificate.")
