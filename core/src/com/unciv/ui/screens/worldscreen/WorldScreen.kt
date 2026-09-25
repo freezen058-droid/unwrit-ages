@@ -159,8 +159,14 @@ class WorldScreen(
     internal val nextTurnButton = NextTurnButton(this)
     private val statusButtons = StatusButtons(nextTurnButton)
     internal val smallUnitButton = SmallUnitButton(this, statusButtons)
+    // Its tap-to-collapse is registered once, here; the contents are swapped with clearChildren,
+    // because Table.clear would drop that listener with them.
     private val tutorialTaskTable = Table().apply {
         background = skinStrings.getUiBackground("WorldScreen/TutorialTaskTable", tintColor = skinStrings.skinConfig.baseColor.darken(0.5f))
+        onClick {
+            UncivGame.Current.isTutorialTaskCollapsed = !UncivGame.Current.isTutorialTaskCollapsed
+            displayTutorialTaskOnUpdate()
+        }
     }
     private var tutorialTaskTableHash = 0
 
@@ -464,8 +470,7 @@ class WorldScreen(
         mapHolder.updateTiles(getGameViewConsideringForOfWar().civView)
 
         topBar.update(selectedCiv)
-        if (tutorialTaskTable.isVisible)
-            tutorialTaskTable.y = topBar.getYForTutorialTask() - tutorialTaskTable.height
+        placeTutorialTaskTable()
 
         if (techPolicyAndDiplomacy.update())
             displayTutorial(TutorialTrigger.OtherCivEncountered)
@@ -517,7 +522,9 @@ class WorldScreen(
 
     private fun getCurrentTutorialTask(): Event? {
         if (!gameInfo.tutorialTasksCompleted.contains("Create a trade route")) {
-            if (viewingCiv.cache.citiesConnectedToCapitalToMediums.any { it.key.civ == viewingCiv })
+            // The capital is in this map too, connected to itself - so a one-city empire had
+            // "created" a trade route before the task ever appeared (user, 09-25).
+            if (viewingCiv.cache.citiesConnectedToCapitalToMediums.any { it.key.civ == viewingCiv && !it.key.isCapital() })
                 game.settings.addCompletedTutorialTask("Create a trade route", gameInfo)
         }
         val stateForConditionals = viewingCiv.state
@@ -557,7 +564,7 @@ class WorldScreen(
     private fun displayTutorialTaskOnUpdate() {
         fun setInvisible() {
             tutorialTaskTable.isVisible = false
-            tutorialTaskTable.clear()
+            tutorialTaskTable.clearChildren()
             tutorialTaskTableHash = 0
             // The button outlives the hint - it is the way in once the chain is finished.
             positionTutorialProgressButton()
@@ -572,7 +579,7 @@ class WorldScreen(
                     shouldUpdate = true
                 }
                 if (!renderEvent.isValid) return setInvisible()
-                tutorialTaskTable.clear()
+                tutorialTaskTable.clearChildren()
                 // A task can run to several paragraphs - reassigning citizens explains what the
                 // number on screen does and what the choice costs - and the panel sits over the
                 // map, so without a ceiling it covered the game the player is being taught.
@@ -583,18 +590,27 @@ class WorldScreen(
                 tutorialTaskTableHash = hash
             }
         } else {
-            tutorialTaskTable.clear()
+            tutorialTaskTable.clearChildren()
             tutorialTaskTable.add(ImageGetter.getImage("OtherIcons/HiddenTutorialTask").apply { setSize(30f,30f) }).pad(5f)
             tutorialTaskTableHash = 0
         }
         tutorialTaskTable.pack()
+        tutorialTaskTable.isVisible = true
+        placeTutorialTaskTable()
+    }
+
+    /**
+     * Centred under the top bar - unless the next-turn button reaches into it. That button grows
+     * with its text ("Move automated units" in 30-point type) and shares the band under the top
+     * bar, so the hint drops below it instead of being covered.
+     */
+    private fun placeTutorialTaskTable() {
+        if (!tutorialTaskTable.isVisible) return
         tutorialTaskTable.centerX(stage)
         tutorialTaskTable.y = topBar.getYForTutorialTask() - tutorialTaskTable.height
-        tutorialTaskTable.onClick {
-            UncivGame.Current.isTutorialTaskCollapsed = !UncivGame.Current.isTutorialTaskCollapsed
-            displayTutorialTaskOnUpdate()
-        }
-        tutorialTaskTable.isVisible = true
+        if (statusButtons.isVisible && tutorialTaskTable.right > statusButtons.x - 10f
+                && tutorialTaskTable.y < statusButtons.top)
+            tutorialTaskTable.y = statusButtons.y - 10f - tutorialTaskTable.height
         positionTutorialProgressButton()
     }
 
@@ -784,6 +800,8 @@ class WorldScreen(
             statusButtons.update(true)
         }
         statusButtons.setPosition(stage.width - statusButtons.width - 10f, topBar.y - statusButtons.height - 10f)
+        // The hint was placed before the button learnt its text this update.
+        placeTutorialTaskTable()
 
         // Update chat button position to always be below techPolicyAndDiplomacy
         chatButton.updatePosition()

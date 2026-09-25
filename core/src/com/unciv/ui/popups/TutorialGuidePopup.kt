@@ -2,20 +2,23 @@ package com.unciv.ui.popups
 
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.Stage
+import com.badlogic.gdx.scenes.scene2d.Touchable
+import com.badlogic.gdx.scenes.scene2d.actions.Actions
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.utils.Align
 import com.unciv.Constants
+import com.unciv.UncivGame
 import com.unciv.logic.GameInfo
 import com.unciv.models.ruleset.Ruleset
 import com.unciv.ui.components.extensions.addSeparator
 import com.unciv.ui.components.extensions.center
 import com.unciv.ui.components.extensions.getCloseButton
 import com.unciv.ui.components.extensions.toLabel
-import com.unciv.ui.components.extensions.toTextButton
 import com.unciv.ui.components.input.onClick
 import com.unciv.ui.components.widgets.TabbedPager
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.screens.basescreen.BaseScreen
+import com.unciv.ui.screens.mainmenuscreen.MainMenuTour
 
 /**
  * Everything a new player needs, in the order they need it.
@@ -40,6 +43,9 @@ class TutorialGuidePopup(
 ) : Popup(stageToShowOn, scrollable = Scrollability.None) {
 
     private companion object {
+        /** The gold of the menu tour's highlight, the store art and the certificate. */
+        val playAccent: Color = Color.valueOf("d3ac6c")
+
         /** Chapter title to the tutorials it collects, in reading order rather than ruleset order. */
         val CHAPTERS = listOf(
             "Getting started" to listOf(
@@ -60,6 +66,9 @@ class TutorialGuidePopup(
                 "Victory Types", "Victory Certificate", "Your Wallet", "Recording Saves On-Chain"),
         )
     }
+
+    /** Set by [chapterPage] when the play offer is shown, for the first-open pointer. */
+    private var playButton: Table? = null
 
     init {
         clickBehindToClose = true
@@ -99,6 +108,26 @@ class TutorialGuidePopup(
 
         pack()
         center(stageToShowOn)
+        pointAtPlayButtonOnce(stageToShowOn)
+    }
+
+    /**
+     * The first time the Guide is opened from the menu, point at the tutorial game the same way the
+     * menu tour points at the Guide. After a delay: the button has no stage position until the
+     * popup has been opened and laid out.
+     */
+    private fun pointAtPlayButtonOnce(stage: Stage) {
+        val target = playButton ?: return
+        val settings = UncivGame.Current.settings
+        if (settings.guideTourShown) return
+        stage.addAction(Actions.delay(0.4f, Actions.run {
+            if (target.stage == null) return@run  // closed before the pointer came up
+            MainMenuTour(stage, listOf(MainMenuTour.Step(target,
+                "Start here: a small practice game that gives you one task at a time."))) {
+                settings.guideTourShown = true
+                settings.save()
+            }.show()
+        }))
     }
 
     /** One chapter, or null if the ruleset has none of its tutorials. */
@@ -115,9 +144,19 @@ class TutorialGuidePopup(
 
         val play = startTutorialGame
         if (withPlayButton && play != null) {
-            val playButton = "Start a tutorial game".toTextButton()
+            // Gold like the tour's highlight and larger than any other button here: it is the one
+            // thing on this page a beginner should press.
+            val playButton = Table()
+            playButton.background = BaseScreen.skinStrings.getUiBackground(
+                "TutorialGuide/PlayButton", BaseScreen.skinStrings.roundedEdgeRectangleShape, playAccent)
+            playButton.pad(14f, 36f, 14f, 36f)
+            playButton.add(ImageGetter.getImage("OtherIcons/Quickstart").apply { color = Color.BLACK })
+                .size(34f).padRight(12f)
+            playButton.add("Start a tutorial game".toLabel(Color.BLACK, 30))
+            playButton.touchable = Touchable.enabled
             playButton.onClick { close(); play() }
-            table.add(playButton).padBottom(4f).row()
+            this.playButton = playButton
+            table.add(playButton).padTop(6f).padBottom(8f).row()
             val blurb = "A small map, one rival and the gentlest difficulty, with the hints switched on - the fastest way to see how all of this works."
                 .toLabel(fontSize = Constants.defaultFontSize - 4)
             blurb.wrap = true

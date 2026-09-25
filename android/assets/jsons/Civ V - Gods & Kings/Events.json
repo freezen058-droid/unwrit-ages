@@ -73,6 +73,7 @@
 			{"text":"Pick a construction!", "centered":true},
             {"extraImage":"Tutorials/Pick construction", "imageSize":120},
             {"text":"Enter city screen → Click on a unit or building → Click 'add to queue'."},
+            {"text":"A Worker is a good first choice: it builds farms and mines on the land around your city, and the next tasks use it."},
 		],
         "uniques": [
             "Only available <if tutorials are enabled> <when number of [Cities] is more than [0]> <if tutorial [Enter city screen] is completed>",
@@ -145,10 +146,10 @@
         "civilopediaText":[
 			{"text":"Construct an improvement!", "centered":true},
             {"extraImage":"Tutorials/Construct an improvement", "imageSize":150},
-            {"text":"Construct a Worker unit → Move it to a Plains or Grassland tile → Click 'Construct improvement' → Choose the farm → Leave the worker there until it's finished."},
+            {"text":"Select your Worker → Move it to a Plains or Grassland tile → Click 'Construct improvement' → Choose the farm → Leave the worker there until it's finished."},
 		],
         "uniques": [
-            "Only available <if tutorials are enabled> <when number of [Cities] is more than [0]> <if tutorial [Open the options table] is completed>",
+            "Only available <if tutorials are enabled> <when number of [Cities] is more than [0]> <when number of [[Worker] Units] is more than [0]> <if tutorial [Open the options table] is completed>",
             "Unavailable <if tutorial [Construct an improvement] is completed>"
         ]
     },

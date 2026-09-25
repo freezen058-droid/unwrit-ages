@@ -1,19 +1,11 @@
 package com.unciv.ui.popups.options
 
-import com.badlogic.gdx.graphics.Color
-import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.unciv.Constants
-import com.unciv.ui.audio.MusicTrackChooserFlags
 import com.unciv.ui.components.extensions.MusicControls
 import com.unciv.ui.components.extensions.addSeparator
-import com.unciv.ui.components.extensions.disable
 import com.unciv.ui.components.extensions.toLabel
-import com.unciv.ui.components.extensions.toTextButton
-import com.unciv.ui.components.input.onClick
 import com.unciv.ui.components.widgets.LanguageSelectBox
 import com.unciv.ui.components.widgets.TabbedPager
-import com.unciv.utils.Concurrency
-import com.unciv.utils.launchOnGLThread
 
 /**
  *  The language dropdown and the sound controls on one page. Each used to have a tab of its own,
@@ -43,9 +35,6 @@ internal class LanguageAndSoundTab(
         if (music.isMusicAvailable())
             addMusicControls(settings, music)
 
-        if (!music.isDefaultFileAvailable())
-            addDownloadMusic()
-
         super.lateInitialize()
     }
 
@@ -60,34 +49,5 @@ internal class LanguageAndSoundTab(
     override fun activated(index: Int, caption: String, pager: TabbedPager) {
         super.activated(index, caption, pager)
         languageSelectBox.showSelected(settings.language)
-    }
-
-    private fun addDownloadMusic() {
-        val downloadMusicButton = "Download music".toTextButton()
-        add(downloadMusicButton).colspan(2).padTop(20f).row()
-        val errorTable = Table()
-        add(errorTable).colspan(2).row()
-
-        downloadMusicButton.onClick {
-            downloadMusicButton.disable()
-            errorTable.clear()
-            errorTable.add("Downloading...".toLabel())
-
-            // So the whole game doesn't get stuck while downloading the file
-            Concurrency.run("MusicDownload") {
-                try {
-                    game.musicController.downloadDefaultFile()
-                    launchOnGLThread {
-                        replacePage { optionsPopup -> LanguageAndSoundTab(optionsPopup) }
-                        game.musicController.chooseTrack(flags = MusicTrackChooserFlags.setPlayDefault)
-                    }
-                } catch (_: Exception) {
-                    launchOnGLThread {
-                        errorTable.clear()
-                        errorTable.add("Could not download music!".toLabel(Color.RED))
-                    }
-                }
-            }
-        }
     }
 }

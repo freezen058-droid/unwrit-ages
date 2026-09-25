@@ -155,6 +155,7 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
         // hand meant one of the two cases was always lopsided - a hardcoded 3+3 became 4+3 the
         // moment a save existed, and moving Quickstart out of the list would have made the fresh
         // install 2+3 instead, which is the case a new player and a store reviewer see first.
+        lateinit var newGameButton: Table
         lateinit var guideButton: Table
         lateinit var walletButton: Table
         val menuButtons = buildList {
@@ -164,7 +165,7 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
             add(getMenuButton("Start new game", "OtherIcons/New", KeyboardBinding.StartNewGame) {
                 InputDisabling.disableInput()
                 game.pushScreen(NewGameScreen())
-            })
+            }.also { newGameButton = it })
 
             add(getMenuButton("Load game", "OtherIcons/Load", KeyboardBinding.MainMenuLoad) {
                 InputDisabling.disableInput()
@@ -247,16 +248,18 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
         }
         stage.addActor(versionTable)
 
-        if (!game.settings.mainMenuTourShown) startTour(guideButton, walletButton)
+        if (!game.settings.mainMenuTourShown) startTour(guideButton, newGameButton, walletButton)
     }
 
     /** Shown once, on the first main menu after install; see [MainMenuTour]. Started after a short
      *  delay because the buttons have no stage position until the menu has been laid out. */
-    private fun startTour(guideButton: Table, walletButton: Table) {
+    private fun startTour(guideButton: Table, newGameButton: Table, walletButton: Table) {
         stage.addAction(Actions.delay(0.4f, Actions.run {
             MainMenuTour(stage, listOf(
                 MainMenuTour.Step(guideButton,
                     "New here? The Guide teaches the game in six short chapters, with a starter game to learn in."),
+                MainMenuTour.Step(newGameButton,
+                    "Played this kind of game before? Start a new game straight away and choose the difficulty, the map and your rivals yourself."),
                 MainMenuTour.Step(walletButton,
                     "Connect a Solana wallet here to record saves on-chain and mint victory certificates. It's optional - the whole game plays without it."),
             )) {

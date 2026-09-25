@@ -50,9 +50,13 @@ class TutorialTaskPanel : Table() {
     /** Fill with [civ]'s current task, or hide when there is none or the player collapsed it.
      *  [labelWidth] is what the instruction wraps at - a task like "Enter city screen -> click the
      *  assigned tile to unassign -> click an unassigned tile" is one long line and would otherwise
-     *  run off both edges of the screen. */
-    fun update(civ: Civilization, labelWidth: Float) {
-        clear()
+     *  run off both edges of the screen. Past [maxHeight] the text scrolls - reassigning citizens
+     *  runs to several paragraphs, and unbounded it covered the middle of the city screen.
+     *
+     *  clearChildren, not clear: Table.clear also drops the actor's listeners, which took the
+     *  screen's tap-to-collapse with it after the first update. */
+    fun update(civ: Civilization, labelWidth: Float, maxHeight: Float) {
+        clearChildren()
         val task = currentTutorialTask(civ)
         if (task == null) {
             isVisible = false
@@ -64,7 +68,9 @@ class TutorialTaskPanel : Table() {
             add(currentTaskDot()).pad(5f)
         } else {
             val lines = task.civilopediaText.filter { it.extraImage.isEmpty() }
-            MarkupRenderer.renderTo(this, lines, labelWidth)
+            val text = Table()
+            MarkupRenderer.renderTo(text, lines, labelWidth)
+            add(AutoScrollPane(text)).maxHeight(maxHeight)
         }
         pack()
         isVisible = true

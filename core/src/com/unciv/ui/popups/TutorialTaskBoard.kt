@@ -102,12 +102,12 @@ object TutorialTaskBoard {
         task.civilopediaText.firstOrNull { it.text.isNotEmpty() }?.text ?: taskKey(task)
 
     /**
-     * Requirements written out for the four situational tasks.
+     * Requirements written out for the situational tasks.
      *
      * The generic rendering of their conditions is correct but reads like a rule engine -
      * "[countable] 大于 [countable2] 时" - and cannot be improved by translating better, because
      * the countable inside it has no entry of its own: pulled out and translated alone, "[Air]
-     * Units" comes back as "空军 Units" with the English showing through. Four short lines are
+     * Units" comes back as "空军 Units" with the English showing through. A few short lines are
      * worth more than a clever derivation that cannot say "once you have your first aircraft".
      *
      * Anything not listed falls back to the condition as the ruleset states it, so a mod's own
@@ -115,6 +115,7 @@ object TutorialTaskBoard {
      */
     private val writtenRequirements = mapOf(
         "Meet another civilization" to "Once you have met another civilization",
+        "Construct an improvement" to "Once you have a Worker",
         "Create a trade route" to "Once you have a second city",
         "Conquer a city" to "Once you are at war",
         "Move an air unit" to "Once you have your first aircraft",

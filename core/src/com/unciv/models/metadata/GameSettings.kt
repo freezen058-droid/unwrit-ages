@@ -203,6 +203,9 @@ class GameSettings {
     /** Whether the main menu has walked the player through its Guide and Wallet buttons (MainMenuTour) */
     var mainMenuTourShown = false
 
+    /** Whether the Guide has pointed at its "Start a tutorial game" button (first open only) */
+    var guideTourShown = false
+
     // Controlled from ModManagementScreen
     var visualMods = HashSet<String>()
 

@@ -245,7 +245,7 @@ class CityScreen(
         // Half the screen: wide enough to read, narrow enough to leave the city panels alone.
         // getCiv() is ForeignCivView's migration bridge - the task conditionals want the real
         // Civilization's GameContext, which the view wrapper does not expose.
-        tutorialTaskPanel.update(cityView.viewingCiv().getCiv(), stage.width * 0.45f)
+        tutorialTaskPanel.update(cityView.viewingCiv().getCiv(), stage.width * 0.45f, stage.height * 0.3f)
         if (!tutorialTaskPanel.isVisible) return
         val below = if (razeCityButtonHolder.height > 0f)
             razeCityButtonHolder.y - 10f
