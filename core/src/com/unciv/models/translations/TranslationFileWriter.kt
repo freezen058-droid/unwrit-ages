@@ -110,6 +110,94 @@ object TranslationFileWriter {
         }
     }
 
+    /** Every line the base game offers for translation - code templates, uniques, enums and the
+     *  base rulesets' JSONs - in the "key = " form of the language files, with the JSON lines
+     *  grouped by source file in [fileNameToGeneratedStrings]. */
+    private fun collectBaseGameLines(
+        linesToTranslate: MutableList<String>,
+        fileNameToGeneratedStrings: LinkedHashMap<String, MutableSet<String>>
+    ) {
+        TranslationFileReader.readTemplates {
+            linesToTranslate.addAll(it)
+        }
+
+        linesToTranslate += "\n\n#################### Lines from Unique Types #######################\n"
+        for (uniqueType in UniqueType.entries) {
+            val deprecationAnnotation = uniqueType.getDeprecationAnnotation()
+            if (deprecationAnnotation != null) continue
+            if (uniqueType.flags.contains(UniqueFlag.HiddenToUsers)) continue
+
+            linesToTranslate += "${uniqueType.getTranslatable()} = "
+        }
+
+        for (uniqueParameterType in UniqueParameterType.entries) {
+            val strings = uniqueParameterType.getTranslationWriterStringsForOutput()
+            if (strings.isEmpty()) continue
+            linesToTranslate += "\n######### ${uniqueParameterType.displayName} ###########\n"
+            linesToTranslate.addAll(strings.map { "$it = " })
+        }
+
+        for (uniqueTarget in UniqueTarget.entries)
+            linesToTranslate += "$uniqueTarget = "
+
+        linesToTranslate += "\n\n#################### Lines from Countables #######################\n"
+        for (countable in Countables.entries)
+            if (countable.text.isNotEmpty())
+                linesToTranslate += "${countable.text} = "
+
+        linesToTranslate += "\n\n#################### Lines from spy actions #######################\n"
+        for (spyAction in SpyAction.entries)
+            linesToTranslate += "${spyAction.displayString} = "
+
+        linesToTranslate += "\n\n#################### Lines from diplomatic modifiers #######################\n"
+        for (diplomaticModifier in DiplomaticModifiers.entries)
+            linesToTranslate += "${diplomaticModifier.text} = "
+
+        linesToTranslate += "\n\n#################### Lines from demands #######################\n"
+        for (demand in Demand.entries) {
+            linesToTranslate += "\n### ${demand.name} \n"
+            val uiTexts = listOf(demand.demandText, demand.acceptDemandText, demand.refuseDemandText,
+                demand.violationNoticedText, demand.agreedToDemandText, demand.refusedDemandText,
+                demand.wePromisedText, demand.theyPromisedText)
+            for (text in uiTexts)
+                linesToTranslate += "$text = "
+        }
+
+        linesToTranslate += "\n\n#################### Lines from personality biases #######################\n"
+        for (focus in PersonalityValue.entries)
+            linesToTranslate += "${focus.description} = "
+
+        linesToTranslate += "\n\n#################### Lines from key bindings #######################\n"
+        for (bindingLabel in KeyboardBinding.getTranslationEntries())
+            linesToTranslate += "$bindingLabel = "
+
+        for (baseRuleset in BaseRuleset.entries) {
+            val generatedStringsFromBaseRuleset = GenerateStringsFromJSONs(baseRuleset)
+            for (entry in generatedStringsFromBaseRuleset)
+                fileNameToGeneratedStrings[entry.key + " from " + baseRuleset.fullName] = entry.value
+        }
+
+        // Global Tutorials reside one level above the base rulesets - if we had only per-ruleset tutorials the following lines would be unnecessary
+        val tutorialStrings = GenerateStringsFromJSONs(UncivGame.Current.files.getLocalFile("jsons")) { it.name == "Tutorials.json" }
+        fileNameToGeneratedStrings["Global Tutorials"] = tutorialStrings.values.first()
+    }
+
+    /**
+     * The keys, as [Translations] stores them, of every line the base game can show - the same
+     * set "Generate translation files" writes. For tests that check a shipped language is complete:
+     * the language files cannot answer that themselves, because a line the generator was never
+     * re-run for is missing from all of them, English included (09-25: the game's first popup).
+     */
+    fun baseGameTranslationKeys(): Set<String> {
+        val lines = mutableListOf<String>()
+        val fromJsons = LinkedHashMap<String, MutableSet<String>>()
+        collectBaseGameLines(lines, fromJsons)
+        fromJsons.values.forEach { lines.addAll(it) }
+        return lines.filter { " = " in it }
+            .map { it.split(" = ")[0].replace("\\n", "\n").replace(pointyBraceRegex, "").replace(squareBraceRegex, "[]") }
+            .toSet()
+    }
+
     private fun getFileHandle(modFolder: FileHandle?, fileLocation: String) =
             if (modFolder != null) modFolder.child(fileLocation)
             else UncivGame.Current.files.getLocalFile(fileLocation)
@@ -128,73 +216,10 @@ object TranslationFileWriter {
         val fileNameToGeneratedStrings = LinkedHashMap<String, MutableSet<String>>()
         val linesToTranslate = mutableListOf<String>()
 
-        if (modFolder == null) { // base game
-            TranslationFileReader.readTemplates {
-                linesToTranslate.addAll(it)
-            }
-
-            linesToTranslate += "\n\n#################### Lines from Unique Types #######################\n"
-            for (uniqueType in UniqueType.entries) {
-                val deprecationAnnotation = uniqueType.getDeprecationAnnotation()
-                if (deprecationAnnotation != null) continue
-                if (uniqueType.flags.contains(UniqueFlag.HiddenToUsers)) continue
-
-                linesToTranslate += "${uniqueType.getTranslatable()} = "
-            }
-
-            for (uniqueParameterType in UniqueParameterType.entries) {
-                val strings = uniqueParameterType.getTranslationWriterStringsForOutput()
-                if (strings.isEmpty()) continue
-                linesToTranslate += "\n######### ${uniqueParameterType.displayName} ###########\n"
-                linesToTranslate.addAll(strings.map { "$it = " })
-            }
-
-            for (uniqueTarget in UniqueTarget.entries)
-                linesToTranslate += "$uniqueTarget = "
-
-            linesToTranslate += "\n\n#################### Lines from Countables #######################\n"
-            for (countable in Countables.entries)
-                if (countable.text.isNotEmpty())
-                    linesToTranslate += "${countable.text} = "
-
-            linesToTranslate += "\n\n#################### Lines from spy actions #######################\n"
-            for (spyAction in SpyAction.entries)
-                linesToTranslate += "${spyAction.displayString} = "
-
-            linesToTranslate += "\n\n#################### Lines from diplomatic modifiers #######################\n"
-            for (diplomaticModifier in DiplomaticModifiers.entries)
-                linesToTranslate += "${diplomaticModifier.text} = "
-
-            linesToTranslate += "\n\n#################### Lines from demands #######################\n"
-            for (demand in Demand.entries) {
-                linesToTranslate += "\n### ${demand.name} \n"
-                val uiTexts = listOf(demand.demandText, demand.acceptDemandText, demand.refuseDemandText,
-                    demand.violationNoticedText, demand.agreedToDemandText, demand.refusedDemandText,
-                    demand.wePromisedText, demand.theyPromisedText)
-                for (text in uiTexts)
-                    linesToTranslate += "$text = "
-            }
-
-            linesToTranslate += "\n\n#################### Lines from personality biases #######################\n"
-            for (focus in PersonalityValue.entries)
-                linesToTranslate += "${focus.description} = "
-
-            linesToTranslate += "\n\n#################### Lines from key bindings #######################\n"
-            for (bindingLabel in KeyboardBinding.getTranslationEntries())
-                linesToTranslate += "$bindingLabel = "
-
-            for (baseRuleset in BaseRuleset.entries) {
-                val generatedStringsFromBaseRuleset = GenerateStringsFromJSONs(baseRuleset)
-                for (entry in generatedStringsFromBaseRuleset)
-                    fileNameToGeneratedStrings[entry.key + " from " + baseRuleset.fullName] = entry.value
-            }
-
-            // Global Tutorials reside one level above the base rulesets - if we had only per-ruleset tutorials the following lines would be unnecessary
-            val tutorialStrings = GenerateStringsFromJSONs(UncivGame.Current.files.getLocalFile("jsons")) { it.name == "Tutorials.json" }
-            fileNameToGeneratedStrings["Global Tutorials"] = tutorialStrings.values.first()
-        } else {
+        if (modFolder == null) // base game
+            collectBaseGameLines(linesToTranslate, fileNameToGeneratedStrings)
+        else
             fileNameToGeneratedStrings.putAll(GenerateStringsFromJSONs(modFolder.child("jsons")))
-        }
 
         for ((key, value) in fileNameToGeneratedStrings) {
             if (value.isEmpty()) continue
