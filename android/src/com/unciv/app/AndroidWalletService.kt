@@ -919,7 +919,7 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
                 // capped so a long player-chosen name can't blow the budget, and any ':' in the
                 // name is stripped so it can't be confused with our own field delimiter.
                 val safeSaveName = saveName.replace(":", "").take(64)
-                val memoText = "unciv-save:$gameId:$safeSaveName:$hashHex"
+                val memoText = "unwritages-save:$gameId:$safeSaveName:$hashHex"
 
                 val blockhash = fetchLatestBlockhash()
 

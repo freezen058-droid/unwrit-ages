@@ -636,10 +636,11 @@ class WorldScreen(
         val (left, right) = band
         tutorialTaskTable.y = topBar.getYForTutorialTask() - tutorialTaskTable.height
         if (tutorialTaskTable.width <= right - left) {
-            // Centred on the screen if that fits, otherwise centred in the strip.
+            // Centred on the screen when that is clear of the buttons; otherwise as close to the
+            // centre as it can get - usually a little to the left of the next-turn button
+            // (user, 09-25: attached to the top, shifted left, rather than moved down).
             val centred = (stage.width - tutorialTaskTable.width) / 2
-            tutorialTaskTable.x = if (centred >= left && centred + tutorialTaskTable.width <= right) centred
-                else left + (right - left - tutorialTaskTable.width) / 2
+            tutorialTaskTable.x = centred.coerceIn(left, right - tutorialTaskTable.width)
         } else {
             // A strip narrower than a readable column: below the next-turn button after all.
             tutorialTaskTable.centerX(stage)
