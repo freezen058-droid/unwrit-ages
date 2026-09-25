@@ -189,7 +189,7 @@ object VictoryCertificate {
     fun metadataJson(record: Record, imageUri: String, saveUri: String): String {
         val sb = StringBuilder(4096)
         sb.append('{')
-        sb.field("name", "${record.winner} - ${describe(record.victoryType)}, turn ${record.victoryTurn}")
+        sb.field("name", NAME)
         sb.append(',')
         sb.field("description", description(record))
         sb.append(',')
@@ -267,6 +267,12 @@ object VictoryCertificate {
         if (full.toByteArray(Charsets.UTF_8).size <= maxBytes) return full
         return metadataJson(record.copy(chronicle = emptyList()), imageUri, "")
     }
+
+    /**
+     * Every certificate's name: the game first, so a wallet lists them together (user, 09-25).
+     * Who won, how and when is in the description and the attributes, not the name.
+     */
+    const val NAME = "Unwrit Ages Victory"
 
     private fun description(record: Record): String {
         val lines = StringBuilder()

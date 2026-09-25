@@ -65,9 +65,8 @@ object VictoryCertificateService {
         onSuccess: (assetAddress: String) -> Unit,
         onError: (Exception) -> Unit
     ) {
-        val name = "${record.winner} - ${record.victoryType} T${record.victoryTurn}"
         ChainWallet.service.mintVictoryCertificate(
-            certificateName = name,
+            certificateName = VictoryCertificate.NAME,
             inscription = VictoryCertificate.inscription(record),
             emblem = CertificateEmblem(record.nation, record.emblemOuter, record.emblemInner),
             alreadyUploadedMetadataUri = alreadyMintedUpload(gameInfo),

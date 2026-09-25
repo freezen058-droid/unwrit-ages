@@ -43,4 +43,12 @@ class CertificateMetadataTests {
         Assert.assertEquals("AutoPlay: 37 turns", VictoryCertificate.inscription(autoPlayed).last().text)
         Assert.assertEquals("AutoPlay: 1 turn", VictoryCertificate.inscription(record.copy(autoPlayedTurns = 1)).last().text)
     }
+
+    @Test
+    fun nameIsTheGameAndTheVictoryIsInTheDescription() {
+        val json = Json.parseToJsonElement(VictoryCertificate.metadataJson(record, "https://x/y", "")).jsonObject
+        Assert.assertEquals("Unwrit Ages Victory", json["name"]!!.jsonPrimitive.content)
+        Assert.assertTrue(json["description"]!!.jsonPrimitive.content.startsWith(record.winner + " achieved"))
+        Assert.assertEquals(record.winner, traits(record)["Civilization"])
+    }
 }
