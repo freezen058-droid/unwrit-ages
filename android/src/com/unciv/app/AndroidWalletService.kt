@@ -109,7 +109,7 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
         // player sees does not drift with SOL. Charged in SOL rather than SKR because a mint
         // already requires SOL for the asset's rent - a SOL fee needs no second token and no extra
         // token account, just one more transfer in the same transaction.
-        private const val CERTIFICATE_FEE_USD_CENTS = 75L
+        private const val CERTIFICATE_FEE_USD_CENTS = 90L  // US$0.75 until 09-25
 
         // Pyth's SOL/USD "push oracle" price account. Verified live 2026-09-21 against BOTH
         // clusters - same address, same account, owner `rec5EK...`, feed id matching Pyth's
@@ -133,10 +133,11 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
         /** Used only when the feed cannot be read or is stale. Measured 2026-09-21. */
         private const val FALLBACK_SOL_USD_CENTS = 11757L
         // Hard bounds on what a player can ever be charged, in case the feed returns something
-        // absurd. They correspond to SOL between $30 and $500 at the fee above; outside that band
-        // the player is charged *less* than the nominal fee, never more - the safe direction.
-        private const val CERTIFICATE_FEE_MIN_LAMPORTS = 1_500_000L
-        private const val CERTIFICATE_FEE_MAX_LAMPORTS = 25_000_000L
+        // absurd. They are the fee above at SOL = $500 and SOL = $30. Below $30 the ceiling
+        // charges less than the nominal fee; above $500 the floor charges somewhat more, which
+        // is the price of never letting a broken feed push the charge towards nothing.
+        private const val CERTIFICATE_FEE_MIN_LAMPORTS = 1_800_000L
+        private const val CERTIFICATE_FEE_MAX_LAMPORTS = 30_000_000L
 
         // A Solana transaction has to fit in 1232 bytes and the certificate name is player-derived
         // (civ name + victory type + turn), so it gets a bound. Everything else in this transaction

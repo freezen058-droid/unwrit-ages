@@ -26,7 +26,7 @@ Saves get lost. Phones get replaced. Your greatest victory shouldn't disappear w
 
 Connect a Solana wallet — Phantom, Solflare, or anything that speaks Mobile Wallet Adapter — and mint your win as an on-chain certificate: who won, how, on which turn, in which year. The record lives inside the certificate itself, in your own wallet, so there's no website to go dark and no link to break.
 
-US$0.75, converted to SOL at the moment you mint, plus roughly US$0.17 the network charges to keep it.
+US$0.90, converted to SOL at the moment you mint, plus roughly US$0.17 the network charges to keep it.
 
 Played a game you'll want to prove happened? Stamp a save on-chain — its fingerprint and a timestamp, never the file itself — for 1 SKR. Autosaves are recorded only if you switch that on, and every record asks you first.
 

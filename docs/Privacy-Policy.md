@@ -57,7 +57,7 @@ the Solana blockchain**:
 A public blockchain is permanent and world-readable by design; that is inherent to how it works
 rather than something this game adds. A minted certificate cannot be withdrawn from it.
 
-The fee is **US$0.75**, charged in SOL converted at the live SOL/USD rate from an on-chain price
+The fee is **US$0.90**, charged in SOL converted at the live SOL/USD rate from an on-chain price
 feed so the price you see does not drift, and held between hard bounds so a misbehaving feed can
 only ever charge you less than the nominal fee, never more. You also pay the ordinary Solana
 account rent and network fee, which go to the network and not to us.
