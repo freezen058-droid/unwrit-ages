@@ -160,6 +160,28 @@ open class AndroidLauncher : AndroidApplication() {
                cancel should not be enough of a reason for the game to crash! */
         }
         super.onResume()
+        redrawAfterReturning()
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) redrawAfterReturning()
+    }
+
+    /**
+     * Ask for frames after coming back from another activity - the wallet, above all.
+     *
+     * The game renders only on request (continuousRendering is off). On resume libGDX lets the
+     * GL view draw once, but that frame can run before its own resume() has marked the game as
+     * running, and then draws nothing - and nothing asks for another. After a wallet approval
+     * (whose sheet is portrait, so the screen turns twice) the game stayed black until the power
+     * button produced the next pause/resume (logcat 09-25: resumed at the power press, 7 s later).
+     * A request now and one shortly after cover both orders of that race.
+     */
+    private fun redrawAfterReturning() {
+        val graphics = graphics ?: return
+        graphics.requestRendering()
+        window.decorView.postDelayed({ graphics.requestRendering() }, 300)
     }
 
     override fun onNewIntent(intent: Intent?) {
