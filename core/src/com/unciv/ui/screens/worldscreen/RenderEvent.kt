@@ -22,10 +22,12 @@ class RenderEvent(
     event: Event,
     val worldScreen: WorldScreen,
     val unit: MapUnit? = null,
+    /** Where the text wraps; half the screen unless the caller has less room than that. */
+    textWidth: Float? = null,
     val onChoice: (EventChoice) -> Unit
 ) : Table() {
     private val gameInfo get() = worldScreen.gameInfo
-    private val stageWidth get() = worldScreen.stage.width
+    private val wrapWidth = textWidth ?: (worldScreen.stage.width * 0.5f)
 
     val isValid: Boolean
 
@@ -39,14 +41,14 @@ class RenderEvent(
         isValid = choices != null
         if (isValid) {
             if (event.text.isNotEmpty()) {
-                add(WrappableLabel(event.text, stageWidth * 0.5f).apply {
+                add(WrappableLabel(event.text, wrapWidth).apply {
                     wrap = true
                     setAlignment(Align.center)
                     optimizePrefWidth()
                 }).row()
             }
             if (event.civilopediaText.isNotEmpty()) {
-                add(event.renderCivilopediaText(stageWidth * 0.5f, ::openCivilopedia)).row()
+                add(event.renderCivilopediaText(wrapWidth, ::openCivilopedia)).row()
             }
 
             for (choice in choices!!) addChoice(choice)
@@ -74,7 +76,7 @@ class RenderEvent(
                     .filterNot { it.isHiddenToUsers() }
                     .map { FormattedLine(it) }
             ).asIterable()
-        add(MarkupRenderer.render(lines, stageWidth * 0.5f, linkAction = ::openCivilopedia)).row()
+        add(MarkupRenderer.render(lines, wrapWidth, linkAction = ::openCivilopedia)).row()
     }
 
     private fun openCivilopedia(link: String) = worldScreen.openCivilopedia(link)

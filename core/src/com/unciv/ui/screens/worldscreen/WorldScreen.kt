@@ -100,6 +100,9 @@ class WorldScreen(
     restoreState: RestoreState? = null
 ) : BaseScreen() {
     companion object {
+        /** The narrowest the tutorial hint wraps to, as a share of the screen, before it gives up
+         *  the top strip and drops below the next-turn button. */
+        private const val minTutorialTaskShare = 0.25f
         /** false in the submitted APK (ROADMAP "Final APK - SOP", step 1); true only for test builds. */
         const val DEVELOPER_CONSOLE_OPEN = false
     }
@@ -169,6 +172,8 @@ class WorldScreen(
         }
     }
     private var tutorialTaskTableHash = 0
+    /** The wrap width [tutorialTaskTable]'s text was built with, to rebuild it when the room changes. */
+    private var tutorialTaskTextWidth = 0f
 
     /**
      * Always-there way into the task list, floating under the hint.
@@ -574,8 +579,9 @@ class WorldScreen(
 
         if (!UncivGame.Current.isTutorialTaskCollapsed) {
             val hash = tutorialTask.hashCode()  // Default implementation is OK - we see the same instance or not
-            if (hash != tutorialTaskTableHash) {
-                val renderEvent = RenderEvent(tutorialTask, this) {
+            val textWidth = tutorialTaskTextWidthFor(tutorialTaskBand())
+            if (hash != tutorialTaskTableHash || textWidth != tutorialTaskTextWidth) {
+                val renderEvent = RenderEvent(tutorialTask, this, textWidth = textWidth) {
                     shouldUpdate = true
                 }
                 if (!renderEvent.isValid) return setInvisible()
@@ -586,8 +592,8 @@ class WorldScreen(
                 tutorialTaskTable.add(AutoScrollPane(renderEvent))
                     .pad(10f)
                     .maxHeight(stage.height * 0.4f)
-                    .maxWidth(stage.width * 0.6f)
                 tutorialTaskTableHash = hash
+                tutorialTaskTextWidth = textWidth
             }
         } else {
             tutorialTaskTable.clearChildren()
@@ -600,17 +606,46 @@ class WorldScreen(
     }
 
     /**
-     * Centred under the top bar - unless the next-turn button reaches into it. That button grows
-     * with its text ("Move automated units" in 30-point type) and shares the band under the top
-     * bar, so the hint drops below it instead of being covered.
+     * The strip under the top bar between the tech/policy buttons on the left and the next-turn
+     * button on the right, as (left, right). The hint lives there: in the middle of the map it
+     * covers the game it is teaching (user, 09-25), and the next-turn button grows with its text
+     * ("Move automated units" in 30-point type), so the strip is re-measured on every update.
      */
+    private fun tutorialTaskBand(): Pair<Float, Float> {
+        val left = if (techPolicyAndDiplomacy.isVisible && techPolicyAndDiplomacy.width > 0f)
+            techPolicyAndDiplomacy.x + techPolicyAndDiplomacy.width + 10f else 10f
+        val right = if (statusButtons.isVisible && statusButtons.width > 0f)
+            statusButtons.x - 10f else stage.width - 10f
+        return left to right
+    }
+
+    /** Half the screen, or narrower to fit the [band]; the text then wraps into more lines and scrolls. */
+    private fun tutorialTaskTextWidthFor(band: Pair<Float, Float>): Float {
+        val room = band.second - band.first - 30f  // the table's and RenderEvent's padding
+        return room.coerceIn(stage.width * minTutorialTaskShare, stage.width * 0.5f)
+    }
+
     private fun placeTutorialTaskTable() {
         if (!tutorialTaskTable.isVisible) return
-        tutorialTaskTable.centerX(stage)
+        val band = tutorialTaskBand()
+        // The buttons have changed size since the text was wrapped - wrap it again.
+        if (tutorialTaskTableHash != 0 && tutorialTaskTextWidthFor(band) != tutorialTaskTextWidth) {
+            tutorialTaskTableHash = 0
+            return displayTutorialTaskOnUpdate()
+        }
+        val (left, right) = band
         tutorialTaskTable.y = topBar.getYForTutorialTask() - tutorialTaskTable.height
-        if (statusButtons.isVisible && tutorialTaskTable.right > statusButtons.x - 10f
-                && tutorialTaskTable.y < statusButtons.top)
-            tutorialTaskTable.y = statusButtons.y - 10f - tutorialTaskTable.height
+        if (tutorialTaskTable.width <= right - left) {
+            // Centred on the screen if that fits, otherwise centred in the strip.
+            val centred = (stage.width - tutorialTaskTable.width) / 2
+            tutorialTaskTable.x = if (centred >= left && centred + tutorialTaskTable.width <= right) centred
+                else left + (right - left - tutorialTaskTable.width) / 2
+        } else {
+            // A strip narrower than a readable column: below the next-turn button after all.
+            tutorialTaskTable.centerX(stage)
+            if (statusButtons.isVisible && tutorialTaskTable.y < statusButtons.top)
+                tutorialTaskTable.y = statusButtons.y - 10f - tutorialTaskTable.height
+        }
         positionTutorialProgressButton()
     }
 
@@ -620,8 +655,10 @@ class WorldScreen(
         if (!tutorialProgressButton.isVisible) return
         val below = if (tutorialTaskTable.isVisible) tutorialTaskTable.y
             else topBar.getYForTutorialTask()
+        val centreX = if (tutorialTaskTable.isVisible) tutorialTaskTable.x + tutorialTaskTable.width / 2
+            else stage.width / 2
         tutorialProgressButton.setPosition(
-            stage.width / 2 - tutorialProgressButton.width / 2,
+            centreX - tutorialProgressButton.width / 2,
             below - tutorialProgressButton.height - 5f
         )
     }
