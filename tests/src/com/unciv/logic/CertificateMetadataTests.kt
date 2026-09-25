@@ -50,5 +50,7 @@ class CertificateMetadataTests {
         Assert.assertEquals("Unwrit Ages Victory", json["name"]!!.jsonPrimitive.content)
         Assert.assertTrue(json["description"]!!.jsonPrimitive.content.startsWith(record.winner + " achieved"))
         Assert.assertEquals(record.winner, traits(record)["Civilization"])
+        // No save is uploaded in 1.0.0, so nothing may promise the world can be reopened.
+        Assert.assertFalse(json["description"]!!.jsonPrimitive.content.contains("reopen"))
     }
 }

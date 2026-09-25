@@ -14,9 +14,10 @@ import com.unciv.ui.screens.victoryscreen.RankingType
  *    chronicle of how it went and the score curve behind it. A few kilobytes. This travels as the
  *    asset's metadata, so a wallet or a marketplace can show it without fetching anything, and so
  *    it survives even if every file host on earth goes away;
- *  * the **world** - the final save, hundreds of kilobytes of it. This goes to permanent storage
- *    and the metadata points at it, so the finished map can be reopened, walked, and played on
- *    from "one more turn".
+ *  * the **world** - the final save, hundreds of kilobytes of it. Planned to go to permanent
+ *    storage with the metadata pointing at it, so the finished map could be reopened. **Not in
+ *    1.0.0**: nothing uploads the save and `saveUri` is always empty, so the description must not
+ *    say otherwise (it did until 09-25 - every certificate claimed a world it did not store).
  *
  * The one thing a certificate cannot promise is a turn-by-turn replay of the whole game: a save is
  * a snapshot and there is no action log to replay. What it can do is [ReplayData] - the map's own
@@ -281,7 +282,6 @@ object VictoryCertificate {
             .append("at ${record.difficulty} difficulty.")
         if (record.eliminated.isNotEmpty())
             lines.append(" Eliminated: ${record.eliminated.joinToString(", ")}.")
-        lines.append(" The final world is stored permanently and can be reopened from this certificate.")
         return lines.toString()
     }
 
