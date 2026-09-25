@@ -46,6 +46,13 @@ class TutorialGuidePopup(
         /** The gold of the menu tour's highlight, the store art and the certificate. */
         val playAccent: Color = Color.valueOf("d3ac6c")
 
+        /** Headings for tutorials whose ruleset name is an internal trigger id - shown as-is, those
+         *  read "BarbarianEncountered" in every language (09-25). */
+        val TITLES = mapOf(
+            "BarbarianEncountered" to "Barbarians",
+            "EnemyCityNeedsConqueringWithMeleeUnit" to "Capturing a City",
+        )
+
         /** Chapter title to the tutorials it collects, in reading order rather than ruleset order. */
         val CHAPTERS = listOf(
             "Getting started" to listOf(
@@ -170,7 +177,7 @@ class TutorialGuidePopup(
         for ((index, entry) in found.withIndex()) {
             val (name, steps) = entry
             if (index > 0) table.addSeparator(Color.GRAY).padTop(10f).padBottom(10f)
-            table.add(name.toLabel(fontSize = Constants.headingFontSize))
+            table.add((TITLES[name] ?: name).toLabel(fontSize = Constants.headingFontSize))
                 .width(textWidth).align(Align.left).row()
             for (step in steps) {
                 val label = step.toLabel()
