@@ -99,6 +99,11 @@ class WorldScreen(
     private val viewingCiv: Civilization,
     restoreState: RestoreState? = null
 ) : BaseScreen() {
+    companion object {
+        /** false in the submitted APK (ROADMAP "Final APK - SOP", step 1); true only for test builds. */
+        const val DEVELOPER_CONSOLE_OPEN = false
+    }
+
     /** When set, causes the screen to update in the next [render][render] event */
     var shouldUpdate = false
 
@@ -345,6 +350,9 @@ class WorldScreen(
 
     @Readonly
     fun openDeveloperConsole() {
+        // Closed in the released game: a victory reached through it would still be offered a
+        // certificate. Flip DEVELOPER_CONSOLE_OPEN for a test build.
+        if (!DEVELOPER_CONSOLE_OPEN) return
         // No cheating unless you're by yourself, ignoring a possible spectator
         if (gameInfo.civilizations.count { it.isHuman() && !it.isSpectator() } > 1) return
         DevConsolePopup(this)

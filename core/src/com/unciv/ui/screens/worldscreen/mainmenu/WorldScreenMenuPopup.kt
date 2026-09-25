@@ -33,7 +33,7 @@ class WorldScreenMenuPopup(
 
         val showSave = !worldScreen.gameInfo.gameParameters.isOnlineMultiplayer
         val showMusic = worldScreen.game.musicController.isMusicAvailable()
-        val showConsole = showSave && expertMode
+        val showConsole = WorldScreen.DEVELOPER_CONSOLE_OPEN && showSave && expertMode
         val buttonCount = 8 + (if (showSave) 1 else 0) + (if (showMusic) 1 else 0) + (if (showConsole) 1 else 0)
 
         val emptyPrefHeight = this.prefHeight
