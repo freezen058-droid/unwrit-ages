@@ -22,13 +22,19 @@ import yairm210.purity.annotations.Readonly
 
 class NextTurnButton(
     private val worldScreen: WorldScreen
-) : IconTextButton("", null, 30) {
+) : IconTextButton("", null, fontSize) {
+    private companion object {
+        /** 24, down from upstream's 30: "Move automated units" at 30 took a third of a phone's
+         *  width and crowded the tutorial hint off the top strip (user, 09-25). */
+        const val fontSize = 24
+    }
+
     private var nextTurnAction = Default
     private val unitsDueLabel = Label("", BaseScreen.skin)
     private val unitsDueCell: Cell<Label>
 
     init {
-        pad(15f)
+        pad(12f)
         onActivation { nextTurnAction.action(worldScreen) }
         addContextMenu { NextTurnMenu(stage, this, worldScreen) }
         keyShortcuts.add(KeyboardBinding.NextTurn)
@@ -67,7 +73,7 @@ class NextTurnButton(
         label.color = nextTurnAction.color
         if (nextTurnAction.icon != null && ImageGetter.imageExists(nextTurnAction.icon!!))
             iconCell.setActor(ImageGetter.getImage(nextTurnAction.icon).apply {
-                setSize(30f)
+                setSize(fontSize.toFloat())
                 color = nextTurnAction.color
             })
         else

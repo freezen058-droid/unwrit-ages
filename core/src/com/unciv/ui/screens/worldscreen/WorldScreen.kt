@@ -612,7 +612,7 @@ class WorldScreen(
      * The strip under the top bar between the tech/policy buttons on the left and the next-turn
      * button on the right, as (left, right). The hint lives there: in the middle of the map it
      * covers the game it is teaching (user, 09-25), and the next-turn button grows with its text
-     * ("Move automated units" in 30-point type), so the strip is re-measured on every update.
+     * ("Move automated units"), so the strip is re-measured on every update.
      */
     private fun tutorialTaskBand(): Pair<Float, Float> {
         val left = if (techPolicyAndDiplomacy.isVisible && techPolicyAndDiplomacy.width > 0f)
