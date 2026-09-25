@@ -174,6 +174,9 @@ class WorldScreen(
     private var tutorialTaskTableHash = 0
     /** The wrap width [tutorialTaskTable]'s text was built with, to rebuild it when the room changes. */
     private var tutorialTaskTextWidth = 0f
+    /** How much wider the hint is than its text: padding, background border, scroll bar. Starts as
+     *  an estimate and is replaced by the measured value the first time the hint is laid out. */
+    private var tutorialTaskChromeWidth = 30f
 
     /**
      * Always-there way into the task list, floating under the hint.
@@ -621,17 +624,27 @@ class WorldScreen(
 
     /** Half the screen, or narrower to fit the [band]; the text then wraps into more lines and scrolls. */
     private fun tutorialTaskTextWidthFor(band: Pair<Float, Float>): Float {
-        val room = band.second - band.first - 30f  // the table's and RenderEvent's padding
+        val room = band.second - band.first - tutorialTaskChromeWidth
         return room.coerceIn(stage.width * minTutorialTaskShare, stage.width * 0.5f)
     }
 
     private fun placeTutorialTaskTable() {
         if (!tutorialTaskTable.isVisible) return
         val band = tutorialTaskBand()
-        // The buttons have changed size since the text was wrapped - wrap it again.
-        if (tutorialTaskTableHash != 0 && tutorialTaskTextWidthFor(band) != tutorialTaskTextWidth) {
-            tutorialTaskTableHash = 0
-            return displayTutorialTaskOnUpdate()
+        if (tutorialTaskTableHash != 0) {
+            // The estimate of the border was short (09-25: the hint came out a few pixels wider
+            // than the strip and dropped below the buttons) - learn the real one and wrap again.
+            val chrome = tutorialTaskTable.width - tutorialTaskTextWidth
+            if (chrome > tutorialTaskChromeWidth) {
+                tutorialTaskChromeWidth = chrome
+                tutorialTaskTableHash = 0
+                return displayTutorialTaskOnUpdate()
+            }
+            // The buttons have changed size since the text was wrapped - wrap it again.
+            if (tutorialTaskTextWidthFor(band) != tutorialTaskTextWidth) {
+                tutorialTaskTableHash = 0
+                return displayTutorialTaskOnUpdate()
+            }
         }
         val (left, right) = band
         tutorialTaskTable.y = topBar.getYForTutorialTask() - tutorialTaskTable.height
