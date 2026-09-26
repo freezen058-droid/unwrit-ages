@@ -8,13 +8,22 @@ file is its source.
 ## We collect no personal information
 
 At all, in any way. Unwrit Ages has no account system, no analytics, and no advertising or
-tracking SDKs, and there is nothing to opt out of because there is no collection to begin with.
+tracking SDKs, and nothing is collected in the background: the only thing that ever reaches us is a problem report you choose to send (below).
 When you use a Solana feature, the game's blockchain requests pass through a relay at
 unwritages.pages.dev/rpc (Cloudflare), which forwards them to Helius and keeps no logs. A signed
 transaction contains your public address, as every Solana transaction does. Files you choose to
 put on-chain (a recorded save, a victory certificate's picture and record) are uploaded to
 Arweave, a permanent public storage network, through ArDrive's Turbo service. The full policy is
 at https://unwritages.pages.dev/privacy.html.
+
+## Reporting a problem — only when you press Send
+
+The crash screen's "Send report" and the game menu's "Report a problem" send a report to
+unwritages.pages.dev/report (Cloudflare), where only the developers can read it. It holds what
+you wrote, the error if there was one, the game's version and your phone's model and Android
+version - and, only if you leave them ticked, the game's save and a screenshot. Your IP address
+is not stored: it is hashed only to count reports per hour, and that count expires within the
+hour. Nothing is sent unless you press Send.
 
 ## Your saved games
 

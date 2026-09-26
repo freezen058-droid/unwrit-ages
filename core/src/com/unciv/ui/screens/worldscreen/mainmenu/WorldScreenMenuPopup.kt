@@ -6,7 +6,10 @@ import com.badlogic.gdx.scenes.scene2d.ui.Cell
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton.TextButtonStyle
 import com.unciv.ui.components.input.KeyboardBinding
 import com.unciv.ui.components.input.onLongPress
+import com.unciv.logic.ProblemReport
+import com.unciv.logic.files.UncivFiles
 import com.unciv.ui.popups.Popup
+import com.unciv.ui.popups.ReportProblemPopup
 import com.unciv.ui.popups.TutorialGuidePopup
 import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.screens.savescreens.LoadGameScreen
@@ -34,7 +37,7 @@ class WorldScreenMenuPopup(
         val showSave = !worldScreen.gameInfo.gameParameters.isOnlineMultiplayer
         val showMusic = worldScreen.game.musicController.isMusicAvailable()
         val showConsole = WorldScreen.DEVELOPER_CONSOLE_OPEN && showSave && expertMode
-        val buttonCount = 8 + (if (showSave) 1 else 0) + (if (showMusic) 1 else 0) + (if (showConsole) 1 else 0)
+        val buttonCount = 9 + (if (showSave) 1 else 0) + (if (showMusic) 1 else 0) + (if (showConsole) 1 else 0)
 
         val emptyPrefHeight = this.prefHeight
         val firstCell = addButton("Main menu") {
@@ -88,6 +91,14 @@ class WorldScreenMenuPopup(
                 close()
                 WorldScreenMusicPopup(worldScreen).open(force = true)
             }.nextColumn()
+
+        // A problem report the player sends themselves (user, 09-26: option B) - the picture is
+        // taken once this menu is gone, so it shows the game, not the menu
+        addButton("Report a problem", KeyboardBinding.None) {
+            close()
+            val save = try { UncivFiles.gameInfoToString(worldScreen.gameInfo, forceZip = true) } catch (_: Throwable) { null }
+            ReportProblemPopup(worldScreen, "problem", save, ProblemReport.screenshot(worldScreen.stage))
+        }.nextColumn()
 
         if (showConsole)
             addButton("Developer Console", KeyboardBinding.DeveloperConsole) {

@@ -22,7 +22,6 @@ import com.unciv.models.metadata.isMigrationNecessary
 import com.unciv.models.ruleset.RulesetCache
 import com.unciv.models.translations.tr
 import com.unciv.ui.popups.Popup
-import com.unciv.ui.popups.ToastPopup
 import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.screens.modmanager.ModUIData
 import com.unciv.logic.CompatibilityVersion
@@ -221,7 +220,7 @@ class UncivFiles(
             // translation lookup.
             reportOnChainResult(
                 "Could not record [$saveName] on the blockchain. The game is saved on this device either way."
-                    .tr() + "\n" + (ex.message ?: ex.javaClass.simpleName), isError = true
+                    .tr() + "\n" + (ex.message ?: ex.javaClass.simpleName)
             )
         }
 
@@ -255,17 +254,16 @@ class UncivFiles(
      * complete silence: a player who declined the prompt, or whose transaction failed, was left
      * believing their save was on the chain when it was not. A paid action needs a receipt.
      */
-    private fun reportOnChainResult(message: String, isError: Boolean = false) {
+    private fun reportOnChainResult(message: String) {
         Concurrency.runOnGLThread {
             val screen = UncivGame.Current.screen as? BaseScreen ?: return@runOnGLThread
-            // A failure stays until closed: a paid action's error that vanished after five seconds
-            // left the player (09-26) not knowing what went wrong
-            if (isError) Popup(screen).apply {
+            // Stays until closed, success or failure: it is the receipt for a paid action, and one
+            // that vanished after five seconds left the player (09-26) not knowing what happened
+            Popup(screen).apply {
                 addGoodSizedLabel(message).row()
                 addCloseButton()
                 open(force = true)
             }
-            else ToastPopup(message, screen, time = 5000)
         }
     }
 

@@ -16,6 +16,7 @@ import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.input.onClick
 import com.unciv.ui.components.widgets.AutoScrollPane
 import com.unciv.ui.images.IconTextButton
+import com.unciv.ui.popups.ReportProblemPopup
 import com.unciv.ui.popups.ToastPopup
 import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.utils.Log
@@ -184,11 +185,22 @@ class CrashScreen(val exception: Throwable) : BaseScreen() {
             }
         val closeButton = IconTextButton("Close Unwrit Ages", fontSize = Constants.headingFontSize)
             .onClick { Gdx.app.exit() }
+        // To us, only if the player sends it (user, 09-26: option B) - our own report of our own
+        // game, not upstream's contact, which stays gone (09-24)
+        val sendButton = IconTextButton("Send report", fontSize = Constants.headingFontSize)
+            .onClick {
+                val save = UncivGame.getGameInfoOrNull()?.let {
+                    try { UncivFiles.gameInfoToString(it, forceZip = true) } catch (_: Throwable) { null }
+                }
+                ReportProblemPopup(this@CrashScreen, "crash", save, null, details = displayedText + tryGetSaveMods())
+            }
 
         // Upstream had an "Open Issue Tracker" button here and a line pointing to it. This fork
         // names no contact on this screen: it is not upstream's to receive, and we don't offer
         // one in the game (user, 09-24). Copy stays - the report is the player's own.
         val buttonsTable = Table()
+        buttonsTable.add(sendButton)
+            .pad(10f)
         buttonsTable.add(copyButton)
             .pad(10f)
         buttonsTable.add(closeButton)

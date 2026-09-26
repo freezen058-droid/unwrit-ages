@@ -5,6 +5,7 @@ import com.badlogic.gdx.files.FileHandle
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.unciv.UncivGame
 import com.unciv.logic.GameInfo
+import com.unciv.logic.chain.ChainWallet
 import com.unciv.logic.files.PlatformSaverLoader
 import com.unciv.logic.files.UncivFiles
 import com.unciv.models.translations.tr
@@ -13,6 +14,7 @@ import com.unciv.ui.components.UncivTooltip.Companion.addTooltip
 import com.unciv.ui.components.extensions.disable
 import com.unciv.ui.components.extensions.enable
 import com.unciv.ui.components.extensions.isEnabled
+import com.unciv.ui.components.extensions.toCheckBox
 import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.extensions.toTextButton
 import com.unciv.ui.components.input.KeyCharAndCode
@@ -75,6 +77,15 @@ class SaveGameScreen(private val gameInfo: GameInfo) : LoadOrSaveScreen("Current
 
         add(nameFieldLabelText.toLabel()).row()
         add(gameNameTextField).width(300f).row()
+
+        // Where the choice is made: the same setting as the Wallet popup's, shown here only when
+        // saves are being recorded (user, 09-26 - they looked for it on this screen)
+        val settings = game.settings
+        if (settings.recordSavesOnChain && ChainWallet.service.isAvailable)
+            add("Share this save (anyone can load it)".toCheckBox(settings.shareCloudSaves) {
+                settings.shareCloudSaves = it
+                settings.save()
+            }).padTop(10f).row()
     }
 
     private fun enableSaveButton(text: String) {
