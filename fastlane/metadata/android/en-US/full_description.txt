@@ -14,7 +14,7 @@ THE WHOLE GAME. NOTHING LOCKED.
 - Cities that grow, starve, riot and boom depending on which tiles you work
 - A technology tree that runs from pottery to the space age
 - Wonders, great people, social policies, religion, espionage, city-states, diplomacy and all-out war
-- Seventeen natural wonders on terrain hand-drawn for this game, lit like a relief map
+- Seventeen natural wonders on terrain painted for this game, lit like a relief map
 - Three languages: English, 简体中文, 繁體中文
 - New to strategy games? A built-in guide turns sixty tutorials into six short chapters, with a starter game to learn in
 
@@ -27,6 +27,8 @@ Saves get lost. Phones get replaced. Your greatest victory shouldn't disappear w
 Connect a Solana wallet — Phantom, Solflare, or anything that speaks Mobile Wallet Adapter — and mint your win as an on-chain certificate: who won, how, on which turn, in which year. The record lives inside the certificate itself, in your own wallet, so there's no website to go dark and no link to break.
 
 US$0.90, converted to SOL at the moment you mint, plus roughly US$0.17 the network charges to keep it.
+
+Want proof you played it from the very first turn? Anchor the start: one free signature as the game begins, and your victory is carved on a gilded stele marked "Anchored start", checkable by anyone.
 
 Played a game you'll want to prove happened? Stamp a save on-chain — its fingerprint and a timestamp, never the file itself — for 1 SKR. Autosaves are recorded only if you switch that on, and every record asks you first.
 
