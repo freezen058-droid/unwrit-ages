@@ -21,6 +21,7 @@ import com.unciv.models.metadata.doMigrations
 import com.unciv.models.metadata.isMigrationNecessary
 import com.unciv.models.ruleset.RulesetCache
 import com.unciv.models.translations.tr
+import com.unciv.ui.popups.Popup
 import com.unciv.ui.popups.ToastPopup
 import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.screens.modmanager.ModUIData
@@ -212,13 +213,15 @@ class UncivFiles(
         val shared = settings.shareCloudSaves
 
         fun failed(ex: Exception) {
-            debug("Failed to record save %s on-chain: %s", game.gameId, ex.message)
+            // Logged as an error, not debug: on 09-26 a failure message on the phone could not be
+            // explained afterwards because nothing of it reached the log
+            Log.error("Failed to record save ${game.gameId} on-chain", ex)
             // The reason is appended rather than fed through a placeholder: it comes from the
             // wallet or the network and may itself contain brackets, which would confuse the
             // translation lookup.
             reportOnChainResult(
                 "Could not record [$saveName] on the blockchain. The game is saved on this device either way."
-                    .tr() + "\n" + (ex.message ?: "")
+                    .tr() + "\n" + (ex.message ?: ex.javaClass.simpleName), isError = true
             )
         }
 
@@ -252,10 +255,17 @@ class UncivFiles(
      * complete silence: a player who declined the prompt, or whose transaction failed, was left
      * believing their save was on the chain when it was not. A paid action needs a receipt.
      */
-    private fun reportOnChainResult(message: String) {
+    private fun reportOnChainResult(message: String, isError: Boolean = false) {
         Concurrency.runOnGLThread {
             val screen = UncivGame.Current.screen as? BaseScreen ?: return@runOnGLThread
-            ToastPopup(message, screen, time = 5000)
+            // A failure stays until closed: a paid action's error that vanished after five seconds
+            // left the player (09-26) not knowing what went wrong
+            if (isError) Popup(screen).apply {
+                addGoodSizedLabel(message).row()
+                addCloseButton()
+                open(force = true)
+            }
+            else ToastPopup(message, screen, time = 5000)
         }
     }
 
