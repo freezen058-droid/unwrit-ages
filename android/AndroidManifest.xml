@@ -5,7 +5,16 @@
     <uses-sdk/>
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Only what the game uses (09-26). Notifications, boot and foreground-service permissions
+         served upstream's multiplayer turn checker, which is off in this fork (its code is kept;
+         restore these three if multiplayer comes back). REORDER_TASKS came from androidx.test,
+         which the wallet library wrongly ships as a runtime dependency (excluded in
+         build.gradle.kts). Kept, from libraries: ACCESS_NETWORK_STATE, WAKE_LOCK (the wallet
+         flow holds a wake lock), and androidx.core's app-private receiver permission. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" tools:node="remove" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" tools:node="remove" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" tools:node="remove" />
+    <uses-permission android:name="android.permission.REORDER_TASKS" tools:node="remove" />
     <!-- See https://developer.android.com/training/tv/start/start -->
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />

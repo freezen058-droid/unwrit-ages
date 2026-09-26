@@ -921,6 +921,12 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
                 contentType(ContentType.Application.Json)
                 setBody(requestBody)
             }.body()
+            // A refusal (e.g. the site's RPC proxy not forwarding this method) is said at once,
+            // not waited out as "not confirmed in time" - that hid a 403 on the phone, 09-26.
+            (response["error"] as? kotlinx.serialization.json.JsonObject)?.let { err ->
+                throw IllegalStateException("The network refused the confirmation check: " +
+                    ((err["message"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: err.toString()))
+            }
             // result.value is a list with one entry per signature: null until the network has
             // seen it, then an object with "err" (null on success) and "confirmationStatus".
             val status = (response["result"] as? kotlinx.serialization.json.JsonObject)

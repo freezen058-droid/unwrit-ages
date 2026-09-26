@@ -198,7 +198,15 @@ dependencies {
     //  - solanaWeb3 = "0.3.0": couldn't confirm this exact version exists / is the intended
     //    "latest stable" via Maven Central metadata (403s). A "0.3.2-beta6" also exists upstream;
     //    if 0.3.0 fails to resolve, that's the next thing to try.
-    implementation(libs.solana.mwa.clientlib)
+    implementation(libs.solana.mwa.clientlib) {
+        // clientlib-ktx 2.0.8 lists androidx.test junit-ktx as a runtime dependency: test
+        // libraries (and their REORDER_TASKS permission) shipped inside the release APK (09-26).
+        exclude(group = "androidx.test")
+        exclude(group = "androidx.test.ext")
+        exclude(group = "androidx.test.services")
+        exclude(group = "junit")
+        exclude(group = "org.hamcrest")
+    }
     implementation(libs.solana.web3)
     // Explicit dep for androidx.activity.ComponentActivity used by AndroidWalletService /
     // ActivityResultSender - likely already pulled in transitively by the MWA clientlib, but
