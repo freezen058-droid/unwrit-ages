@@ -25,6 +25,7 @@ import com.solana.transaction.Transaction
 import com.solana.transaction.TransactionInstruction
 import com.unciv.logic.chain.Ans104
 import com.unciv.logic.chain.CertificateEmblem
+import com.unciv.logic.chain.CloudSave
 import com.unciv.logic.chain.PlatformWalletService
 import com.unciv.logic.chain.StartAnchor
 import com.unciv.logic.chain.VictoryCertificate
@@ -35,6 +36,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
@@ -994,10 +996,141 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
         }
     }
 
+    /** Cloud-save keys by wallet address, for this run of the app only - never written anywhere. */
+    private val cloudKeys = java.util.concurrent.ConcurrentHashMap<String, ByteArray>()
+
+    override fun cloudSaveKey(onSuccess: (key: ByteArray) -> Unit, onError: (Exception) -> Unit) {
+        val address = _connectedAddress
+        if (authToken == null || address == null) {
+            onError(IllegalStateException("No wallet connected"))
+            return
+        }
+        cloudKeys[address]?.let { onSuccess(it); return }
+        Concurrency.run("WalletCloudKey") {
+            try {
+                val owner = SolanaPublicKey.from(address)
+                val result = withWakeLock {
+                    withBridge { sender ->
+                        walletAdapter.transact(sender) {
+                            signMessagesDetached(arrayOf(CloudSave.KEY_MESSAGE.encodeToByteArray()), arrayOf(owner.bytes))
+                        }
+                    }
+                }
+                val signature = when (result) {
+                    is TransactionResult.Success -> result.successPayload?.messages?.firstOrNull()?.signatures?.firstOrNull()
+                        ?: throw IllegalStateException("Wallet did not return a signature")
+                    is TransactionResult.NoWalletFound -> throw Exception("No MWA-compatible wallet app found")
+                    is TransactionResult.Failure -> throw result.e
+                }
+                val key = CloudSave.keyFromSignature(signature)
+                cloudKeys[address] = key
+                launchOnGLThread { onSuccess(key) }
+            } catch (ex: Exception) {
+                Log.error("Failed to get the cloud save key", ex)
+                launchOnGLThread { onError(ex) }
+            }
+        }
+    }
+
+    override fun uploadCloudSave(data: ByteArray, onSuccess: (arweaveIds: List<String>) -> Unit, onError: (Exception) -> Unit) {
+        Concurrency.run("WalletCloudUpload") {
+            try {
+                // Each piece is its own data item under Turbo's free size, so the upload costs
+                // nothing and the 1 SKR record fee stays the whole price (ROADMAP)
+                val ids = CloudSave.chunks(data).map { uploadToArweave(it, "application/octet-stream").substringAfterLast('/') }
+                launchOnGLThread { onSuccess(ids) }
+            } catch (ex: Exception) {
+                Log.error("Failed to upload the cloud save", ex)
+                launchOnGLThread { onError(ex) }
+            }
+        }
+    }
+
+    override fun listSaveRecords(shared: Boolean, onSuccess: (List<CloudSave.Record>) -> Unit, onError: (Exception) -> Unit) {
+        val own = _connectedAddress
+        if (!shared && own == null) {
+            onError(IllegalStateException("No wallet connected"))
+            return
+        }
+        Concurrency.run("WalletListSaves") {
+            try {
+                // Every record pays its fee into the treasury's SKR account, so that account's
+                // history is everyone's records; the treasury's own address is not in them
+                val address = if (shared) treasurySkrAccount().base58() else own!!
+                val requestBody = kotlinx.serialization.json.buildJsonObject {
+                    put("jsonrpc", kotlinx.serialization.json.JsonPrimitive("2.0"))
+                    put("id", kotlinx.serialization.json.JsonPrimitive(1))
+                    put("method", kotlinx.serialization.json.JsonPrimitive("getSignaturesForAddress"))
+                    put("params", kotlinx.serialization.json.buildJsonArray {
+                        add(kotlinx.serialization.json.JsonPrimitive(address))
+                        add(kotlinx.serialization.json.buildJsonObject {
+                            put("limit", kotlinx.serialization.json.JsonPrimitive(1000))
+                        })
+                    })
+                }
+                val response: kotlinx.serialization.json.JsonObject = httpClient.post(RPC_ENDPOINT) {
+                    contentType(ContentType.Application.Json)
+                    setBody(requestBody)
+                }.body()
+                (response["error"] as? kotlinx.serialization.json.JsonObject)?.let { err ->
+                    throw IllegalStateException("The network refused the list: " +
+                        ((err["message"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: err.toString()))
+                }
+                val entries = response["result"] as? kotlinx.serialization.json.JsonArray ?: emptyList()
+                val records = entries.mapNotNull { e ->
+                    val o = e as? kotlinx.serialization.json.JsonObject ?: return@mapNotNull null
+                    val err = o["err"]
+                    if (err != null && err !is kotlinx.serialization.json.JsonNull) return@mapNotNull null
+                    val memo = (o["memo"] as? kotlinx.serialization.json.JsonPrimitive)?.takeIf { it.isString }?.content
+                        ?: return@mapNotNull null
+                    CloudSave.parse(
+                        memo,
+                        (o["signature"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: "",
+                        (o["blockTime"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.toLongOrNull() ?: 0
+                    )
+                }.filter { if (shared) it.shared && it.restorable else true }
+                launchOnGLThread { onSuccess(records) }
+            } catch (ex: Exception) {
+                Log.error("Failed to list save records", ex)
+                launchOnGLThread { onError(ex) }
+            }
+        }
+    }
+
+    override fun downloadCloudSave(arweaveIds: List<String>, onSuccess: (ByteArray) -> Unit, onError: (Exception) -> Unit) {
+        Concurrency.run("WalletCloudDownload") {
+            try {
+                val out = java.io.ByteArrayOutputStream()
+                for (id in arweaveIds) {
+                    // Turbo's gateway serves an upload at once; arweave.net once it has settled
+                    var bytes: ByteArray? = null
+                    for (url in listOf(ARWEAVE_GATEWAY + id, "https://arweave.net/$id")) {
+                        try {
+                            val response = httpClient.get(url)
+                            if (response.status.value == 200) { bytes = response.body<ByteArray>(); break }
+                        } catch (_: Exception) { }
+                    }
+                    out.write(bytes ?: throw IllegalStateException("Could not download part $id of the save"))
+                }
+                launchOnGLThread { onSuccess(out.toByteArray()) }
+            } catch (ex: Exception) {
+                Log.error("Failed to download the cloud save", ex)
+                launchOnGLThread { onError(ex) }
+            }
+        }
+    }
+
+    /** The treasury's SKR token account: the ATA PDA of [treasury, TOKEN_PROGRAM, SKR mint]. */
+    private suspend fun treasurySkrAccount(): SolanaPublicKey {
+        val pda = ProgramDerivedAddress.find(
+            listOf(SolanaPublicKey.from(TREASURY_ADDRESS).bytes, TokenProgram.PROGRAM_ID.bytes, SolanaPublicKey.from(SKR_MINT).bytes),
+            AssociatedTokenProgram.PROGRAM_ID
+        ).getOrThrow()
+        return SolanaPublicKey(pda.bytes)
+    }
+
     override fun recordSaveHash(
-        gameId: String,
-        saveName: String,
-        hashHex: String,
+        record: CloudSave.Record,
         onSuccess: (txSignature: String) -> Unit,
         onError: (Exception) -> Unit
     ) {
@@ -1009,12 +1142,12 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
 
         Concurrency.run("WalletRecordSaveHash") {
             try {
-                // Keep the memo short and well within Solana's ~1232 byte tx size limit -
-                // gameId is a UUID (36 chars), hashHex a SHA-256 hex digest (64 chars), saveName
-                // capped so a long player-chosen name can't blow the budget, and any ':' in the
-                // name is stripped so it can't be confused with our own field delimiter.
-                val safeSaveName = saveName.replace(":", "").take(64)
-                val memoText = "unwritages-save:$gameId:$safeSaveName:$hashHex"
+                // Keep the memo well within Solana's ~1232 byte tx size limit - gameId is a UUID
+                // (36 chars), the hash 64, the name capped at 64 with ':' stripped (the field
+                // delimiter), and each Arweave id 43: one per 90 KiB of save, so even a large
+                // late-game save stays a few hundred bytes (CloudSave.Record.memo)
+                val memoText = record.memo()
+                check(memoText.length < 900) { "This save is too large to record in one transaction" }
 
                 val blockhash = fetchLatestBlockhash()
 

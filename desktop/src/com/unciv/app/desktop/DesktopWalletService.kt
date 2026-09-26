@@ -22,9 +22,7 @@ class DesktopWalletService : PlatformWalletService {
     override fun disconnect() {}
 
     override fun recordSaveHash(
-        gameId: String,
-        saveName: String,
-        hashHex: String,
+        record: com.unciv.logic.chain.CloudSave.Record,
         onSuccess: (txSignature: String) -> Unit,
         onError: (Exception) -> Unit
     ) {

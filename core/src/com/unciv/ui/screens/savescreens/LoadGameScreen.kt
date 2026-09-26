@@ -8,6 +8,7 @@ import com.unciv.Constants
 import com.unciv.logic.MissingModsException
 import com.unciv.logic.MissingNationException
 import com.unciv.logic.UncivShowableException
+import com.unciv.logic.chain.ChainWallet
 import com.unciv.logic.files.FileConversions
 import com.unciv.logic.files.PlatformSaverLoader
 import com.unciv.logic.files.UncivFiles
@@ -22,6 +23,7 @@ import com.unciv.ui.components.extensions.toTextButton
 import com.unciv.ui.components.input.KeyCharAndCode
 import com.unciv.ui.components.input.keyShortcuts
 import com.unciv.ui.components.input.onActivation
+import com.unciv.ui.components.input.onClick
 import com.unciv.ui.popups.LoadingPopup
 import com.unciv.ui.popups.Popup
 import com.unciv.ui.popups.ToastPopup
@@ -78,10 +80,18 @@ class LoadGameScreen : LoadOrSaveScreen() {
     private fun Table.initRightSideTable() {
         // No "Load copied data", "Load from custom location" or "Copy saved game to clipboard":
         // a game may only be loaded from this app's own saves, so nobody can start from another
-        // player's near-won game and claim its victory certificate (user, 09-24). Code kept.
+        // player's near-won game and claim its victory certificate as their own (user, 09-24).
+        // Code kept.
         add(errorLabel).width(stage.width / 2).center().row()
         add(deleteSaveButton).row()
         add(showAutosavesCheckbox).row()
+        // Saves recorded on the chain (cloud saves): your own back onto this device, or another
+        // player's shared one to play on - the one way in for a game from elsewhere, and it is
+        // marked "Continued from turn N" (ROADMAP "Provenance", user 09-26)
+        if (ChainWallet.service.isAvailable) {
+            add("Restore from the chain".toTextButton().apply { onClick { ChainSavesPopup(this@LoadGameScreen, shared = false) } }).row()
+            add("Shared saves".toTextButton().apply { onClick { ChainSavesPopup(this@LoadGameScreen, shared = true) } }).row()
+        }
     }
 
     private fun onLoadGame(saveGameFile: FileHandle?) {

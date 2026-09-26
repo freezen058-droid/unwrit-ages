@@ -19,6 +19,8 @@ object StartAnchor {
 
     const val ORIGIN_ANCHORED = "Anchored start"
     const val ORIGIN_UNANCHORED = "Unanchored"
+    /** A game taken over from someone else's shared save; the turn follows. */
+    const val ORIGIN_CONTINUED = "Continued from turn "
 
     fun memo(gameId: String) = MEMO_PREFIX + gameId
 
@@ -38,10 +40,12 @@ object StartAnchor {
 
     /**
      * [ORIGIN_ANCHORED] when this game was started under an anchor whose seed its map still has,
-     * and - when [minter] is known - by that same wallet. Everything else is [ORIGIN_UNANCHORED]:
+     * and - when [minter] is known - by that same wallet; [ORIGIN_CONTINUED] when it was taken over
+     * from someone else's shared save. Everything else is [ORIGIN_UNANCHORED]:
      * unverified, not accused.
      */
     fun origin(gameInfo: GameInfo, minter: String?): String {
+        if (gameInfo.continuedFromTurn > 0) return ORIGIN_CONTINUED + gameInfo.continuedFromTurn
         if (gameInfo.startAnchorSignature.isEmpty() || gameInfo.startAnchorWallet.isEmpty())
             return ORIGIN_UNANCHORED
         if (minter != null && minter != gameInfo.startAnchorWallet) return ORIGIN_UNANCHORED

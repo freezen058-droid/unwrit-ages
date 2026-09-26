@@ -56,6 +56,9 @@ class GameSettings {
     /** New games start anchored on-chain ([com.unciv.logic.chain.StartAnchor]) - free, opt-in,
      *  remembered from the new-game screen's checkbox. */
     var anchorNewGames = false
+    /** Recorded saves are stored shared (anyone can load them and play on) instead of encrypted
+     *  for this wallet alone ([com.unciv.logic.chain.CloudSave]). Off by default. */
+    var shareCloudSaves = false
     /** Set by the "Don't show again" box on the warning that leaving a half-built improvement
      *  pauses it. */
     var hideWorkerLeavingWarning = false

@@ -52,19 +52,39 @@ interface PlatformWalletService {
     fun disconnect()
 
     /**
-     * Submits [hashHex] (a hex-encoded hash of a save file) as a Memo-program transaction signed
-     * by the connected wallet, so the existence of that exact save at that point in time can be
-     * verified on-chain later. Does not upload the save itself - saves stay in normal local/cloud
-     * storage, this is a lightweight proof-of-existence only. [saveName] is the player-chosen save
-     * name (not just [gameId], an opaque UUID) so the on-chain record is human-identifiable.
+     * Submits [record]'s memo ([CloudSave.Record.memo]) as a Memo-program transaction signed by
+     * the connected wallet, with the 1 SKR fee in the same transaction, so that exact save at that
+     * point in time can be verified on-chain later. Since cloud saves the record also names the
+     * Arweave uploads of the save itself ([uploadCloudSave]); a record without them is the 1.0.0
+     * proof-of-existence only.
      */
     fun recordSaveHash(
-        gameId: String,
-        saveName: String,
-        hashHex: String,
+        record: CloudSave.Record,
         onSuccess: (txSignature: String) -> Unit,
         onError: (Exception) -> Unit = {}
     )
+
+    /** The connected wallet's cloud-save key ([CloudSave.keyFromSignature] of its signature over
+     *  [CloudSave.KEY_MESSAGE]). Asks the wallet once; kept in memory only, per address. */
+    fun cloudSaveKey(onSuccess: (key: ByteArray) -> Unit, onError: (Exception) -> Unit) {
+        onError(UnsupportedOperationException("Wallet integration is not available on this platform"))
+    }
+
+    /** Stores [data] on Arweave in [CloudSave.chunks], each a free upload; returns their ids in order. */
+    fun uploadCloudSave(data: ByteArray, onSuccess: (arweaveIds: List<String>) -> Unit, onError: (Exception) -> Unit) {
+        onError(UnsupportedOperationException("Wallet integration is not available on this platform"))
+    }
+
+    /** The recorded saves, newest first: the connected wallet's own (private and shared), or
+     *  when [shared] every player's shared ones - read from the transactions that paid the fee. */
+    fun listSaveRecords(shared: Boolean, onSuccess: (List<CloudSave.Record>) -> Unit, onError: (Exception) -> Unit) {
+        onError(UnsupportedOperationException("Wallet integration is not available on this platform"))
+    }
+
+    /** The bytes [uploadCloudSave] stored under [arweaveIds], joined back in order. */
+    fun downloadCloudSave(arweaveIds: List<String>, onSuccess: (ByteArray) -> Unit, onError: (Exception) -> Unit) {
+        onError(UnsupportedOperationException("Wallet integration is not available on this platform"))
+    }
 
     /**
      * Draws the certificate - the stele with this game's inscription and emblem - stores the picture
@@ -103,9 +123,7 @@ interface PlatformWalletService {
             }
             override fun disconnect() {}
             override fun recordSaveHash(
-                gameId: String,
-                saveName: String,
-                hashHex: String,
+                record: CloudSave.Record,
                 onSuccess: (txSignature: String) -> Unit,
                 onError: (Exception) -> Unit
             ) {

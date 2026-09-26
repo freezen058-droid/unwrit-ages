@@ -12,6 +12,7 @@ import com.unciv.json.fromJsonFile
 import com.unciv.json.json
 import com.unciv.logic.BackwardCompatibility.migrateCivID
 import com.unciv.logic.chain.ChainWallet
+import com.unciv.logic.chain.CloudSave
 import com.unciv.logic.GameInfo
 import com.unciv.logic.GameInfoPreview
 import com.unciv.logic.UncivShowableException
@@ -196,33 +197,51 @@ class UncivFiles(
 
     /**
      * Fire-and-forget: if the user opted in (settings.recordSavesOnChain) and a wallet is
-     * connected, submit a hash of this save as an on-chain Memo transaction, tagged with the
-     * player-chosen save name so it's identifiable on-chain (not just an opaque gameId/hash).
-     * Never blocks or fails the actual save - errors are only logged.
+     * connected, record this save on-chain - since cloud saves, with the save itself stored on
+     * Arweave (CloudSave): encrypted with the wallet's key unless the player shares their saves.
+     * Upload first, then the paid record: a failed upload charges nothing. Never blocks or fails
+     * the actual save - the player is told how it went.
      */
     private fun recordSaveHashOnChainIfEnabled(game: GameInfo, saveName: String) {
-        if (!UncivGame.Current.settings.recordSavesOnChain) return
+        val settings = UncivGame.Current.settings
+        if (!settings.recordSavesOnChain) return
         if (!ChainWallet.isConnected) return
-        val hash = ChainWallet.sha256Hex(json().toJson(game))
-        ChainWallet.service.recordSaveHash(
-            gameId = game.gameId,
-            saveName = saveName,
-            hashHex = hash,
-            onSuccess = { tx ->
-                debug("Recorded save %s hash on-chain, tx %s", game.gameId, tx)
-                reportOnChainResult("[$saveName] is now recorded on the blockchain.".tr())
-            },
-            onError = { ex ->
-                debug("Failed to record save %s hash on-chain: %s", game.gameId, ex.message)
-                // The reason is appended rather than fed through a placeholder: it comes from the
-                // wallet or the network and may itself contain brackets, which would confuse the
-                // translation lookup.
-                reportOnChainResult(
-                    "Could not record [$saveName] on the blockchain. The game is saved on this device either way."
-                        .tr() + "\n" + (ex.message ?: "")
+        // The hash is of exactly the JSON that is uploaded, so a restore can check it
+        val json = json().toJson(game)
+        val hash = ChainWallet.sha256Hex(json)
+        val shared = settings.shareCloudSaves
+
+        fun failed(ex: Exception) {
+            debug("Failed to record save %s on-chain: %s", game.gameId, ex.message)
+            // The reason is appended rather than fed through a placeholder: it comes from the
+            // wallet or the network and may itself contain brackets, which would confuse the
+            // translation lookup.
+            reportOnChainResult(
+                "Could not record [$saveName] on the blockchain. The game is saved on this device either way."
+                    .tr() + "\n" + (ex.message ?: "")
+            )
+        }
+
+        fun uploadAndRecord(key: ByteArray?) = Concurrency.run("CloudSavePack") {
+            val packed = try { CloudSave.pack(json, key) } catch (ex: Exception) { return@run failed(ex) }
+            ChainWallet.service.uploadCloudSave(packed, onError = ::failed, onSuccess = { ids ->
+                val record = CloudSave.Record(
+                    game.gameId, saveName, hash,
+                    visibility = if (key == null) CloudSave.SHARED else CloudSave.PRIVATE,
+                    keyFingerprint = key?.let { CloudSave.keyFingerprint(it) } ?: "",
+                    arweaveIds = ids
                 )
-            }
-        )
+                ChainWallet.service.recordSaveHash(record, onError = ::failed, onSuccess = { tx ->
+                    debug("Recorded save %s on-chain, tx %s", game.gameId, tx)
+                    reportOnChainResult("[$saveName] is now recorded on the blockchain.".tr() + "\n" +
+                        (if (shared) "Anyone can now load it from Shared saves."
+                        else "Your wallet can restore it on any device.").tr())
+                })
+            })
+        }
+
+        if (shared) uploadAndRecord(null)
+        else ChainWallet.service.cloudSaveKey(onError = ::failed, onSuccess = { uploadAndRecord(it) })
     }
 
     /**

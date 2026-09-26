@@ -85,6 +85,19 @@ class CertificateMetadataTests {
     }
 
     @Test
+    fun aGameTakenOverFromASharedSaveSaysSoAndIsNotAnchored() {
+        val seed = StartAnchor.seedFor("W", "S")
+        val game = anchoredGame("W", "S", seed).apply { continuedFromTurn = 120 }
+        // Continued beats anchored: the anchor was the sharer's, not this player's
+        Assert.assertEquals("Continued from turn 120", StartAnchor.origin(game, "W"))
+        val r = record.copy(origin = StartAnchor.origin(game, "X"))
+        Assert.assertFalse(r.anchored)
+        Assert.assertEquals("Continued from turn 120", traits(r)["Origin"])
+        Assert.assertEquals("Continued from turn 120", VictoryCertificate.inscription(r).last().text)
+        Assert.assertTrue(VictoryCertificate.inscription(record).none { it.text.startsWith("Continued") })
+    }
+
+    @Test
     fun nameIsTheGameAndTheVictoryIsInTheDescription() {
         val json = Json.parseToJsonElement(VictoryCertificate.metadataJson(record, "https://x/y", "")).jsonObject
         Assert.assertEquals("Unwrit Ages Victory", json["name"]!!.jsonPrimitive.content)

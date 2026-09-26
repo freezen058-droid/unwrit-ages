@@ -149,6 +149,11 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
     var startAnchorWallet = ""
     var startAnchorSignature = ""
 
+    /** The turn this player took the game over from someone else's shared save (the turn it was
+     *  loaded at); 0 = played here from the start. A certificate says so: "Continued from turn N"
+     *  (ROADMAP "Provenance", option B). */
+    var continuedFromTurn = 0
+
     /** The minted certificate's address, once there is one - so the offer shows it instead of
      *  a second mint button that would charge again for the same victory. */
     var certificateAddress: String? = null
@@ -253,6 +258,7 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
         toReturn.autoPlayedTurns = autoPlayedTurns
         toReturn.startAnchorWallet = startAnchorWallet
         toReturn.startAnchorSignature = startAnchorSignature
+        toReturn.continuedFromTurn = continuedFromTurn
         toReturn.certificateAddress = certificateAddress
         toReturn.historyStartTurn = historyStartTurn
         toReturn.lastUnitId = lastUnitId

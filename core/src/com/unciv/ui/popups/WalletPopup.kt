@@ -83,9 +83,11 @@ private class WalletPage(
 
         addHeader("Wallet")
 
-        add(("Put a save's fingerprint on the blockchain - a permanent record that your "
-            + "empire reached that point - for 1 SKR.\nYour wallet asks before every one. Autosaves "
-            + "are recorded only if you turn that on in the Auto-Save tab.").toLabel()
+        // Cloud saves (09-26): the record now carries the save itself, so it says what it buys
+        add(("Record a save on the blockchain for 1 SKR: a permanent record that your empire "
+            + "reached that point, and a copy of the save that you can restore on any phone "
+            + "with this wallet (Load game > Restore from the chain).\nYour wallet asks before every "
+            + "one. Autosaves are recorded only if you turn that on in the Auto-Save tab.").toLabel()
             .apply { wrap = true }).colspan(2).fillX().row()
 
         addSeparator()
@@ -110,6 +112,15 @@ private class WalletPage(
         addSeparator()
 
         addCheckbox("Record save games on-chain (requires a connected wallet)", settings::recordSavesOnChain)
+
+        addSeparator()
+
+        // Private is the default and the safe choice: a shared save is public and permanent
+        add(("Recorded saves are private: encrypted, so only this wallet can open them. Share them "
+            + "instead, and anyone can load them from Shared saves and play on - public and permanent, "
+            + "and a victory from someone else's save says \"Continued from turn N\".").toLabel()
+            .apply { wrap = true }).colspan(2).fillX().row()
+        addCheckbox("Share my recorded saves", settings::shareCloudSaves)
     }
 
     private fun showError(message: String) {

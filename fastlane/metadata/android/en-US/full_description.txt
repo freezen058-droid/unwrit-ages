@@ -30,7 +30,7 @@ US$0.90, converted to SOL at the moment you mint, plus roughly US$0.17 the netwo
 
 Want proof you played it from the very first turn? Anchor the start: one free signature as the game begins, and your victory is carved on a gilded stele marked "Anchored start", checkable by anyone.
 
-Played a game you'll want to prove happened? Stamp a save on-chain — its fingerprint and a timestamp, never the file itself — for 1 SKR. Autosaves are recorded only if you switch that on, and every record asks you first.
+Record a save on-chain for 1 SKR: a timestamped proof, and an encrypted copy you can restore on any phone with the same wallet. Or share it, and anyone can pick up your game where you left off. Autosaves are recorded only if you switch that on, and every record asks you first.
 
 OUR PROMISE
 Those two are the only things this game will ever charge for. Both are optional, and your wallet asks you before either one happens. Your seed phrase never touches this app, and you can play the whole game start to finish without opening the Wallet screen once.

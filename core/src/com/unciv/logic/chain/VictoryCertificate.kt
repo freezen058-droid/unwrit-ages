@@ -177,6 +177,8 @@ object VictoryCertificate {
         lines += InscriptionLine("fact", "${record.mapType} · ${record.mapSize}")
         // Stated, not judged: the certificate is issued either way (user, 09-24).
         if (record.autoPlayedTurns > 0) lines += InscriptionLine("fact", autoPlay(record.autoPlayedTurns))
+        // Likewise a game taken over from someone else's shared save (option B, user 09-26)
+        if (record.origin.startsWith(StartAnchor.ORIGIN_CONTINUED)) lines += InscriptionLine("fact", record.origin)
         return lines
     }
 
