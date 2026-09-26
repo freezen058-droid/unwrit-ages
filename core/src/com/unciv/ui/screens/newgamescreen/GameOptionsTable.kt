@@ -107,8 +107,9 @@ class GameOptionsTable(
                 }
             }).colspan(2).fillX().row()
         }).row()
-        addVictoryTypeCheckboxes()
+        // Above the victory choices (user, 09-26): it decides how the game starts, before what it is played for
         if (ChainWallet.service.isAvailable) addAnchorStartCheckbox()
+        addVictoryTypeCheckboxes()
 
         // Online multiplayer is not part of this fork, so neither is its setup: the checkbox,
         // the spectator toggle it reveals, and the three turn-timer boxes behind it are all gone.
@@ -175,9 +176,11 @@ class GameOptionsTable(
             settings.anchorNewGames = it
             settings.save()
         }
-        add(("Your wallet signs once and the map is made from that signature, "
-            + "so a victory certificate can show this game started with you. "
-            + "Generated maps only; the map seed is then not yours to pick.").toLabel(fontSize = 14)
+        // What it is for first, then how (user, 09-26: the old text said only what the wallet does)
+        add(("Proves you played this game from its first turn. Win it, and its victory certificate "
+            + "is carved on the gilded stele and marked 'Anchored start', which anyone can check. "
+            + "Your wallet signs one free record as the game begins, and the map is made from that "
+            + "signature, so no one can pass off someone else's game as theirs. Generated maps only.").toLabel(fontSize = 14)
             .apply { wrap = true }).colspan(2).fillX().padLeft(20f).row()
     }
 

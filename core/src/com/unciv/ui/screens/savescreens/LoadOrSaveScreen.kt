@@ -140,11 +140,12 @@ abstract class LoadOrSaveScreen(
                     .filter { it.isPlayerCivilization() }.joinToString { it.civName.tr() }
                 val mods = if (game.gameParameters.mods.isEmpty()) ""
                     else "\n{Mods:} " + game.gameParameters.mods.joinToString()
+                val anchored = if (game.startAnchorWallet.isEmpty()) "" else "\n{Anchored start on-chain}"
 
                 // Format result for textToSet
                 "${saveGameFile.name()}\n{Saved at}: ${savedAt.formatDate()}\n" +
                 "$playerCivNames, ${game.difficulty.tr()}, ${Fonts.turn}${game.turns}\n" +
-                "{Base ruleset:} {${game.gameParameters.baseRuleset}}$mods"
+                "{Base ruleset:} {${game.gameParameters.baseRuleset}}$mods$anchored"
             } catch (_: Exception) {
                 "Could not load game!"
             }

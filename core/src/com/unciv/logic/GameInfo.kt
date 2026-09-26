@@ -934,6 +934,10 @@ class GameInfoPreview() {
     var gameId = ""
     var currentPlayer = ""
     var currentTurnStartTime = System.currentTimeMillis()
+    /** Read from the save like the fields above, so the load screen can say a game was started
+     *  anchored ([com.unciv.logic.chain.StartAnchor]); whether its map still matches is the
+     *  certificate's check, which needs the whole game. */
+    var startAnchorWallet = ""
 
     /**
      * Converts a GameInfo object (can be uninitialized) into a GameInfoPreview object.
@@ -947,6 +951,7 @@ class GameInfoPreview() {
         gameId = gameInfo.gameId
         currentPlayer = gameInfo.currentPlayer
         currentTurnStartTime = gameInfo.currentTurnStartTime
+        startAnchorWallet = gameInfo.startAnchorWallet
     }
 
     @Readonly fun getCivilization(civID: String) = civilizations.first { it.civID == civID }
