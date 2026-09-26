@@ -58,10 +58,19 @@ object VictoryCertificate {
         val curves: Map<String, Map<Int, Int>>,
         val chronicle: List<ChronicleEntry>,
         /** Turns the game's AI played for the player ([GameInfo.autoPlayedTurns]); 0 = none. */
-        val autoPlayedTurns: Int = 0
-    )
+        val autoPlayedTurns: Int = 0,
+        /** [StartAnchor.ORIGIN_ANCHORED] or [StartAnchor.ORIGIN_UNANCHORED]. */
+        val origin: String = StartAnchor.ORIGIN_UNANCHORED,
+        /** The start anchor, base58, so anyone can recompute [mapSeed]; empty when unanchored. */
+        val startWallet: String = "",
+        val startSignature: String = ""
+    ) {
+        val anchored get() = origin == StartAnchor.ORIGIN_ANCHORED
+    }
 
-    fun record(gameInfo: GameInfo, winner: Civilization): Record {
+    /** @param minter the wallet the certificate goes to, when known: a start anchored by another
+     *  wallet does not make this one's certificate anchored. */
+    fun record(gameInfo: GameInfo, winner: Civilization, minter: String? = ChainWallet.service.connectedAddress): Record {
         val victory = gameInfo.victoryData
         val mapParams = gameInfo.tileMap.mapParameters
         return Record(
@@ -91,7 +100,10 @@ object VictoryCertificate {
                 type.name to sample(winner.statsHistory.mapValues { it.value[type] ?: 0 })
             },
             chronicle = gameInfo.chronicle.toList(),
-            autoPlayedTurns = gameInfo.autoPlayedTurns
+            autoPlayedTurns = gameInfo.autoPlayedTurns,
+            origin = StartAnchor.origin(gameInfo, minter),
+            startWallet = gameInfo.startAnchorWallet,
+            startSignature = gameInfo.startAnchorSignature
         )
     }
 
@@ -218,7 +230,8 @@ object VictoryCertificate {
             "Difficulty" to record.difficulty,
             "Speed" to record.gameSpeed,
             "Map" to "${record.mapType} ${record.mapSize}",
-            "Rivals eliminated" to record.eliminated.size.toString()
+            "Rivals eliminated" to record.eliminated.size.toString(),
+            "Origin" to record.origin
         ) + (if (record.autoPlayedTurns > 0) listOf("AutoPlay" to autoPlay(record.autoPlayedTurns).removePrefix("AutoPlay: ")) else emptyList()
         ) + (EMBLEM_CREDITS[record.nation]?.let { listOf("Emblem" to it) } ?: emptyList())
         attributes.forEachIndexed { i, (trait, value) ->
@@ -234,6 +247,14 @@ object VictoryCertificate {
         sb.append(',')
         sb.field("saveUri", saveUri)
         sb.append(",\"mapSeed\":").append(record.mapSeed)
+        // Only for an anchored certificate: SHA-256(startWallet ‖ startSignature) is mapSeed, and
+        // the signature's memo names gameId - anyone can check both (ROADMAP "Provenance").
+        if (record.anchored) {
+            sb.append(',')
+            sb.field("startWallet", record.startWallet)
+            sb.append(',')
+            sb.field("startSignature", record.startSignature)
+        }
         sb.append(",\"curves\":{")
         record.curves.entries.forEachIndexed { i, (name, points) ->
             if (i > 0) sb.append(',')

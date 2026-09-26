@@ -53,6 +53,9 @@ class GameSettings {
     /** If true and a wallet is connected, every [turnsBetweenAutosaves] turns the player is asked
      *  (never charged silently) whether to also record that point on-chain for 1 SKR. */
     var remindRecordOnChainOnAutosave = false
+    /** New games start anchored on-chain ([com.unciv.logic.chain.StartAnchor]) - free, opt-in,
+     *  remembered from the new-game screen's checkbox. */
+    var anchorNewGames = false
     /** Set by the "Don't show again" box on the warning that leaving a half-built improvement
      *  pauses it. */
     var hideWorkerLeavingWarning = false

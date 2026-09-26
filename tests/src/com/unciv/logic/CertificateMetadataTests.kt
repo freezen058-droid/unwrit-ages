@@ -1,5 +1,6 @@
 package com.unciv.logic
 
+import com.unciv.logic.chain.StartAnchor
 import com.unciv.logic.chain.VictoryCertificate
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
@@ -42,6 +43,45 @@ class CertificateMetadataTests {
         Assert.assertEquals("37 turns", traits(autoPlayed)["AutoPlay"])
         Assert.assertEquals("AutoPlay: 37 turns", VictoryCertificate.inscription(autoPlayed).last().text)
         Assert.assertEquals("AutoPlay: 1 turn", VictoryCertificate.inscription(record.copy(autoPlayedTurns = 1)).last().text)
+    }
+
+    @Test
+    fun theSeedIsWhatAnyoneCanRecomputeFromTheAnchor() {
+        // First eight bytes of SHA-256("Wa11et" + "S1g"), big-endian - computed outside Kotlin
+        // (Python hashlib), so a change to the derivation cannot pass by agreeing with itself.
+        Assert.assertEquals(105442945842005338L, StartAnchor.seedFor("Wa11et", "S1g"))
+        Assert.assertNotEquals(StartAnchor.seedFor("Wa11et", "S1g"), StartAnchor.seedFor("Other", "S1g"))
+    }
+
+    private fun anchoredGame(wallet: String, signature: String, seed: Long) = GameInfo().apply {
+        startAnchorWallet = wallet
+        startAnchorSignature = signature
+        tileMap.mapParameters.seed = seed
+    }
+
+    @Test
+    fun originIsAnchoredOnlyWhenTheMapStillHasTheAnchorsSeed() {
+        val seed = StartAnchor.seedFor("W", "S")
+        Assert.assertEquals(StartAnchor.ORIGIN_ANCHORED, StartAnchor.origin(anchoredGame("W", "S", seed), "W"))
+        // Not yet known who mints (the picture before connecting): the anchor alone decides.
+        Assert.assertEquals(StartAnchor.ORIGIN_ANCHORED, StartAnchor.origin(anchoredGame("W", "S", seed), null))
+        // Another wallet's certificate, a map that is not the anchor's, and no anchor at all.
+        Assert.assertEquals(StartAnchor.ORIGIN_UNANCHORED, StartAnchor.origin(anchoredGame("W", "S", seed), "X"))
+        Assert.assertEquals(StartAnchor.ORIGIN_UNANCHORED, StartAnchor.origin(anchoredGame("W", "S", seed + 1), "W"))
+        Assert.assertEquals(StartAnchor.ORIGIN_UNANCHORED, StartAnchor.origin(GameInfo(), null))
+    }
+
+    @Test
+    fun originIsAnAttributeAndTheAnchorTravelsOnlyWhenAnchored() {
+        fun payload(r: VictoryCertificate.Record) =
+            Json.parseToJsonElement(VictoryCertificate.metadataJson(r, "https://x/y", "")).jsonObject["unwritAges"]!!.jsonObject
+        Assert.assertEquals("Unanchored", traits(record)["Origin"])
+        Assert.assertNull(payload(record)["startSignature"])
+
+        val anchored = record.copy(origin = StartAnchor.ORIGIN_ANCHORED, startWallet = "W", startSignature = "S")
+        Assert.assertEquals("Anchored start", traits(anchored)["Origin"])
+        Assert.assertEquals("W", payload(anchored)["startWallet"]!!.jsonPrimitive.content)
+        Assert.assertEquals("S", payload(anchored)["startSignature"]!!.jsonPrimitive.content)
     }
 
     @Test

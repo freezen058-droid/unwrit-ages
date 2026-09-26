@@ -6,11 +6,14 @@ import com.badlogic.gdx.scenes.scene2d.ui.HorizontalGroup
 import com.unciv.Constants
 import com.unciv.UncivGame
 import com.unciv.logic.GameInfo
+import com.unciv.logic.GameInfoPreview
 import com.unciv.logic.GameStarter
 import com.unciv.logic.IdChecker
 import com.unciv.logic.UncivShowableException
 import com.unciv.logic.civilization.AlertType
 import com.unciv.logic.civilization.Civilization
+import com.unciv.logic.chain.ChainWallet
+import com.unciv.logic.chain.StartAnchor
 import com.unciv.logic.civilization.PlayerType
 import com.unciv.logic.files.MapSaver
 import com.unciv.logic.map.MapGeneratedMainType
@@ -213,7 +216,20 @@ class NewGameScreen(
         return null
     }
     
+    /** Anchoring applies to a generated single-player map: a custom map or a scenario has no seed
+     *  for the anchor to decide (ROADMAP "Provenance"). */
+    private fun shouldAnchor() = game.settings.anchorNewGames
+        && ChainWallet.service.isAvailable
+        && !gameSetupInfo.gameParameters.isOnlineMultiplayer
+        && mapOptionsTable.getSelectedScenario() == null
+        && mapOptionsTable.mapTypeSelectBox.selected.value != MapGeneratedMainType.custom
+
     private fun startGame() {
+        if (shouldAnchor()) Concurrency.runOnGLThread { anchorThenStart() }
+        else startGame(null)
+    }
+
+    private fun startGame(anchor: StartAnchor.Anchor?) {
 
         Concurrency.runOnGLThread {
             rightSideButton.disable()
@@ -222,9 +238,44 @@ class NewGameScreen(
             
             // Creating a new game can take a while and we don't want ANRs
             Concurrency.runOnNonDaemonThreadPool("NewGame") {
-                startNewGame()
+                startNewGame(anchor)
             }
         }
+    }
+
+    /** The wallet signs the start memo first; only once it is confirmed is the map generated,
+     *  from the seed the signature gives. Any failure offers the unanchored start - an anchor
+     *  is never what stands between a player and their game. */
+    private fun anchorThenStart() {
+        rightSideButton.disable()
+        rightSideButton.setText("Anchoring the start...".tr())
+        val gameId = GameInfoPreview.randomGameId()
+
+        fun failed(ex: Exception) {
+            rightSideButton.enable()
+            rightSideButton.setText("Start game!".tr())
+            Gdx.input.inputProcessor = stage
+            ConfirmPopup(
+                this,
+                "The start could not be anchored on-chain:".tr() + "\n" + (ex.message ?: ex.javaClass.simpleName)
+                    + "\n\n" + "Start without the anchor?".tr(),
+                "Start without the anchor",
+                isConfirmPositive = true
+            ) { startGame(null) }.open()
+        }
+
+        fun anchor() = ChainWallet.service.anchorGameStart(
+            gameId,
+            onSuccess = { signature ->
+                val wallet = ChainWallet.service.connectedAddress
+                if (wallet == null) failed(IllegalStateException("The wallet disconnected"))
+                else startGame(StartAnchor.Anchor(gameId, wallet, signature))
+            },
+            onError = ::failed
+        )
+
+        if (ChainWallet.isConnected) anchor()
+        else ChainWallet.service.connect(onConnected = { anchor() }, onError = ::failed)
     }
 
     /** Subtables may need an upper limit to their width - they can ask this function. */
@@ -294,7 +345,7 @@ class NewGameScreen(
         }
     }
 
-    private suspend fun startNewGame() = coroutineScope {
+    private suspend fun startNewGame(anchor: StartAnchor.Anchor?) = coroutineScope {
         val popup = Popup(this@NewGameScreen)
         launchOnGLThread {
             popup.addGoodSizedLabel(Constants.working).row()
@@ -306,7 +357,7 @@ class NewGameScreen(
         try {
             val selectedScenario = mapOptionsTable.getSelectedScenario()
             newGame = if (selectedScenario == null)
-                GameStarter.startNewGame(gameSetupInfo)
+                GameStarter.startNewGame(gameSetupInfo, anchor)
             else {
                 val gameInfo = game.files.loadGameFromFile(selectedScenario.file)
                 // Remove the Spectator - it was recommended by the wiki as Scenario builder

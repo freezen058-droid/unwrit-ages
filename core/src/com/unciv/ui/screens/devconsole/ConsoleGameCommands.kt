@@ -43,7 +43,8 @@ internal class ConsoleGameCommands : ConsoleCommandNode {
             val record = com.unciv.logic.chain.VictoryCertificate.record(console.gameInfo, civ)
             val jpeg = com.unciv.logic.chain.ChainWallet.service.renderCertificate(
                 com.unciv.logic.chain.VictoryCertificate.inscription(record),
-                com.unciv.logic.chain.CertificateEmblem(record.nation, record.emblemOuter, record.emblemInner)
+                com.unciv.logic.chain.CertificateEmblem(record.nation, record.emblemOuter, record.emblemInner),
+                record.anchored
             ) ?: throw ConsoleErrorException("This platform cannot draw a certificate")
             val file = com.unciv.UncivGame.Current.files.getSave("certificate-preview.jpg")
             file.writeBytes(jpeg, false)

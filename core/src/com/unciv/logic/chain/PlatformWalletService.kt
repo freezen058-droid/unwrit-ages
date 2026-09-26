@@ -27,8 +27,22 @@ interface PlatformWalletService {
     fun explorerUrl(address: String): String? = null
 
     /** The certificate picture exactly as a mint would draw it, without uploading or minting -
-     *  for checking the look on a device. Null where the platform cannot draw one. */
-    fun renderCertificate(inscription: List<VictoryCertificate.InscriptionLine>, emblem: CertificateEmblem): ByteArray? = null
+     *  for checking the look on a device. Null where the platform cannot draw one.
+     *  [anchored] picks the anchored stele (see [StartAnchor]). */
+    fun renderCertificate(inscription: List<VictoryCertificate.InscriptionLine>, emblem: CertificateEmblem, anchored: Boolean): ByteArray? = null
+
+    /**
+     * Signs and sends the memo [StartAnchor.memo] for [gameId] with the connected wallet - no fee
+     * beyond the network's - and calls [onSuccess] only once the network has confirmed it, since
+     * the map is generated from the signature and a start that never landed must not claim one.
+     */
+    fun anchorGameStart(
+        gameId: String,
+        onSuccess: (txSignature: String) -> Unit,
+        onError: (Exception) -> Unit
+    ) {
+        onError(UnsupportedOperationException("Wallet integration is not available on this platform"))
+    }
 
     fun connect(
         onConnected: (address: String) -> Unit,
@@ -62,6 +76,7 @@ interface PlatformWalletService {
      *
      * @param inscription the lines to carve, top to bottom; see [VictoryCertificate.inscription].
      * @param emblem the winner's nation name and its two colours, for the medallion.
+     * @param anchored draw the anchored stele - the game's origin is [StartAnchor.ORIGIN_ANCHORED].
      * @param buildMetadata called with the picture's permanent URI - returns the metadata JSON.
      * @param onUploaded the metadata's permanent URI, as soon as it exists, so the caller can record it.
      * @param onSuccess the minted asset's address.
@@ -70,6 +85,7 @@ interface PlatformWalletService {
         certificateName: String,
         inscription: List<VictoryCertificate.InscriptionLine>,
         emblem: CertificateEmblem,
+        anchored: Boolean,
         alreadyUploadedMetadataUri: String?,
         buildMetadata: (imageUri: String) -> String,
         onUploaded: (metadataUri: String) -> Unit,
@@ -99,6 +115,7 @@ interface PlatformWalletService {
                 certificateName: String,
                 inscription: List<VictoryCertificate.InscriptionLine>,
                 emblem: CertificateEmblem,
+                anchored: Boolean,
                 alreadyUploadedMetadataUri: String?,
                 buildMetadata: (imageUri: String) -> String,
                 onUploaded: (metadataUri: String) -> Unit,

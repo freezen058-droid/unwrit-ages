@@ -138,7 +138,8 @@ class VictoryCertificateOffer(
         Concurrency.run("CertificatePicture") {
             val jpeg = ChainWallet.service.renderCertificate(
                 VictoryCertificate.inscription(record),
-                CertificateEmblem(record.nation, record.emblemOuter, record.emblemInner)
+                CertificateEmblem(record.nation, record.emblemOuter, record.emblemInner),
+                record.anchored
             ) ?: return@run
             launchOnGLThread {
                 val pixmap = Pixmap(jpeg, 0, jpeg.size)

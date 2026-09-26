@@ -22,6 +22,7 @@ import com.unciv.models.ruleset.unit.BaseUnit
 import com.unciv.models.stats.Stats
 import com.unciv.models.translations.equalsPlaceholderText
 import com.unciv.models.translations.getPlaceholderParameters
+import com.unciv.logic.chain.StartAnchor
 import com.unciv.utils.debug
 import yairm210.purity.annotations.LocalState
 import yairm210.purity.annotations.Readonly
@@ -34,17 +35,27 @@ import yairm210.purity.annotations.Readonly
  *  is fully random per game.
  */
 class GameStarter private constructor(
-    private val gameSetupInfo: GameSetupInfo
+    private val gameSetupInfo: GameSetupInfo,
+    private val anchor: StartAnchor.Anchor?
 ) {
     companion object {
         // temporary instrumentation while tuning/debugging
         private const val consoleTimings = false
 
-        fun startNewGame(gameSetupInfo: GameSetupInfo): GameInfo =
-            GameStarter(gameSetupInfo).gameInfo
+        /** @param anchor an anchored start: the game takes its signed gameId, and the map the seed
+         *  derived from it, whatever the map options said. */
+        fun startNewGame(gameSetupInfo: GameSetupInfo, anchor: StartAnchor.Anchor? = null): GameInfo =
+            GameStarter(gameSetupInfo, anchor).gameInfo
     }
 
-    private val gameInfo = GameInfo()
+    private val gameInfo = GameInfo().apply {
+        if (anchor != null) {
+            gameId = anchor.gameId
+            startAnchorWallet = anchor.wallet
+            startAnchorSignature = anchor.signature
+            gameSetupInfo.mapParameters.seed = anchor.seed
+        }
+    }
     private val rng = GameContext(gameInfo = gameInfo).stateBasedRandom("GameStarter")
     private val ruleset: Ruleset
     private lateinit var tileMap: TileMap

@@ -35,6 +35,7 @@ class DesktopWalletService : PlatformWalletService {
         certificateName: String,
         inscription: List<VictoryCertificate.InscriptionLine>,
         emblem: CertificateEmblem,
+        anchored: Boolean,
         alreadyUploadedMetadataUri: String?,
         buildMetadata: (imageUri: String) -> String,
         onUploaded: (metadataUri: String) -> Unit,

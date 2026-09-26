@@ -711,7 +711,7 @@
         "category": "Blockchain",
         "steps": [
             "Unwrit Ages can connect to a Solana wallet on your phone - Phantom or Solflare. This is entirely optional. The whole game is playable, start to finish, without ever opening the Wallet screen.",
-            "Connecting one makes two things possible: recording a save on the chain, and minting a certificate for a game you have won. Each is something you choose, one at a time. Nothing is ever charged without your wallet asking you to approve it first.",
+            "Connecting one makes three things possible: anchoring the start of a new game, which is free; recording a save on the chain; and minting a certificate for a game you have won. Each is something you choose, one at a time. Nothing is ever charged without your wallet asking you to approve it first.",
             "Connect from the Wallet button on the main menu. Disconnecting is immediate and local - the game simply forgets your address."
         ]
     },
@@ -731,6 +731,7 @@
         "category": "Blockchain",
         "steps": [
             "Win a game and the victory screen offers you a certificate: an NFT recording who won, by which victory, on which turn and in which year, owned by your wallet.",
+            "A game started with 'Anchor the start on-chain' says so on its certificate - Origin: Anchored start - together with the signature its map was made from, so anyone can check it.",
             "It costs US$0.90, converted to SOL at the moment you mint it, plus the network's own cost of roughly US$0.17 - the rent for the account that will hold the certificate forever. The US$0.90 is the game's, and it goes towards building the game further. Besides the optional 1 SKR save record, that is the only charge: there is no subscription, no advertising, and nothing to buy inside the game.",
             "The certificate carries its own record inside it rather than pointing at a website, so it does not go blank if some server disappears. And it is genuinely yours - it lives in your wallet, and you can hold, transfer or sell it like anything else there."
         ]

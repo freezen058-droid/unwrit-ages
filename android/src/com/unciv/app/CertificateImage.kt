@@ -54,9 +54,13 @@ class CertificateImage(private val assets: AssetManager) {
         "mark" to Style(cinzel, 700, 18f, true, 0f),
     )
 
-    /** The finished certificate as a JPEG small enough for the free upload tier. */
-    fun render(lines: List<VictoryCertificate.InscriptionLine>, emblem: CertificateEmblem): ByteArray {
-        val base = assets.open("certificate/stele.jpg").use { BitmapFactory.decodeStream(it) }
+    /** The finished certificate as a JPEG small enough for the free upload tier. [anchored] draws
+     *  on the anchored stele - the same painting with a gold glow, geometry unchanged, so the
+     *  layout below fits both (ROADMAP "Provenance") - or the plain one while it is not painted. */
+    fun render(lines: List<VictoryCertificate.InscriptionLine>, emblem: CertificateEmblem, anchored: Boolean): ByteArray {
+        val file = if (anchored && "stele_anchored.jpg" in (assets.list("certificate") ?: emptyArray()))
+            "certificate/stele_anchored.jpg" else "certificate/stele.jpg"
+        val base = assets.open(file).use { BitmapFactory.decodeStream(it) }
         val bitmap = base.copy(Bitmap.Config.ARGB_8888, true)
         base.recycle()
         val canvas = Canvas(bitmap)

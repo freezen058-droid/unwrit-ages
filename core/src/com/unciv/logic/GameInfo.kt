@@ -143,6 +143,12 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
      *  single-turn AutoPlay can't hide a whole game; the certificate states the number (user, 09-24). */
     var autoPlayedTurns = 0
 
+    /** An anchored start ([com.unciv.logic.chain.StartAnchor]): the wallet that signed this game's
+     *  start memo and the signature, both base58, empty for an unanchored game. The map's seed was
+     *  derived from them, which is what the certificate's `Origin` checks. */
+    var startAnchorWallet = ""
+    var startAnchorSignature = ""
+
     /** The minted certificate's address, once there is one - so the offer shows it instead of
      *  a second mint button that would charge again for the same victory. */
     var certificateAddress: String? = null
@@ -245,6 +251,8 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
         toReturn.isTutorialGame = isTutorialGame
         toReturn.certificateOfferShown = certificateOfferShown
         toReturn.autoPlayedTurns = autoPlayedTurns
+        toReturn.startAnchorWallet = startAnchorWallet
+        toReturn.startAnchorSignature = startAnchorSignature
         toReturn.certificateAddress = certificateAddress
         toReturn.historyStartTurn = historyStartTurn
         toReturn.lastUnitId = lastUnitId

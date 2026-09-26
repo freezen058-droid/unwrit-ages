@@ -60,15 +60,19 @@ object VictoryCertificateService {
     /** The mint itself, with a connected wallet guaranteed and the record already assembled. */
     private fun mintConnected(
         gameInfo: GameInfo,
-        record: VictoryCertificate.Record,
+        assembled: VictoryCertificate.Record,
         onProgress: (String) -> Unit,
         onSuccess: (assetAddress: String) -> Unit,
         onError: (Exception) -> Unit
     ) {
+        // The record may have been assembled before the wallet was connected; the origin depends
+        // on which wallet the certificate goes to, so it is settled now that that is known.
+        val record = assembled.copy(origin = StartAnchor.origin(gameInfo, ChainWallet.service.connectedAddress))
         ChainWallet.service.mintVictoryCertificate(
             certificateName = VictoryCertificate.NAME,
             inscription = VictoryCertificate.inscription(record),
             emblem = CertificateEmblem(record.nation, record.emblemOuter, record.emblemInner),
+            anchored = record.anchored,
             alreadyUploadedMetadataUri = alreadyMintedUpload(gameInfo),
             buildMetadata = { imageUri -> VictoryCertificate.metadataJsonWithin(record, imageUri, METADATA_MAX_BYTES) },
             onUploaded = { remember(gameInfo.gameId, it) },

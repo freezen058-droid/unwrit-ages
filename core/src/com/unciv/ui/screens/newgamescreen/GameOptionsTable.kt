@@ -9,6 +9,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.utils.Align
 import com.unciv.Constants
 import com.unciv.UncivGame
+import com.unciv.logic.chain.ChainWallet
 import com.unciv.logic.civilization.PlayerType
 import com.unciv.models.metadata.GameParameters
 import com.unciv.models.metadata.Player
@@ -107,6 +108,7 @@ class GameOptionsTable(
             }).colspan(2).fillX().row()
         }).row()
         addVictoryTypeCheckboxes()
+        if (ChainWallet.service.isAvailable) addAnchorStartCheckbox()
 
         // Online multiplayer is not part of this fork, so neither is its setup: the checkbox,
         // the spectator toggle it reveals, and the three turn-timer boxes behind it are all gone.
@@ -163,6 +165,20 @@ class GameOptionsTable(
         checkbox.align(Align.left)
         add(checkbox).colspan(2).row()
         return checkbox
+    }
+
+    /** Opt-in and free: see [com.unciv.logic.chain.StartAnchor]. A player setting, not a game
+     *  parameter - it decides how this game starts, not how it plays. */
+    private fun Table.addAnchorStartCheckbox() {
+        val settings = UncivGame.Current.settings
+        addCheckbox("Anchor the start on-chain (free)", settings.anchorNewGames) {
+            settings.anchorNewGames = it
+            settings.save()
+        }
+        add(("Your wallet signs once and the map is made from that signature, "
+            + "so a victory certificate can show this game started with you. "
+            + "Generated maps only; the map seed is then not yours to pick.").toLabel(fontSize = 14)
+            .apply { wrap = true }).colspan(2).fillX().padLeft(20f).row()
     }
 
     private fun Table.addNoCityRazingCheckbox() =

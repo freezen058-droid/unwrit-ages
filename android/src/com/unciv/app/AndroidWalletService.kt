@@ -26,6 +26,7 @@ import com.solana.transaction.TransactionInstruction
 import com.unciv.logic.chain.Ans104
 import com.unciv.logic.chain.CertificateEmblem
 import com.unciv.logic.chain.PlatformWalletService
+import com.unciv.logic.chain.StartAnchor
 import com.unciv.logic.chain.VictoryCertificate
 import com.unciv.utils.Concurrency
 import com.unciv.utils.Log
@@ -488,8 +489,8 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
 
     override val certificateFeeUsdCents = CERTIFICATE_FEE_USD_CENTS.toInt()
 
-    override fun renderCertificate(inscription: List<VictoryCertificate.InscriptionLine>, emblem: CertificateEmblem) =
-        CertificateImage(activity.assets).render(inscription, emblem)
+    override fun renderCertificate(inscription: List<VictoryCertificate.InscriptionLine>, emblem: CertificateEmblem, anchored: Boolean) =
+        CertificateImage(activity.assets).render(inscription, emblem, anchored)
 
     override fun explorerUrl(address: String) =
         "https://explorer.solana.com/address/$address" + (if (IS_MAINNET) "" else "?cluster=devnet")
@@ -618,6 +619,7 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
         certificateName: String,
         inscription: List<VictoryCertificate.InscriptionLine>,
         emblem: CertificateEmblem,
+        anchored: Boolean,
         alreadyUploadedMetadataUri: String?,
         buildMetadata: (imageUri: String) -> String,
         onUploaded: (metadataUri: String) -> Unit,
@@ -637,7 +639,7 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
                 // back at once: a mint that fails after this point retries against it for free.
                 val metadataUri = alreadyUploadedMetadataUri ?: run {
                     launchOnGLThread { onProgress("Carving the certificate...") }
-                    val jpeg = CertificateImage(activity.assets).render(inscription, emblem)
+                    val jpeg = CertificateImage(activity.assets).render(inscription, emblem, anchored)
                     Log.debug("Victory certificate: picture %d bytes", jpeg.size)
                     launchOnGLThread { onProgress("Storing the certificate...") }
                     val imageUri = uploadToArweave(jpeg, "image/jpeg")
@@ -897,6 +899,93 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
             SolanaPublicKey.from(blockhash),
             compiled
         )
+    }
+
+    /**
+     * Polls until the network reports [signature] confirmed - the start anchor's map is generated
+     * from the signature, so it has to be known to have landed first. A transaction that failed
+     * on chain, or is not seen within [timeoutMs], is an error: the game then starts unanchored.
+     */
+    private suspend fun awaitConfirmation(signature: String, timeoutMs: Long = 45_000) {
+        val deadline = System.currentTimeMillis() + timeoutMs
+        while (System.currentTimeMillis() < deadline) {
+            val requestBody = kotlinx.serialization.json.buildJsonObject {
+                put("jsonrpc", kotlinx.serialization.json.JsonPrimitive("2.0"))
+                put("id", kotlinx.serialization.json.JsonPrimitive(1))
+                put("method", kotlinx.serialization.json.JsonPrimitive("getSignatureStatuses"))
+                put("params", kotlinx.serialization.json.buildJsonArray {
+                    add(kotlinx.serialization.json.buildJsonArray { add(kotlinx.serialization.json.JsonPrimitive(signature)) })
+                })
+            }
+            val response: kotlinx.serialization.json.JsonObject = httpClient.post(RPC_ENDPOINT) {
+                contentType(ContentType.Application.Json)
+                setBody(requestBody)
+            }.body()
+            // result.value is a list with one entry per signature: null until the network has
+            // seen it, then an object with "err" (null on success) and "confirmationStatus".
+            val status = (response["result"] as? kotlinx.serialization.json.JsonObject)
+                ?.get("value")?.let { it as? kotlinx.serialization.json.JsonArray }
+                ?.firstOrNull() as? kotlinx.serialization.json.JsonObject
+            if (status != null) {
+                val err = status["err"]
+                if (err != null && err !is kotlinx.serialization.json.JsonNull)
+                    throw IllegalStateException("The start anchor failed on chain: $err")
+                val level = (status["confirmationStatus"] as? kotlinx.serialization.json.JsonPrimitive)?.content
+                if (level == "confirmed" || level == "finalized") return
+            }
+            kotlinx.coroutines.delay(1_000)
+        }
+        throw IllegalStateException("The start anchor was not confirmed in time")
+    }
+
+    override fun anchorGameStart(
+        gameId: String,
+        onSuccess: (txSignature: String) -> Unit,
+        onError: (Exception) -> Unit
+    ) {
+        val address = _connectedAddress
+        if (authToken == null || address == null) {
+            onError(IllegalStateException("No wallet connected"))
+            return
+        }
+
+        Concurrency.run("WalletAnchorStart") {
+            try {
+                val ownerKey = SolanaPublicKey.from(address)
+                // Memo only: no transfer, so the player pays the network's fee and nothing else
+                // (user, 09-26). Read-only signer, as in [recordSaveHash].
+                val memoInstruction = TransactionInstruction(
+                    memoProgramId,
+                    listOf(AccountMeta(ownerKey, isSigner = true, isWritable = false)),
+                    StartAnchor.memo(gameId).encodeToByteArray()
+                )
+                val message = Message.Builder()
+                    .addInstruction(memoInstruction)
+                    .setRecentBlockhash(fetchLatestBlockhash())
+                    .build()
+                val unsignedTx = Transaction(message)
+
+                val result = withWakeLock {
+                    withBridge { sender ->
+                        walletAdapter.transact(sender) {
+                            signAndSendTransactions(arrayOf(unsignedTx.serialize()))
+                        }
+                    }
+                }
+                val signature = when (result) {
+                    is TransactionResult.Success -> result.successPayload?.signatures?.firstOrNull()
+                        ?.let { base58Encode(it) }
+                        ?: throw IllegalStateException("Wallet did not return a transaction signature")
+                    is TransactionResult.NoWalletFound -> throw Exception("No MWA-compatible wallet app found")
+                    is TransactionResult.Failure -> throw result.e
+                }
+                awaitConfirmation(signature)
+                launchOnGLThread { onSuccess(signature) }
+            } catch (ex: Exception) {
+                Log.error("Failed to anchor the game start on-chain", ex)
+                launchOnGLThread { onError(ex) }
+            }
+        }
     }
 
     override fun recordSaveHash(
