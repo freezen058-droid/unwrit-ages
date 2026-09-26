@@ -180,7 +180,8 @@ class GameOptionsTable(
         add(("Proves you played this game from its first turn. Win it, and its victory certificate "
             + "is carved on the gilded stele and marked 'Anchored start', which anyone can check. "
             + "Your wallet signs one free record as the game begins, and the map is made from that "
-            + "signature, so no one can pass off someone else's game as theirs. Generated maps only.").toLabel(fontSize = 14)
+            + "signature, so no one can pass off someone else's game as theirs. You still choose the "
+            + "map's type and size; only its random layout comes from the signature.").toLabel(fontSize = 14)
             .apply { wrap = true }).colspan(2).fillX().padLeft(20f).row()
     }
 

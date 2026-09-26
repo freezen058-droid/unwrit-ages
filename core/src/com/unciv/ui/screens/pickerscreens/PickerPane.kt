@@ -31,7 +31,9 @@ class PickerPane(
     /** A button on the lower right of [bottomTable] you can use for a "OK"-type action, starts disabled */
     val rightSideButton = "".toTextButton()
 
-    private val screenSplit = 0.85f
+    /** The list's share of the height at least; the bottom bar gets the rest, up to [maxBottomTableHeight].
+     *  A screen whose description needs more lines lowers it (the load and save screens, 09-26). */
+    var screenSplit = 0.85f
     private val maxBottomTableHeight = 150f     // about 7 lines of normal text
 
     /**

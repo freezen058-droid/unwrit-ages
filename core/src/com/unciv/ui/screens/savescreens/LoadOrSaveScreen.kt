@@ -61,6 +61,9 @@ abstract class LoadOrSaveScreen(
     }
 
     init {
+        // A save's info is three lines; the default bottom bar shows about three and a half on a
+        // phone held sideways, so it gets a little more room here (user, 09-26)
+        pickerPane.screenSplit = 0.78f
         savesScrollPane.onChange(::selectExistingSave)
         savesScrollPane.onDoubleClick(::doubleClickAction)
 
@@ -140,12 +143,12 @@ abstract class LoadOrSaveScreen(
                     .filter { it.isPlayerCivilization() }.joinToString { it.civName.tr() }
                 val mods = if (game.gameParameters.mods.isEmpty()) ""
                     else "\n{Mods:} " + game.gameParameters.mods.joinToString()
-                val anchored = if (game.startAnchorWallet.isEmpty()) "" else "\n{Anchored start on-chain}"
+                val anchored = if (game.startAnchorWallet.isEmpty()) "" else " · {Anchored start on-chain}"
 
-                // Format result for textToSet
+                // Format result for textToSet. No base ruleset line: every game is Expanded and
+                // there is no choice to show (ROADMAP "Not in 1.0.0", user 09-26)
                 "${saveGameFile.name()}\n{Saved at}: ${savedAt.formatDate()}\n" +
-                "$playerCivNames, ${game.difficulty.tr()}, ${Fonts.turn}${game.turns}\n" +
-                "{Base ruleset:} {${game.gameParameters.baseRuleset}}$mods$anchored"
+                "$playerCivNames, ${game.difficulty.tr()}, ${Fonts.turn}${game.turns}$anchored$mods"
             } catch (_: Exception) {
                 "Could not load game!"
             }
