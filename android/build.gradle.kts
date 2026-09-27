@@ -3,6 +3,8 @@ import com.unciv.build.AndroidImagePacker
 import com.unciv.build.BuildConfig
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.util.Properties
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 plugins {
     id("com.android.application")
@@ -38,7 +40,9 @@ android {
         versionCode = BuildConfig.appCodeNumber
         versionName = BuildConfig.appVersion
 
-        base.archivesName.set(BuildConfig.appName)
+        // "UnwritAges-1.0.1-260927-release.apk": version and build date in the file name (user, 09-27)
+        val buildDate = LocalDate.now().format(DateTimeFormatter.ofPattern("yyMMdd"))
+        base.archivesName.set("${BuildConfig.appName.replace(" ", "")}-${BuildConfig.appVersion}-$buildDate")
     }
 
     // Had to add this crap for Travis to build, it wanted to sign the app
