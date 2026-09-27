@@ -490,11 +490,11 @@ private fun logRunningThreads() {
         // run - so when BuildConfig was bumped to 1.0.0 nothing updated it and it still read
         // 4.21.13, which is the number the main menu, the About page and the crash report all
         // show. Version's own KDoc says text and number are BuildConfig.appVersion and
-        // appCodeNumber, so 1.0.0 / 1 is what belongs here. Changing it affects no save:
+        // appCodeNumber - VersionMatchesBuildConfigTest fails when they differ. Changing it affects no save:
         // CompatibilityVersion.compareTo only compares its own `number`
         // (CURRENT_COMPATIBILITY_NUMBER), never the Version it carries.
         //region AUTOMATICALLY GENERATED VERSION DATA - DO NOT CHANGE THIS REGION, INCLUDING THIS COMMENT
-        val VERSION = Version("1.0.0", 1)
+        val VERSION = Version("1.0.1", 2)
         //endregion
 
         /** Global reference to the one Gdx.Game instance created by the platform launchers - do not use without checking [isCurrentInitialized] first. */
