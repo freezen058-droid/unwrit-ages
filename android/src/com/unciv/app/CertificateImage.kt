@@ -33,6 +33,11 @@ class CertificateImage(private val assets: AssetManager) {
         const val MEDAL_X = 512f
         const val MEDAL_Y = 355f
         const val MEDAL_R = 36f
+        /** On the gilded stele the emblem sits in the arch's niche, above the rail it would
+         *  otherwise overlap; the largest size that keeps every nation's emblem (India and Japan
+         *  are the widest) at least 2 px off the arch's frame (09-28). */
+        const val MEDAL_Y_ANCHORED = 346f
+        const val MEDAL_R_ANCHORED = 30f
         /** Gilded letters; the civilisation, the victory and the emblem are the brighter gold. */
         val GOLD = Color.rgb(206, 160, 78)
         val GOLD_BRIGHT = Color.rgb(240, 200, 118)
@@ -55,27 +60,29 @@ class CertificateImage(private val assets: AssetManager) {
     )
 
     /** The finished certificate as a JPEG small enough for the free upload tier. [anchored] draws
-     *  on the anchored stele - the same painting with a gold glow, geometry unchanged, so the
-     *  layout below fits both (ROADMAP "Provenance") - or the plain one while it is not painted. */
+     *  on the anchored stele - the same painting gilded, its tablet unchanged, so the inscription's
+     *  layout fits both (ROADMAP "Provenance"); only the emblem moves up into the arch - or the
+     *  plain one while it is not painted. */
     fun render(lines: List<VictoryCertificate.InscriptionLine>, emblem: CertificateEmblem, anchored: Boolean): ByteArray {
-        val file = if (anchored && "stele_anchored.jpg" in (assets.list("certificate") ?: emptyArray()))
-            "certificate/stele_anchored.jpg" else "certificate/stele.jpg"
+        val gilded = anchored && "stele_anchored.jpg" in (assets.list("certificate") ?: emptyArray())
+        val file = if (gilded) "certificate/stele_anchored.jpg" else "certificate/stele.jpg"
         val base = assets.open(file).use { BitmapFactory.decodeStream(it) }
         val bitmap = base.copy(Bitmap.Config.ARGB_8888, true)
         base.recycle()
         val canvas = Canvas(bitmap)
-        drawEmblem(canvas, emblem)
+        if (gilded) drawEmblem(canvas, emblem, MEDAL_Y_ANCHORED, MEDAL_R_ANCHORED)
+        else drawEmblem(canvas, emblem, MEDAL_Y, MEDAL_R)
         drawInscription(canvas, lines)
         return encode(bitmap).also { bitmap.recycle() }
     }
 
     /** The nation's icon inlaid in gold, like the letters. A mod's nation has no bundled icon;
      *  its tablet then carries the inscription alone. (The emblem's colours stay in the metadata.) */
-    private fun drawEmblem(canvas: Canvas, emblem: CertificateEmblem) {
+    private fun drawEmblem(canvas: Canvas, emblem: CertificateEmblem, medalY: Float, medalR: Float) {
         val icon = try {
             assets.open("certificate/emblems/${emblem.nation}.png").use { BitmapFactory.decodeStream(it) }
         } catch (_: Exception) { null } ?: return
-        val box = RectF(MEDAL_X - MEDAL_R, MEDAL_Y - MEDAL_R, MEDAL_X + MEDAL_R, MEDAL_Y + MEDAL_R)
+        val box = RectF(MEDAL_X - medalR, medalY - medalR, MEDAL_X + medalR, medalY + medalR)
         fun layer(dx: Float, argb: Int, blur: Float) {
             val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
                 colorFilter = PorterDuffColorFilter(argb, PorterDuff.Mode.SRC_IN)

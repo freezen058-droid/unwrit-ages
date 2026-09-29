@@ -78,7 +78,9 @@ object VictoryCertificate {
             winner = winner.civName,
             victoryType = victory?.victoryType ?: "",
             victoryTurn = victory?.victoryTurn ?: gameInfo.turns,
-            victoryYear = gameInfo.getYear(),
+            // the year of the victory turn, not of the turn it is minted on (09-28: a win on turn
+            // 223 minted on 225 was carved "Turn 223 / 1910 AD")
+            victoryYear = gameInfo.getYear((victory?.victoryTurn ?: gameInfo.turns) - gameInfo.turns),
             difficulty = gameInfo.difficulty,
             gameSpeed = gameInfo.gameParameters.speed,
             rivals = gameInfo.civilizations
