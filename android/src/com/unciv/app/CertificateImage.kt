@@ -34,10 +34,12 @@ class CertificateImage(private val assets: AssetManager) {
         const val MEDAL_Y = 355f
         const val MEDAL_R = 36f
         /** On the gilded stele the emblem sits in the arch's niche, above the rail it would
-         *  otherwise overlap; the largest size that keeps every nation's emblem (India and Japan
-         *  are the widest) at least 2 px off the arch's frame (09-28). */
-        const val MEDAL_Y_ANCHORED = 346f
-        const val MEDAL_R_ANCHORED = 30f
+         *  otherwise overlap. The niche is a pointed arch (36 px wide at its top, 109 at the rail),
+         *  so square-topped emblems (America, Spain, Celts) set the limit: this is the largest size
+         *  that keeps all 34, shadow included, at least 3.6 px inside it (09-29; r30 at y346 put
+         *  their top corners on the frame). Measured by pic/batch_review/_cert/anchored/emblem_fit.py. */
+        const val MEDAL_Y_ANCHORED = 351f
+        const val MEDAL_R_ANCHORED = 27f
         /** Gilded letters; the civilisation, the victory and the emblem are the brighter gold. */
         val GOLD = Color.rgb(206, 160, 78)
         val GOLD_BRIGHT = Color.rgb(240, 200, 118)
