@@ -315,7 +315,8 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
     @Serializable
     private data class AccountDataResult(val value: AccountInfoOwnerAndData? = null)
 
-    /** The account's owner program and raw data, or null if the account does not exist. */
+    /** The account's owner program and raw data, or null if the account does not exist. An RPC
+     *  error throws: read as "no account", it made an SKR balance of 54 look like 0 (09-30). */
     private suspend fun fetchAccount(address: String): Pair<String, ByteArray>? {
         val requestBody = kotlinx.serialization.json.buildJsonObject {
             put("jsonrpc", kotlinx.serialization.json.JsonPrimitive("2.0"))
@@ -332,6 +333,7 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
             contentType(ContentType.Application.Json)
             setBody(requestBody)
         }.body()
+        response.error?.let { throw IllegalStateException("RPC getAccountInfo: ${it.message}") }
         val value = response.result?.value ?: return null
         val owner = value.owner ?: return null
         val encoded = value.data.firstOrNull() ?: return null
@@ -1194,26 +1196,13 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
         return wholeSkr * 1_000_000L
     }
 
-    @Serializable
-    private data class TokenBalanceRpcResponse(val result: TokenBalanceResult? = null, val error: RpcError? = null)
-    @Serializable
-    private data class TokenBalanceResult(val value: TokenBalanceValue)
-    @Serializable
-    private data class TokenBalanceValue(val amount: String)
-
-    /** Base units of SKR in [account]; 0 when the account does not exist. */
+    /** Base units of SKR in [account]; 0 when the account does not exist. Read from the account's
+     *  data (an SPL token account holds its amount as a little-endian u64 at byte 64), because the
+     *  RPC proxy forwards getAccountInfo but not getTokenAccountBalance. */
     private suspend fun skrBalance(account: SolanaPublicKey): Long {
-        val requestBody = kotlinx.serialization.json.buildJsonObject {
-            put("jsonrpc", kotlinx.serialization.json.JsonPrimitive("2.0"))
-            put("id", kotlinx.serialization.json.JsonPrimitive(1))
-            put("method", kotlinx.serialization.json.JsonPrimitive("getTokenAccountBalance"))
-            put("params", kotlinx.serialization.json.buildJsonArray { add(kotlinx.serialization.json.JsonPrimitive(account.base58())) })
-        }
-        val response: TokenBalanceRpcResponse = httpClient.post(RPC_ENDPOINT) {
-            contentType(ContentType.Application.Json)
-            setBody(requestBody)
-        }.body()
-        return response.result?.value?.amount?.toLongOrNull() ?: 0L
+        val (owner, data) = fetchAccount(account.base58()) ?: return 0L
+        check(owner == TokenProgram.PROGRAM_ID.base58() && data.size >= 72) { "SKR account owned by $owner" }
+        return java.nio.ByteBuffer.wrap(data, 64, 8).order(java.nio.ByteOrder.LITTLE_ENDIAN).long
     }
 
     /**
