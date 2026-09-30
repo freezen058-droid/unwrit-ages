@@ -7,6 +7,7 @@ import android.graphics.BlurMaskFilter
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
 import android.graphics.RectF
@@ -177,12 +178,21 @@ class CertificateImage(private val assets: AssetManager) {
     private fun engrave(canvas: Canvas, text: String, cx: Float, top: Float, paint: Paint, gold: Boolean) {
         val x = cx - paint.measureText(text) / 2
         val baseline = top - paint.fontMetrics.ascent
+        // Drawn as outlines, not with drawText: Android's "High contrast text" setting rewrites every
+        // drawText on the phone - even into this bitmap - with a black rim and a lightened fill, so a
+        // certificate minted on such a phone looked stamped on, not carved (BUGS #18, reproduced on
+        // the Seeker 10-01). A path is only a shape, and the system leaves shapes alone.
+        val outline = Path().also { paint.getTextPath(text, 0, text.length, x, baseline, it) }
         fun layer(dx: Float, argb: Int, blur: Float) {
             val p = Paint(paint).apply {
                 color = argb
+                style = Paint.Style.FILL
                 if (blur > 0f) maskFilter = BlurMaskFilter(blur, BlurMaskFilter.Blur.NORMAL)
             }
-            canvas.drawText(text, x + dx, baseline + dx, p)
+            canvas.save()
+            canvas.translate(dx, dx)
+            canvas.drawPath(outline, p)
+            canvas.restore()
         }
         layer(-1.5f, Color.argb((0.55f * 255).toInt(), 0, 0, 0), 1.2f)   // the lip's shadow
         layer(0f, if (gold) GOLD_BRIGHT else GOLD, 0.5f)

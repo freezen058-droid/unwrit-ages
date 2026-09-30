@@ -24,7 +24,7 @@ import com.unciv.utils.Concurrency
  *
  * Results go to logcat, tag UACMD. Commands: state | center x y | move id x y | attack id x y |
  * bombard city x y | action id SetUp|Fortify|Sleep|Explore|... | promote id name | build city name |
- * buy city name | tech name | policy name | war civ | peace-no | endturn
+ * buy city name | tech name | policy name | war civ | peace-no | endturn | certificate
  */
 class DemoCommandReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -123,6 +123,19 @@ class DemoCommandReceiver : BroadcastReceiver() {
                 civ.getDiplomacyManager(other)!!.declareWar(); "ok"
             }
             "endturn" -> { ws.nextTurn(); "ending turn" }
+            // The certificate as a mint would draw it, into SaveFiles/certificate-preview.jpg, nothing
+            // spent - to compare phones and settings (BUGS #18: high-contrast text, 10-01)
+            "certificate" -> {
+                val record = com.unciv.logic.chain.VictoryCertificate.record(info, civ)
+                val jpeg = com.unciv.logic.chain.ChainWallet.service.renderCertificate(
+                    com.unciv.logic.chain.VictoryCertificate.inscription(record),
+                    com.unciv.logic.chain.CertificateEmblem(record.nation, record.emblemOuter, record.emblemInner),
+                    record.anchored
+                ) ?: error("cannot draw")
+                val file = game.files.getSave("certificate-preview.jpg")
+                file.writeBytes(jpeg, false)
+                "wrote ${jpeg.size} bytes to ${file.path()}"
+            }
             else -> error("unknown command")
         }
         ws.shouldUpdate = true
