@@ -8,7 +8,8 @@ culture or diplomacy. No ads, no pay-to-win, and it plays offline.
 contributors, MPL-2.0 licensed** - see [LICENSE](LICENSE), [NOTICE.md](NOTICE.md) and
 [MPL-NOTICE.md](MPL-NOTICE.md). The first commit in this repository (`4.21.13`) is Unciv's own
 release, unchanged; every commit after it is ours. The game rules, map, AI and most of the engine
-are Unciv's work.
+are Unciv's work. The art made for Unwrit Ages is not under the MPL - see
+[ART-NOTICE.md](ART-NOTICE.md).
 
 ## What this fork adds
 
