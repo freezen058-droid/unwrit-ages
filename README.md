@@ -18,13 +18,21 @@ On Solana, through the Mobile Wallet Adapter (`core/src/com/unciv/logic/chain/`,
 
 - **Victory certificate** - win, and mint the victory as an NFT (Metaplex Core): a painted stele that
   records who won, how, on which turn and with how many AutoPlay turns. The art and metadata are
-  stored on Arweave. The fee (US$0.90) is paid in SOL at the Pyth price, in the same transaction.
+  stored on Arweave. The fee (US$0.90) is paid in the same transaction, in SOL at the Pyth price or
+  in SKR at the market price - the player picks the token before the wallet opens. Its lettering is
+  drawn as outlines, so a phone's accessibility settings cannot restyle a permanent record.
 - **Anchored start** - opt in, and a free signed memo transaction seeds the map, so anyone can check
   the game was played from turn 1 on the map that signature produced.
 - **Cloud saves (1 SKR each)** - record a save on-chain: it is uploaded to Arweave and named in a memo.
   Private saves are AES-256-GCM encrypted with a key derived from a wallet signature, so the same
   wallet restores them on any phone and nothing secret is stored. Shared saves let anyone continue
   the game; a victory won from one says "Continued from turn N" on its certificate.
+- **Shared-save gallery** - every shared save in one place, with no server: the records are read from
+  the transactions that paid their 1 SKR, and each carries its civ, map, era and turn. Sort by what
+  players tipped or by date, filter by civ, map and era, and preview the map (drawn from the save
+  itself) before loading it. Players tip authors in SKR (1, 10, 17 for Unciv's founding year, or any
+  amount); a tip counts only once its transaction shows the author received it. The first save ever
+  shared is marked Genesis.
 
 For the phone:
 
