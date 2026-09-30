@@ -28,6 +28,8 @@ class Council : IsPartOfGameInfoSerialization {
         const val THREAT_RANGE = 3
         /** Turns before a threat the player answered is asked about again. */
         const val ASK_AGAIN_AFTER = 5
+        /** [answered]'s key for the empire-wide unhappiness report. */
+        const val UNHAPPY = "unhappy"
     }
 
     @Transient
@@ -43,8 +45,8 @@ class Council : IsPartOfGameInfoSerialization {
      *  ends - that go into the next turn's [report]. */
     var pending = ArrayList<String>()
 
-    /** Reports waiting for the player's answer, oldest first: `threat:<city id>:<enemy units>` or
-     *  `passed:<city id>`. Kept here, not as a PopupAlert: an unknown AlertType in a shared save would
+    /** Reports waiting for the player's answer, oldest first: `threat:<city id>:<enemy units>`,
+     *  `passed:<city id>` or `unhappy:<city id>:<happiness>`. Kept here, not as a PopupAlert: an unknown AlertType in a shared save would
      *  break older versions of the game, an unknown field is ignored. */
     var reports = ArrayList<String>()
 
@@ -145,6 +147,7 @@ class Council : IsPartOfGameInfoSerialization {
         report.addAll(pending)
         pending.clear()
         reports.removeAll { item -> civ.cities.none { item.split(":")[1] == it.id } }   // cities lost since
+        reports.removeAll { it.startsWith("unhappy:") && civ.getHappiness() >= 0 }            // solved since
         for (city in civ.cities.toList()) {
             val order = orderOf(city) ?: continue
             if (city.getCityFocus() != order.focus) city.setCityFocus(order.focus)
@@ -161,6 +164,18 @@ class Council : IsPartOfGameInfoSerialization {
             }
         }
         watchForThreats()
+        watchHappiness()
+    }
+
+    /** The empire is unhappy: the council proposes its largest city not already on culture. Asked
+     *  at most every [ASK_AGAIN_AFTER] turns. */
+    private fun watchHappiness() {
+        val happiness = civ.getHappiness()
+        if (happiness >= 0 || reports.any { it.startsWith("unhappy:") }) return
+        val last = answered[UNHAPPY]
+        if (last != null && civ.gameInfo.turns - last < ASK_AGAIN_AFTER) return
+        val city = civ.cities.filter { orderOf(it) != Order.Culture }.maxByOrNull { it.population.population } ?: return
+        reports.add("unhappy:${city.id}:$happiness")
     }
 
     /** Enemy military units - of civs at war with us, on tiles we see - within 3 tiles of [city]. */

@@ -124,4 +124,21 @@ class CouncilTest {
         civ.council.threatPassed(city, keep = false)
         assertNull(civ.council.orderOf(city))
     }
+
+    @Test
+    fun anUnhappyEmpireIsOfferedCultureForItsLargestCity() {
+        civ.council.startTurn()
+        assertTrue(civ.council.reports.none { it.startsWith("unhappy:") })   // a content empire: nothing to ask
+
+        city.population.setPopulation(40)
+        civ.updateStatsForNextTurn()
+        assertTrue("the setup must make the empire unhappy", civ.getHappiness() < 0)
+        civ.council.startTurn()
+        assertTrue(civ.council.reports.any { it.startsWith("unhappy:${city.id}:") })
+
+        civ.council.reports.clear()
+        civ.council.answered[Council.UNHAPPY] = civ.gameInfo.turns
+        civ.council.startTurn()
+        assertTrue(civ.council.reports.none { it.startsWith("unhappy:") })   // answered: not again so soon
+    }
 }

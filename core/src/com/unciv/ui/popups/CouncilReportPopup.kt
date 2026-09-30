@@ -23,13 +23,14 @@ class CouncilReportPopup(private val worldScreen: WorldScreen, private val item:
         val parts = item.split(":")
         val city = worldScreen.selectedCiv.cities.firstOrNull { it.id == parts.getOrNull(1) }
         council.reports.remove(item)
-        if (city == null) {
+        if (city == null || parts[0] !in setOf("threat", "passed", "unhappy")) {
             worldScreen.shouldUpdate = true
         } else {
             addGoodSizedLabel(council.name()).row()
             when (parts[0]) {
                 "threat" -> threat(city, parts.getOrNull(2)?.toIntOrNull() ?: 0)
                 "passed" -> passed(city)
+                "unhappy" -> unhappy(city, parts.getOrNull(2)?.toIntOrNull() ?: 0)
             }
             open(force = true)
         }
@@ -63,6 +64,19 @@ class CouncilReportPopup(private val worldScreen: WorldScreen, private val item:
             close()
         }.row()
         addCloseButton("Ignore") { answered(city) }
+    }
+
+    private fun unhappy(city: City, happiness: Int) {
+        addGoodSizedLabel("The empire is unhappy ([$happiness]).").row()
+        addGoodSizedLabel("[${city.name}] is our largest city. The council can put it on culture and happiness.",
+            size = Constants.defaultFontSize - 2).row()
+        addButton("Hand [${city.name}] to the council - culture and happiness") {
+            council.assign(city, Council.Order.Culture)
+            council.answered[Council.UNHAPPY] = worldScreen.gameInfo.turns
+            worldScreen.shouldUpdate = true
+            close()
+        }.row()
+        addCloseButton("I'll handle it myself") { council.answered[Council.UNHAPPY] = worldScreen.gameInfo.turns }
     }
 
     private fun passed(city: City) {
