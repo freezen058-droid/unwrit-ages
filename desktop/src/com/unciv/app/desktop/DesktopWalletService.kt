@@ -35,6 +35,7 @@ class DesktopWalletService : PlatformWalletService {
         emblem: CertificateEmblem,
         anchored: Boolean,
         alreadyUploadedMetadataUri: String?,
+        payment: com.unciv.logic.chain.CertificatePayment,
         buildMetadata: (imageUri: String) -> String,
         onUploaded: (metadataUri: String) -> Unit,
         onProgress: (String) -> Unit,

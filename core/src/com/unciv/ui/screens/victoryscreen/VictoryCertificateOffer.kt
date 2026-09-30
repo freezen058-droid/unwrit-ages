@@ -12,6 +12,7 @@ import com.unciv.Constants
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.unciv.logic.GameInfo
 import com.unciv.logic.chain.CertificateEmblem
+import com.unciv.logic.chain.CertificatePayment
 import com.unciv.logic.chain.ChainWallet
 import com.unciv.logic.chain.VictoryCertificate
 import com.unciv.logic.chain.VictoryCertificateService
@@ -33,7 +34,8 @@ import com.unciv.utils.launchOnGLThread
  * moment the game is won, so the two cannot drift apart.
  *
  * No price line. The wallet's own approval sheet states exactly what leaves the wallet, before
- * anything is signed, and the user asked for the offer itself to stay free of it.
+ * anything is signed, and the user asked for the offer itself to stay free of it. What the offer
+ * does ask is the token: one button pays the fee in SOL, the other in SKR (user, 09-30).
  */
 class VictoryCertificateOffer(
     private val gameInfo: GameInfo,
@@ -54,7 +56,9 @@ class VictoryCertificateOffer(
     }
 
     private val status = "".toLabel()
-    private val button = "Mint victory certificate".toTextButton()
+    private val buttons = Table()
+    private val payInSol = "Mint - pay in SOL".toTextButton()
+    private val payInSkr = "Mint - pay in SKR".toTextButton()
     private val picture = Table()
     private val result = Table()
 
@@ -62,8 +66,12 @@ class VictoryCertificateOffer(
         defaults().pad(4f)
         status.wrap = true
         status.setAlignment(Align.center)    // centred over the certificate below it
-        button.onClick { mint() }
-        add(button).row()
+        payInSol.onClick { mint(CertificatePayment.SOL) }
+        payInSkr.onClick { mint(CertificatePayment.SKR) }
+        buttons.defaults().pad(4f)
+        buttons.add(payInSol)
+        buttons.add(payInSkr)
+        add(buttons).row()
         add(status).width(500f).row()
         add(picture).row()
         add(result).row()
@@ -72,13 +80,17 @@ class VictoryCertificateOffer(
         val running = mintStatus
         if (address != null) showMinted(address)
         else if (running != null) {
-            button.disable()
+            setButtonsEnabled(false)
             status.setText(running)
         }
     }
 
-    private fun mint() {
-        button.disable()
+    private fun setButtonsEnabled(enabled: Boolean) {
+        for (button in listOf(payInSol, payInSkr)) if (enabled) button.enable() else button.disable()
+    }
+
+    private fun mint(payment: CertificatePayment) {
+        setButtonsEnabled(false)
         result.clear()
         // The service connects a wallet first if there is none, so say which of the two is
         // happening - "Preparing certificate" while a wallet dialog is coming up is a lie.
@@ -89,7 +101,7 @@ class VictoryCertificateOffer(
             else "Waiting for your wallet...").tr()
         )
         VictoryCertificateService.mint(
-            gameInfo, civ,
+            gameInfo, civ, payment,
             onProgress = { progress(it.tr()) },
             onSuccess = { address ->
                 mintStatus = null
@@ -103,7 +115,7 @@ class VictoryCertificateOffer(
                     (it.localizedMessage ?: "Could not mint the certificate".tr()) +
                         (if (paid) RETRY_HINT.tr() else "")
                 )
-                offer.button.enable()
+                offer.setButtonsEnabled(true)
             }
         )
     }
@@ -117,7 +129,7 @@ class VictoryCertificateOffer(
      *  approved a payment could not tell apart from an error. */
     private fun showMinted(address: String) {
         gameInfo.certificateAddress = address
-        button.isVisible = false
+        buttons.isVisible = false
         result.clear()
         status.setText("Congratulations! Your victory certificate is in your wallet!".tr())
         showPicture()

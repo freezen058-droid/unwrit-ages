@@ -24,12 +24,14 @@ object VictoryCertificateService {
         UncivGame.Current.settings.uploadedCertificateSaves[gameInfo.gameId]
 
     /**
+     * @param payment the token the player chose to pay the fee in.
      * @param onProgress a short user-facing line for each stage.
      * @param onSuccess the minted asset's address.
      */
     fun mint(
         gameInfo: GameInfo,
         civ: Civilization,
+        payment: CertificatePayment,
         onProgress: (String) -> Unit,
         onSuccess: (assetAddress: String) -> Unit,
         onError: (Exception) -> Unit
@@ -48,19 +50,20 @@ object VictoryCertificateService {
             ChainWallet.service.connect(
                 onConnected = {
                     onProgress("Wallet connected")
-                    mintConnected(gameInfo, record, onProgress, onSuccess, onError)
+                    mintConnected(gameInfo, record, payment, onProgress, onSuccess, onError)
                 },
                 onError = onError
             )
             return
         }
-        mintConnected(gameInfo, record, onProgress, onSuccess, onError)
+        mintConnected(gameInfo, record, payment, onProgress, onSuccess, onError)
     }
 
     /** The mint itself, with a connected wallet guaranteed and the record already assembled. */
     private fun mintConnected(
         gameInfo: GameInfo,
         assembled: VictoryCertificate.Record,
+        payment: CertificatePayment,
         onProgress: (String) -> Unit,
         onSuccess: (assetAddress: String) -> Unit,
         onError: (Exception) -> Unit
@@ -74,6 +77,7 @@ object VictoryCertificateService {
             emblem = CertificateEmblem(record.nation, record.emblemOuter, record.emblemInner),
             anchored = record.anchored,
             alreadyUploadedMetadataUri = alreadyMintedUpload(gameInfo),
+            payment = payment,
             buildMetadata = { imageUri -> VictoryCertificate.metadataJsonWithin(record, imageUri, METADATA_MAX_BYTES) },
             onUploaded = { remember(gameInfo.gameId, it) },
             onProgress = onProgress,

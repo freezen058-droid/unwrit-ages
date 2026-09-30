@@ -97,6 +97,7 @@ interface PlatformWalletService {
      * @param inscription the lines to carve, top to bottom; see [VictoryCertificate.inscription].
      * @param emblem the winner's nation name and its two colours, for the medallion.
      * @param anchored draw the anchored stele - the game's origin is [StartAnchor.ORIGIN_ANCHORED].
+     * @param payment which token the fee is paid in; the player picks it before the wallet opens.
      * @param buildMetadata called with the picture's permanent URI - returns the metadata JSON.
      * @param onUploaded the metadata's permanent URI, as soon as it exists, so the caller can record it.
      * @param onSuccess the minted asset's address.
@@ -107,6 +108,7 @@ interface PlatformWalletService {
         emblem: CertificateEmblem,
         anchored: Boolean,
         alreadyUploadedMetadataUri: String?,
+        payment: CertificatePayment,
         buildMetadata: (imageUri: String) -> String,
         onUploaded: (metadataUri: String) -> Unit,
         onProgress: (String) -> Unit = {},
@@ -135,6 +137,7 @@ interface PlatformWalletService {
                 emblem: CertificateEmblem,
                 anchored: Boolean,
                 alreadyUploadedMetadataUri: String?,
+                payment: CertificatePayment,
                 buildMetadata: (imageUri: String) -> String,
                 onUploaded: (metadataUri: String) -> Unit,
                 onProgress: (String) -> Unit,
@@ -149,3 +152,6 @@ interface PlatformWalletService {
 
 /** The winner's nation for the stele's medallion: its name finds the icon, the colours paint it. */
 data class CertificateEmblem(val nation: String, val outer: List<Int>, val inner: List<Int>)
+
+/** What the certificate's fee is paid in. The same US-dollar fee either way, converted at mint time. */
+enum class CertificatePayment { SOL, SKR }

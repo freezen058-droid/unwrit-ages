@@ -25,6 +25,7 @@ import com.solana.transaction.Transaction
 import com.solana.transaction.TransactionInstruction
 import com.unciv.logic.chain.Ans104
 import com.unciv.logic.chain.CertificateEmblem
+import com.unciv.logic.chain.CertificatePayment
 import com.unciv.logic.chain.CloudSave
 import com.unciv.logic.chain.PlatformWalletService
 import com.unciv.logic.chain.StartAnchor
@@ -45,6 +46,11 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.double
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import net.i2p.crypto.eddsa.EdDSAEngine
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
@@ -141,6 +147,18 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
         // is the price of never letting a broken feed push the charge towards nothing.
         private const val CERTIFICATE_FEE_MIN_LAMPORTS = 1_800_000L
         private const val CERTIFICATE_FEE_MAX_LAMPORTS = 30_000_000L
+
+        // Paying the certificate fee in SKR (user, 09-30). There is no Pyth price account for SKR
+        // on-chain - the push-oracle PDA for Pyth's SKR/USD feed (38846e...) does not exist, checked
+        // 2026-09-30 - and Pyth's Hermes API now answers 401 without a key. So the price comes from
+        // Jupiter's price API, or CoinGecko's when Jupiter does not answer; both returned US$0.0182
+        // on 09-30. Unlike SOL there is no fallback price: a wrong SKR price charges the wrong
+        // amount, and the player can always pay in SOL instead.
+        private const val SKR_PRICE_JUPITER = "https://lite-api.jup.ag/price/v3?ids=$SKR_MINT"
+        private const val SKR_PRICE_COINGECKO = "https://api.coingecko.com/api/v3/simple/price?ids=seeker&vs_currencies=usd"
+        /** A price outside this band is treated as broken: the fee would be 900 SKR or 0.9 SKR. */
+        private const val SKR_USD_MIN = 0.001
+        private const val SKR_USD_MAX = 1.0
 
         // A Solana transaction has to fit in 1232 bytes and the certificate name is player-derived
         // (civ name + victory type + turn), so it gets a bound. Everything else in this transaction
@@ -623,6 +641,7 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
         emblem: CertificateEmblem,
         anchored: Boolean,
         alreadyUploadedMetadataUri: String?,
+        payment: CertificatePayment,
         buildMetadata: (imageUri: String) -> String,
         onUploaded: (metadataUri: String) -> Unit,
         onProgress: (String) -> Unit,
@@ -637,6 +656,18 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
 
         Concurrency.run("WalletMintCertificate") {
             try {
+                val payer = SolanaPublicKey.from(payerAddress)
+                // The fee first: a missing SKR price or an empty SKR balance is said before
+                // anything is drawn or uploaded, while the player can still pick SOL instead.
+                val feeInstructions = when (payment) {
+                    CertificatePayment.SOL -> {
+                        val feeLamports = certificateFeeLamports()
+                        Log.debug("Victory certificate: fee %d lamports (%d US cents)", feeLamports, CERTIFICATE_FEE_USD_CENTS)
+                        listOf(SystemProgram.transfer(payer, SolanaPublicKey.from(TREASURY_ADDRESS), feeLamports))
+                    }
+                    CertificatePayment.SKR -> skrFeeInstructions(payer, certificateFeeSkr())
+                }
+
                 // The picture and the metadata go to Arweave first, and the metadata's URI is handed
                 // back at once: a mint that fails after this point retries against it for free.
                 val metadataUri = alreadyUploadedMetadataUri ?: run {
@@ -653,23 +684,19 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
 
                 launchOnGLThread { onProgress("Preparing certificate...") }
 
-                val payer = SolanaPublicKey.from(payerAddress)
                 val assetKeypair = AssetKeypair()
                 val assetAddress = assetKeypair.publicKey.base58()
 
                 // Both in the same transaction, so the fee and the certificate succeed or fail
                 // together - there is no state in which a player has paid and holds nothing.
-                val feeLamports = certificateFeeLamports()
-                Log.debug("Victory certificate: fee %d lamports (%d US cents)", feeLamports, CERTIFICATE_FEE_USD_CENTS)
 
                 val blockhash = fetchLatestBlockhash()
                 val name = certificateName.take(CERTIFICATE_NAME_MAX_CHARS)
                 val message = buildLegacyMessage(
                     feePayer = payer,
                     instructions = listOf(
-                        createV1Instruction(asset = assetKeypair.publicKey, payer = payer, name = name, uri = metadataUri),
-                        SystemProgram.transfer(payer, SolanaPublicKey.from(TREASURY_ADDRESS), feeLamports)
-                    ),
+                        createV1Instruction(asset = assetKeypair.publicKey, payer = payer, name = name, uri = metadataUri)
+                    ) + feeInstructions,
                     blockhash = blockhash
                 )
                 check(transactionSize(message) <= TRANSACTION_SIZE_LIMIT) {
@@ -1127,6 +1154,92 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
             AssociatedTokenProgram.PROGRAM_ID
         ).getOrThrow()
         return SolanaPublicKey(pda.bytes)
+    }
+
+    /** [owner]'s SKR token account: the ATA PDA of [owner, TOKEN_PROGRAM, SKR mint]. */
+    private suspend fun skrAccount(owner: SolanaPublicKey): SolanaPublicKey {
+        val pda = ProgramDerivedAddress.find(
+            listOf(owner.bytes, TokenProgram.PROGRAM_ID.bytes, SolanaPublicKey.from(SKR_MINT).bytes),
+            AssociatedTokenProgram.PROGRAM_ID
+        ).getOrThrow()
+        return SolanaPublicKey(pda.bytes)
+    }
+
+    /** US dollars per SKR, from the first source that answers with a believable number. */
+    private suspend fun skrUsdPrice(): Double {
+        fun JsonElement.field(name: String) = jsonObject[name]!!
+        val sources = listOf<Pair<String, suspend () -> Double>>(
+            "Jupiter" to { httpClient.get(SKR_PRICE_JUPITER).body<JsonObject>().field(SKR_MINT).field("usdPrice").jsonPrimitive.double },
+            "CoinGecko" to { httpClient.get(SKR_PRICE_COINGECKO).body<JsonObject>().field("seeker").field("usd").jsonPrimitive.double }
+        )
+        for ((name, read) in sources) {
+            try {
+                val price = read()
+                if (price in SKR_USD_MIN..SKR_USD_MAX) {
+                    Log.debug("Certificate fee: SKR/USD %.5f from %s", price, name)
+                    return price
+                }
+                Log.error("Certificate fee: %s gave SKR/USD %f, outside the believable band", name, price)
+            } catch (ex: Exception) {
+                Log.error("Certificate fee: could not read SKR/USD from $name", ex)
+            }
+        }
+        throw IllegalStateException("Could not get the SKR price - pay in SOL instead")
+    }
+
+    /** [CERTIFICATE_FEE_USD_CENTS] in SKR base units, rounded up to a whole SKR so the wallet
+     *  shows a plain number. */
+    private suspend fun certificateFeeSkr(): Long {
+        val wholeSkr = Math.ceil(CERTIFICATE_FEE_USD_CENTS / (skrUsdPrice() * 100)).toLong()
+        return wholeSkr * 1_000_000L
+    }
+
+    @Serializable
+    private data class TokenBalanceRpcResponse(val result: TokenBalanceResult? = null, val error: RpcError? = null)
+    @Serializable
+    private data class TokenBalanceResult(val value: TokenBalanceValue)
+    @Serializable
+    private data class TokenBalanceValue(val amount: String)
+
+    /** Base units of SKR in [account]; 0 when the account does not exist. */
+    private suspend fun skrBalance(account: SolanaPublicKey): Long {
+        val requestBody = kotlinx.serialization.json.buildJsonObject {
+            put("jsonrpc", kotlinx.serialization.json.JsonPrimitive("2.0"))
+            put("id", kotlinx.serialization.json.JsonPrimitive(1))
+            put("method", kotlinx.serialization.json.JsonPrimitive("getTokenAccountBalance"))
+            put("params", kotlinx.serialization.json.buildJsonArray { add(kotlinx.serialization.json.JsonPrimitive(account.base58())) })
+        }
+        val response: TokenBalanceRpcResponse = httpClient.post(RPC_ENDPOINT) {
+            contentType(ContentType.Application.Json)
+            setBody(requestBody)
+        }.body()
+        return response.result?.value?.amount?.toLongOrNull() ?: 0L
+    }
+
+    /**
+     * The SKR fee as instructions: create the treasury's SKR account if nobody has yet, then a
+     * transferChecked from the player's. The balance is checked here, because a transaction short
+     * of SKR otherwise fails in preflight with a token-program error nobody can read.
+     */
+    private suspend fun skrFeeInstructions(payer: SolanaPublicKey, amount: Long): List<TransactionInstruction> {
+        val skrMint = SolanaPublicKey.from(SKR_MINT)
+        val treasuryKey = SolanaPublicKey.from(TREASURY_ADDRESS)
+        val playerAccount = skrAccount(payer)
+        val treasuryAccount = skrAccount(treasuryKey)
+        val balance = skrBalance(playerAccount)
+        check(balance >= amount) {
+            "This wallet has ${balance / 1_000_000} SKR; the certificate costs ${amount / 1_000_000} SKR"
+        }
+        Log.debug("Victory certificate: fee %d SKR (%d US cents)", amount / 1_000_000, CERTIFICATE_FEE_USD_CENTS)
+        val create = if (accountExists(treasuryAccount)) emptyList() else listOf(
+            AssociatedTokenProgram.createAssociatedTokenAccount(
+                mint = skrMint, associatedAccount = treasuryAccount, owner = treasuryKey, payer = payer
+            )
+        )
+        return create + TokenProgram.transferChecked(
+            from = playerAccount, to = treasuryAccount, amount = amount,
+            decimals = SKR_DECIMALS, owner = payer, mint = skrMint
+        )
     }
 
     override fun recordSaveHash(
