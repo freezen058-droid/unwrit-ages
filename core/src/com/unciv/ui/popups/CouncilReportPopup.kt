@@ -81,7 +81,7 @@ class CouncilReportPopup(private val worldScreen: WorldScreen, private val item:
 
     private fun passed(city: City) {
         addGoodSizedLabel("The enemy has left [${city.name}]. The council offers it back.").row()
-        addButton("Take it back") { council.threatPassed(city, keep = false); worldScreen.shouldUpdate = true; close() }.row()
+        addButton("Back to how it was") { council.threatPassed(city, keep = false); worldScreen.shouldUpdate = true; close() }.row()
         addCloseButton("Leave it with the council") { council.threatPassed(city, keep = true) }
     }
 

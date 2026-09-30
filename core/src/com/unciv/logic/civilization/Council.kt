@@ -61,6 +61,11 @@ class Council : IsPartOfGameInfoSerialization {
     /** Cities the council took over because of a threat: offered back when it has passed. */
     var takenForThreat = HashSet<String>()
 
+    /** What each of [takenForThreat] was under before - an [Order] name, or "" for the player's own -
+     *  so the all-clear puts it back as it was, not simply in the player's hands (found 10-01 in a
+     *  40-turn run: every city ended on Hold). */
+    var beforeThreat = HashMap<String, String>()
+
     /** The military advisor garrisons cities with the player's idle military units (it joins the
      *  council in the Medieval era, as the ROADMAP's era table has it). */
     var garrisonCities = false
@@ -104,6 +109,7 @@ class Council : IsPartOfGameInfoSerialization {
         it.answered.putAll(answered)
         it.standingAnswer = standingAnswer
         it.takenForThreat.addAll(takenForThreat)
+        it.beforeThreat.putAll(beforeThreat)
         it.garrisonCities = garrisonCities
     }
 
@@ -156,7 +162,12 @@ class Council : IsPartOfGameInfoSerialization {
         report.clear()
         report.addAll(pending)
         pending.clear()
-        reports.removeAll { item -> civ.cities.none { item.split(":")[1] == it.id } }   // cities lost since
+        // cities lost since: their orders and reports go (a city won back starts as the player's own)
+        val ours = civ.cities.map { it.id }.toSet()
+        cityOrders.keys.retainAll(ours)
+        takenForThreat.retainAll(ours)
+        beforeThreat.keys.retainAll(ours)
+        reports.removeAll { item -> item.split(":")[1] !in ours }
         reports.removeAll { it.startsWith("unhappy:") && civ.getHappiness() >= 0 }            // solved since
         for (city in civ.cities.toList()) {
             val order = orderOf(city) ?: continue
@@ -246,15 +257,18 @@ class Council : IsPartOfGameInfoSerialization {
 
     /** The player's answer "hand it to the council": the city holds until the threat passes. */
     fun handOverForThreat(city: City) {
+        if (city.id !in takenForThreat) beforeThreat[city.id] = orderOf(city)?.name ?: ""
         assign(city, Order.Hold)
         takenForThreat.add(city.id)
         answered[city.id] = civ.gameInfo.turns
     }
 
-    /** The threat to [city] has passed and the player takes it back - or leaves it ([keep]). */
+    /** The threat to [city] has passed: back to what it was before - the player's own, or the order
+     *  it had - or left on Hold ([keep]). */
     fun threatPassed(city: City, keep: Boolean) {
         takenForThreat.remove(city.id)
-        if (!keep) assign(city, null)
+        val before = beforeThreat.remove(city.id)
+        if (!keep) assign(city, Order.entries.firstOrNull { it.name == before })
     }
 
     private fun note(city: City, line: String) {

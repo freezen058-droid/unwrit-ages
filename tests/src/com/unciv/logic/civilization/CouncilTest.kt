@@ -159,4 +159,13 @@ class CouncilTest {
         assertTrue(warrior.getTile() == second.getCenterTile() || warrior.getTile() == city.getCenterTile())
         assertTrue(warrior.isFortified() || warrior.isSleeping())
     }
+
+    @Test
+    fun afterTheThreatACityGoesBackToItsOrder() {
+        civ.council.assign(city, Council.Order.Growth)
+        civ.council.handOverForThreat(city)
+        assertEquals(Council.Order.Hold, civ.council.orderOf(city))
+        civ.council.threatPassed(city, keep = false)
+        assertEquals(Council.Order.Growth, civ.council.orderOf(city))
+    }
 }
