@@ -37,6 +37,8 @@ On Solana, through the Mobile Wallet Adapter (`core/src/com/unciv/logic/chain/`,
   save's line of players ("relayed N times"), and a certificate won from a shared save names it.
   Authors can post a bounty on their save - SKR for the first victory won from it within N turns,
   without AutoPlay - paid by hand on seeing the winner's certificate.
+  Saves shared from a Seeker are marked: the author's wallet holds a Seeker Genesis Token (checked
+  from public chain data, as Solana Mobile's docs describe).
 
 For the phone:
 
