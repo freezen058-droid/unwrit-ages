@@ -622,6 +622,11 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
         // local disconnect is harmless - it's simply never presented again from this side.
         authToken = null
         _connectedAddress = null
+        // The adapter keeps its own copy of the token and reauthorizes with it, so Connect went
+        // straight back to the same account and a player could not switch (BUGS #20, 10-01).
+        // Forgetting it here makes the next Connect a fresh authorization - the wallet asks which
+        // account - without the overlapping deauthorize round-trip described above.
+        walletAdapter.authToken = null
     }
 
     /**
