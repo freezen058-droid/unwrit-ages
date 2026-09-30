@@ -117,7 +117,10 @@ internal fun decodeCloudSave(record: CloudSave.Record, bytes: ByteArray, key: By
 /** Saves [game] to this device under [record]'s name and opens it - "Continued from turn N" when it
  *  is someone else's ([takenOver]). Off the GL thread; the callbacks run on it. */
 internal suspend fun CoroutineScope.playRestored(game: GameInfo, record: CloudSave.Record, takenOver: Boolean, onLoading: () -> Unit, onError: (Exception) -> Unit) {
-    if (takenOver) game.continuedFromTurn = game.turns
+    if (takenOver) {
+        game.continuedFromTurn = game.turns
+        game.continuedFromSave = record.signature
+    }
     val files = UncivGame.Current.files
     var name = record.name.ifBlank { "Restored" }
     if (files.getSave(name).exists()) name += " (" + "restored".tr() + ")"

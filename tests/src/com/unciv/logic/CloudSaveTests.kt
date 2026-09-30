@@ -98,6 +98,18 @@ class CloudSaveTests {
     }
 
     @Test
+    fun aRelayedSaveNamesItsParentAndOldRecordsHaveNone() {
+        val relayed = meta.copy(parent = "5DVjGn1RNVEdSBM6zTWdouSqtyYeAASVCfqnFikBpkK2aJZwNFxy9VELXARnXmwv95FByvvUzArYpj5PoswiP4s3")
+        val r = CloudSave.Record("g", "Rome", "b".repeat(64), CloudSave.SHARED, "", listOf("id"), meta = relayed)
+        Assert.assertEquals(relayed, CloudSave.parse(r.memo())!!.meta)
+        Assert.assertTrue(r.memo().length < 900)
+        // A record from before lineage: seven fields, no parent
+        val old = CloudSave.Record("g", "Rome", "b".repeat(64), CloudSave.SHARED, "", listOf("id"), meta = meta)
+        Assert.assertFalse(old.memo().endsWith("|"))
+        Assert.assertEquals("", CloudSave.parse(old.memo())!!.meta!!.parent)
+    }
+
+    @Test
     fun tipMemosParseAsTheRpcReportsThem() {
         val memo = CloudSave.tipMemo("sigA", 17)
         Assert.assertEquals("sigA" to 17L, CloudSave.parseTip("[${memo.length}] $memo; [5] other"))

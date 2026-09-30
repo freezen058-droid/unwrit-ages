@@ -258,7 +258,8 @@ class UncivFiles(
         val author = ChainWallet.service.connectedAddress ?: return null
         val civ = game.getCurrentPlayerCivilization()
         val map = game.tileMap.mapParameters
-        return CloudSave.Meta(civ.civName, map.type, map.mapSize.name, civ.getEra().name, game.turns, game.difficulty, author)
+        return CloudSave.Meta(civ.civName, map.type, map.mapSize.name, civ.getEra().name, game.turns, game.difficulty, author,
+            parent = game.continuedFromSave)
     }
 
     /**

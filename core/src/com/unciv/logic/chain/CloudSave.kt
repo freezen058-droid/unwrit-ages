@@ -134,9 +134,10 @@ object CloudSave {
 
     /**
      * A shared save described for the gallery, as a seventh memo field: `civ|map type|map size|era|
-     * turn|difficulty|author`. Readers before 09-30 stop at the sixth field, so they still list and
-     * load the save. [author] is the recording wallet, where tips go - in the memo because listing
-     * reads memos only, not the transaction's signer.
+     * turn|difficulty|author[|parent]`. Readers before 09-30 stop at the sixth field, so they still
+     * list and load the save. [author] is the recording wallet, where tips go - in the memo because
+     * listing reads memos only, not the transaction's signer. [parent] is the record of the shared
+     * save this game was taken over from, if it was (10-01); records before it have none.
      */
     data class Meta(
         val civ: String,
@@ -145,17 +146,18 @@ object CloudSave {
         val era: String,
         val turn: Int,
         val difficulty: String,
-        val author: String
+        val author: String,
+        val parent: String = ""
     ) {
         /** The words are capped to keep the memo small; the author's address never is - cut, tips go nowhere. */
         fun encode() = (listOf(civ, mapType, mapSize, era, turn.toString(), difficulty).map { safeField(it).take(32) } +
-            safeField(author)).joinToString("|")
+            safeField(author) + (if (parent.isEmpty()) emptyList() else listOf(safeField(parent)))).joinToString("|")
 
         companion object {
             fun decode(field: String): Meta? {
                 val p = field.split("|")
                 if (p.size < 7) return null
-                return Meta(p[0], p[1], p[2], p[3], p[4].toIntOrNull() ?: 0, p[5], p[6])
+                return Meta(p[0], p[1], p[2], p[3], p[4].toIntOrNull() ?: 0, p[5], p[6], p.getOrNull(7).orEmpty())
             }
             private fun safeField(text: String) = text.replace(Regex("[:|;]"), "")
         }

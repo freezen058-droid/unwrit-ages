@@ -154,6 +154,11 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
      *  (ROADMAP "Provenance", option B). */
     var continuedFromTurn = 0
 
+    /** The on-chain record (its transaction signature) of the shared save this game was taken over
+     *  from; empty when it was not. Shared again, the game names it as its parent, so the gallery
+     *  can show a save's line of players (ROADMAP gallery: relay lineage, 10-01). */
+    var continuedFromSave = ""
+
     /** The minted certificate's address, once there is one - so the offer shows it instead of
      *  a second mint button that would charge again for the same victory. */
     var certificateAddress: String? = null
@@ -259,6 +264,7 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
         toReturn.startAnchorWallet = startAnchorWallet
         toReturn.startAnchorSignature = startAnchorSignature
         toReturn.continuedFromTurn = continuedFromTurn
+        toReturn.continuedFromSave = continuedFromSave
         toReturn.certificateAddress = certificateAddress
         toReturn.historyStartTurn = historyStartTurn
         toReturn.lastUnitId = lastUnitId

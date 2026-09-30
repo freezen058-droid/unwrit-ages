@@ -71,10 +71,11 @@ class CertificateMetadataTests {
         Assert.assertEquals(StartAnchor.ORIGIN_UNANCHORED, StartAnchor.origin(GameInfo(), null))
     }
 
+    private fun payload(r: VictoryCertificate.Record) =
+        Json.parseToJsonElement(VictoryCertificate.metadataJson(r, "https://x/y", "")).jsonObject["unwritAges"]!!.jsonObject
+
     @Test
     fun originIsAnAttributeAndTheAnchorTravelsOnlyWhenAnchored() {
-        fun payload(r: VictoryCertificate.Record) =
-            Json.parseToJsonElement(VictoryCertificate.metadataJson(r, "https://x/y", "")).jsonObject["unwritAges"]!!.jsonObject
         Assert.assertEquals("Unanchored", traits(record)["Origin"])
         Assert.assertNull(payload(record)["startSignature"])
 
@@ -95,6 +96,13 @@ class CertificateMetadataTests {
         Assert.assertEquals("Continued from turn 120", traits(r)["Origin"])
         Assert.assertEquals("Continued from turn 120", VictoryCertificate.inscription(r).last().text)
         Assert.assertTrue(VictoryCertificate.inscription(record).none { it.text.startsWith("Continued") })
+    }
+
+    @Test
+    fun aVictoryWonFromASharedSaveNamesThatSave() {
+        val won = record.copy(origin = "Continued from turn 66", sourceSave = "5DVjGn1R")
+        Assert.assertEquals("5DVjGn1R", payload(won)["sourceSave"]!!.jsonPrimitive.content)
+        Assert.assertNull(payload(record)["sourceSave"])
     }
 
     @Test

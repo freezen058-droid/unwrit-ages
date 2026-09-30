@@ -63,7 +63,9 @@ object VictoryCertificate {
         val origin: String = StartAnchor.ORIGIN_UNANCHORED,
         /** The start anchor, base58, so anyone can recompute [mapSeed]; empty when unanchored. */
         val startWallet: String = "",
-        val startSignature: String = ""
+        val startSignature: String = "",
+        /** The shared save's record this game was taken over from ([GameInfo.continuedFromSave]). */
+        val sourceSave: String = ""
     ) {
         val anchored get() = origin == StartAnchor.ORIGIN_ANCHORED
     }
@@ -105,7 +107,8 @@ object VictoryCertificate {
             autoPlayedTurns = gameInfo.autoPlayedTurns,
             origin = StartAnchor.origin(gameInfo, minter),
             startWallet = gameInfo.startAnchorWallet,
-            startSignature = gameInfo.startAnchorSignature
+            startSignature = gameInfo.startAnchorSignature,
+            sourceSave = gameInfo.continuedFromSave
         )
     }
 
@@ -251,6 +254,11 @@ object VictoryCertificate {
         sb.append(',')
         sb.field("saveUri", saveUri)
         sb.append(",\"mapSeed\":").append(record.mapSeed)
+        // Won from someone else's shared save: which one, so a victory can be traced to where it began
+        if (record.sourceSave.isNotEmpty()) {
+            sb.append(',')
+            sb.field("sourceSave", record.sourceSave)
+        }
         // Only for an anchored certificate: SHA-256(startWallet ‖ startSignature) is mapSeed, and
         // the signature's memo names gameId - anyone can check both (ROADMAP "Provenance").
         if (record.anchored) {

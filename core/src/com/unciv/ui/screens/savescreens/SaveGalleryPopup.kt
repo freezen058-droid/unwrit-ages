@@ -129,18 +129,24 @@ class SaveGalleryPopup(private val screen: BaseScreen) : Popup(screen) {
         button.add((if (tipped > 0) "[$tipped] SKR tipped".tr() else "").toLabel(Color.GOLD)).right().row()
         button.add(describe(record).toLabel(fontSize = Constants.defaultFontSize - 4, hideIcons = true)).left().colspan(2)
         button.touchable = com.badlogic.gdx.scenes.scene2d.Touchable.enabled
-        button.onClick { SaveGalleryDetailPopup(screen, record, isMine(record), isGenesis) { amount ->
+        val parentName = record.meta?.parent?.takeIf { it.isNotEmpty() }?.let { p -> records.firstOrNull { it.signature == p }?.name }
+        button.onClick { SaveGalleryDetailPopup(screen, record, isMine(record), isGenesis, parentName, relays(record)) { amount ->
             tips[record.signature] = (tips[record.signature] ?: 0) + amount
             show()
         } }
         return button
     }
 
+    /** How many shared saves were taken over from [record] and shared again. */
+    private fun relays(record: CloudSave.Record) = records.count { it.meta?.parent == record.signature }
+
     private fun describe(record: CloudSave.Record): String {
         val date = if (record.blockTime > 0) Date(record.blockTime * 1000).formatDate() else ""
         val meta = record.meta ?: return date
-        return listOf(meta.civ.tr(), meta.mapType.tr() + " " + meta.mapSize.tr(), meta.era.tr(),
-            "Turn [${meta.turn}]".tr(), date).joinToString("  ·  ")
+        val relayed = relays(record)
+        return (listOf(meta.civ.tr(), meta.mapType.tr() + " " + meta.mapSize.tr(), meta.era.tr(),
+            "Turn [${meta.turn}]".tr(), date) + (if (relayed > 0) listOf("Relayed [$relayed] times".tr()) else emptyList()))
+            .joinToString("  ·  ")
     }
 }
 
@@ -150,6 +156,8 @@ private class SaveGalleryDetailPopup(
     private val record: CloudSave.Record,
     private val mine: Boolean,
     genesis: Boolean,
+    private val parentName: String?,
+    private val relayCount: Int,
     private val onTipped: (Long) -> Unit
 ) : Popup(screen) {
 
@@ -194,7 +202,9 @@ private class SaveGalleryDetailPopup(
             civ.civName.tr() + "  ·  " + civ.getEra().name.tr(),
             "Turn [${game.turns}]".tr() + "  ·  " + "Cities: [${civ.cities.size}]".tr(),
             map.type.tr() + " " + map.mapSize.name.tr() + "  ·  " + game.difficulty.tr(),
-            record.meta?.author?.let { "Shared by [${it.take(4)}…${it.takeLast(4)}]".tr() } ?: ""
+            record.meta?.author?.let { "Shared by [${it.take(4)}…${it.takeLast(4)}]".tr() } ?: "",
+            parentName?.let { "Continued from [$it]".tr() } ?: "",
+            if (relayCount > 0) "Relayed [$relayCount] times".tr() else ""
         )) if (line.isNotEmpty()) side.add(line.toLabel(fontSize = small, hideIcons = true)).row()
 
         val play = "Play from here".toTextButton()
