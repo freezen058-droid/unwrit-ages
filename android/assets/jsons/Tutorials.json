@@ -74,7 +74,8 @@
             {"text": "This can be new Buildings that are added to the City Center, or new Units that can go out across the World Map to advance your Nation's goals."},
             {"text": "Everything you can build has a Production Cost. Every turn each City generates a certain amount of Production and puts it towards whatever is at the top of the Build Queue. Once the total cost is collected, the Building or Unit is built!"},
             {"text": "Any excess Production after something is built is overflowed to the next thing the City builds. Up to it's total Production Cost."},
-            {"text": "Since this determines how quickly you can build more stuff, your Nation's Production Capacity is crucial to it's advancement and survival."}
+            {"text": "Since this determines how quickly you can build more stuff, your Nation's Production Capacity is crucial to it's advancement and survival."},
+            {"text": "To build the same unit again and again, select it in the queue and tap 'Repeat'. If you would rather not choose every time, cities can pick their own production when their queue runs out: Options -> Automation -> Auto-assign city production."}
         ]
     },
     {
@@ -245,7 +246,8 @@
         "If you don't want to move a unit this turn, you can skip it by clicking 'Next unit' again, or command the unit to 'Skip turn'.",
         "If you want to disable the 'Next unit' feature entirely, you can toggle it in Options -> Gameplay -> Check for idle units.",
         "If you'd rather 'Next unit' cycle the units and not mark them as Done, you can change it in the Options -> Gameplay menu.",
-        "You can also cycle through the idle units using the left and right triangles on the Unit Table in the lower left of the screen. Or by default using the Cycle button next to the 'Next Unit' button."
+        "You can also cycle through the idle units using the left and right triangles on the Unit Table in the lower left of the screen. Or by default using the Cycle button next to the 'Next Unit' button.",
+        "Many soldiers with nothing to do? Select one, open the second page of its actions and tap 'Fortify all idle units'. Or tap 'Automate', and the AI moves that unit for you."
     ]
   },
   {
