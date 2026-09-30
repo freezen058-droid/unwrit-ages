@@ -24,7 +24,7 @@ import com.unciv.utils.Concurrency
  *
  * Results go to logcat, tag UACMD. Commands: state | center x y | move id x y | attack id x y |
  * bombard city x y | action id SetUp|Fortify|Sleep|Explore|... | promote id name | build city name |
- * buy city name | tech name | policy name | war civ | peace-no | endturn | certificate | seeker address
+ * buy city name | tech name | policy name | war civ | peace-no | endturn | certificate | seeker address | councilreport threat|passed city
  */
 class DemoCommandReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -123,6 +123,8 @@ class DemoCommandReceiver : BroadcastReceiver() {
                 civ.getDiplomacyManager(other)!!.declareWar(); "ok"
             }
             "endturn" -> { ws.nextTurn(); "ending turn" }
+            // A council report for the named city, to see the popup without staging a war
+            "councilreport" -> { civ.council.reports.add("${a[1]}:${city(a[2]).id}:3"); ws.shouldUpdate = true; "queued" }
             // Whether an address holds a Seeker Genesis Token, as the gallery's Seeker mark decides it
             "seeker" -> {
                 com.unciv.logic.chain.ChainWallet.service.seekerOwners(setOf(a[1]),

@@ -48,6 +48,16 @@ class CouncilPopup(private val worldScreen: WorldScreen) : Popup(worldScreen, Sc
         if (civ.cities.isEmpty()) cities.add("Found a city first.".toLabel())
         add(AutoScrollPane(cities)).maxHeight(worldScreen.stage.height * 0.45f).row()
 
+        // The standing answer to threats (Reports): ask each time, or hand the city over without asking
+        val ask = "Ask me"
+        val handOver = "Hand it to the council"
+        val standing = Table().apply { defaults().pad(4f) }
+        standing.add("When enemies mass near a city:".toLabel(fontSize = Constants.defaultFontSize - 2))
+        standing.add(TranslatedSelectBox(listOf(ask, handOver), if (council.standingAnswer.isEmpty()) ask else handOver).apply {
+            onChange { council.standingAnswer = if (selected.value == ask) "" else Council.Order.Hold.name }
+        })
+        add(standing).row()
+
         val report = council.report
         addGoodSizedLabel(if (report.isEmpty()) "The council has nothing to report this turn." else "This turn:",
             size = Constants.defaultFontSize - 2).padTop(10f).row()

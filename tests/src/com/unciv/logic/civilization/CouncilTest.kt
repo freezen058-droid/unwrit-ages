@@ -80,4 +80,48 @@ class CouncilTest {
         aiCity.cityConstructions.chooseNextConstruction()
         assertTrue(aiCity.cityConstructions.constructionQueue.isNotEmpty())
     }
+
+    private fun enemyArmyNearTheCity(): Civilization {
+        val enemy = testGame.addCiv()
+        civ.diplomacyFunctions.makeCivilizationsMeet(enemy)
+        civ.getDiplomacyManager(enemy)!!.declareWar()
+        testGame.addUnit("Warrior", enemy, testGame.getTile(2, 0))
+        testGame.addUnit("Warrior", enemy, testGame.getTile(0, 2))
+        civ.cache.updateViewableTiles()
+        return enemy
+    }
+
+    @Test
+    fun anArmyNearACityAsksThePlayerOnceAndHoldsWhenHandedOver() {
+        enemyArmyNearTheCity()
+        civ.council.startTurn()
+        assertEquals(listOf("threat:${city.id}:2"), civ.council.reports)
+        civ.council.startTurn()
+        assertEquals(1, civ.council.reports.size)   // not asked twice for the same threat
+
+        civ.council.reports.clear()
+        civ.council.handOverForThreat(city)
+        assertEquals(Council.Order.Hold, civ.council.orderOf(city))
+        civ.council.startTurn()
+        assertTrue(civ.council.reports.isEmpty())   // held: nothing to ask
+    }
+
+    @Test
+    fun theStandingAnswerHandsTheCityOverWithoutAsking() {
+        enemyArmyNearTheCity()
+        civ.council.standingAnswer = Council.Order.Hold.name
+        civ.council.startTurn()
+        assertTrue(civ.council.reports.isEmpty())
+        assertEquals(Council.Order.Hold, civ.council.orderOf(city))
+        assertTrue(city.id in civ.council.takenForThreat)
+    }
+
+    @Test
+    fun whenTheThreatPassesTheCouncilOffersTheCityBack() {
+        civ.council.handOverForThreat(city)
+        civ.council.startTurn()                       // no enemies around
+        assertEquals(listOf("passed:${city.id}"), civ.council.reports)
+        civ.council.threatPassed(city, keep = false)
+        assertNull(civ.council.orderOf(city))
+    }
 }

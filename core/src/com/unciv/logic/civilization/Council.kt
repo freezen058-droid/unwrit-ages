@@ -21,6 +21,15 @@ import com.unciv.models.UnitActionType
  */
 class Council : IsPartOfGameInfoSerialization {
 
+    companion object {
+        /** A threat worth a popup (user 09-30: only above a threshold): this many enemy military
+         *  units within [THREAT_RANGE] tiles of a city. Fewer is the turn's ordinary business. */
+        const val THREAT_UNITS = 2
+        const val THREAT_RANGE = 3
+        /** Turns before a threat the player answered is asked about again. */
+        const val ASK_AGAIN_AFTER = 5
+    }
+
     @Transient
     lateinit var civ: Civilization
 
@@ -33,6 +42,20 @@ class Council : IsPartOfGameInfoSerialization {
     /** Choices made between turns - a city finishing something picks its next item while the turn
      *  ends - that go into the next turn's [report]. */
     var pending = ArrayList<String>()
+
+    /** Reports waiting for the player's answer, oldest first: `threat:<city id>:<enemy units>` or
+     *  `passed:<city id>`. Kept here, not as a PopupAlert: an unknown AlertType in a shared save would
+     *  break older versions of the game, an unknown field is ignored. */
+    var reports = ArrayList<String>()
+
+    /** City id -> the turn the player last answered a threat to it: not asked again for a while. */
+    var answered = HashMap<String, Int>()
+
+    /** "" = ask; "Hold" = hand a threatened city to the council without asking (a standing answer). */
+    var standingAnswer = ""
+
+    /** Cities the council took over because of a threat: offered back when it has passed. */
+    var takenForThreat = HashSet<String>()
 
     enum class Order(
         val label: String,
@@ -69,6 +92,10 @@ class Council : IsPartOfGameInfoSerialization {
         it.cityOrders.putAll(cityOrders)
         it.report.addAll(report)
         it.pending.addAll(pending)
+        it.reports.addAll(reports)
+        it.answered.putAll(answered)
+        it.standingAnswer = standingAnswer
+        it.takenForThreat.addAll(takenForThreat)
     }
 
     /** The advisor chose [construction] for [city] (CityConstructions.chooseNextConstruction). */
@@ -117,6 +144,7 @@ class Council : IsPartOfGameInfoSerialization {
         report.clear()
         report.addAll(pending)
         pending.clear()
+        reports.removeAll { item -> civ.cities.none { item.split(":")[1] == it.id } }   // cities lost since
         for (city in civ.cities.toList()) {
             val order = orderOf(city) ?: continue
             if (city.getCityFocus() != order.focus) city.setCityFocus(order.focus)
@@ -132,6 +160,46 @@ class Council : IsPartOfGameInfoSerialization {
                 if (fortified > 0) note(city, "[${city.name}]: [$fortified] idle units hold the city ([${order.label}])")
             }
         }
+        watchForThreats()
+    }
+
+    /** Enemy military units - of civs at war with us, on tiles we see - within 3 tiles of [city]. */
+    fun enemiesNear(city: City): Int =
+        city.getCenterTile().getTilesInDistance(THREAT_RANGE).count { tile ->
+            val unit = tile.militaryUnit ?: return@count false
+            tile in civ.viewableTiles && unit.civ != civ && unit.civ.isAtWarWith(civ)
+        }
+
+    /** Threats and all-clears for the player's answer ([reports]), after the advisors have acted. */
+    private fun watchForThreats() {
+        for (city in civ.cities) {
+            val enemies = enemiesNear(city)
+            if (city.id in takenForThreat) {
+                if (enemies == 0 && reports.none { it == "passed:${city.id}" }) reports.add("passed:${city.id}")
+                continue
+            }
+            if (enemies < THREAT_UNITS || orderOf(city) == Order.Hold) continue
+            val lastAnswer = answered[city.id]
+            if (lastAnswer != null && civ.gameInfo.turns - lastAnswer < ASK_AGAIN_AFTER) continue
+            if (reports.any { it.startsWith("threat:${city.id}:") }) continue
+            if (standingAnswer == Order.Hold.name) {
+                handOverForThreat(city)
+                note(city, "[${city.name}]: [$enemies] enemy units near - the council holds it (standing order)")
+            } else reports.add("threat:${city.id}:$enemies")
+        }
+    }
+
+    /** The player's answer "hand it to the council": the city holds until the threat passes. */
+    fun handOverForThreat(city: City) {
+        assign(city, Order.Hold)
+        takenForThreat.add(city.id)
+        answered[city.id] = civ.gameInfo.turns
+    }
+
+    /** The threat to [city] has passed and the player takes it back - or leaves it ([keep]). */
+    fun threatPassed(city: City, keep: Boolean) {
+        takenForThreat.remove(city.id)
+        if (!keep) assign(city, null)
     }
 
     private fun note(city: City, line: String) {

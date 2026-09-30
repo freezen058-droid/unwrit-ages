@@ -503,6 +503,8 @@ class WorldScreen(
                 viewingCiv.greatPeople.freeGreatPeople > 0 ->
                     game.pushScreen(GreatPersonPickerScreen(this, viewingCiv))
                 viewingCiv.popupAlerts.any() -> AlertPopup(this, viewingCiv.popupAlerts.first())
+                // the council's reports that want an answer, after the game's own alerts (Council.reports)
+                viewingCiv.council.reports.any() -> com.unciv.ui.popups.CouncilReportPopup(this, viewingCiv.council.reports.first())
                 viewingCiv.tradeRequests.isNotEmpty() -> {
                     // In the meantime this became invalid, perhaps because we accepted previous trades
                     for (tradeRequest in viewingCiv.tradeRequests.toList())
