@@ -725,6 +725,7 @@
             "Recording a save writes its fingerprint - a SHA-256 hash - and its name onto the Solana chain, and stores the save itself on Arweave: encrypted, so only your wallet can open it, unless you choose to share your saves.",
             "What that buys you is proof of when - anyone can check that exactly that save existed at exactly that moment - and a copy you can bring back on any phone with the same wallet, from Load game > Restore from the chain. It costs 1 SKR from your wallet for each save you record, and your wallet asks you first every time.",
             "Shared saves are public and permanent: anyone can load them from Load game > Shared saves and play on. A victory won from someone else's save says 'Continued from turn N' on its certificate.",
+            "Load game > Shared saves lists every shared save, sorted by the SKR players tipped their authors or by date, and filtered by civilization, map and era. Open one to see its map before you play it, tip its author, or - if it is yours - offer a bounty for a victory won from it. The first save ever shared is marked Genesis.",
             "Autosaves are not recorded unless you ask for it. Switch on 'Ask to record on-chain every autosave' and the game will ask at each autosave - 1 SKR for each one you say yes to, and you are free to say no every time."
         ]
     },
@@ -735,7 +736,7 @@
         "steps": [
             "Win a game and the victory screen offers you a certificate: an NFT recording who won, by which victory, on which turn and in which year, owned by your wallet.",
             "A game started with 'Anchor the start on-chain' says so on its certificate - Origin: Anchored start - together with the signature its map was made from, so anyone can check it.",
-            "It costs US$0.90, converted to SOL at the moment you mint it, plus the network's own cost of roughly US$0.17 - the rent for the account that will hold the certificate forever. The US$0.90 is the game's, and it goes towards building the game further. Besides the optional 1 SKR save record, that is the only charge: there is no subscription, no advertising, and nothing to buy inside the game.",
+            "It costs US$0.90, paid in SOL or in SKR - you pick before your wallet opens - converted at the moment you mint it, plus the network's own cost of roughly US$0.17 - the rent for the account that will hold the certificate forever. The US$0.90 is the game's, and it goes towards building the game further. Besides the optional 1 SKR save record and any tips you choose to give, that is the only charge: there is no subscription, no advertising, and nothing to buy inside the game.",
             "The certificate carries its own record inside it rather than pointing at a website, so it does not go blank if some server disappears. And it is genuinely yours - it lives in your wallet, and you can hold, transfer or sell it like anything else there."
         ]
     }
