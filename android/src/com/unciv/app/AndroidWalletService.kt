@@ -1147,6 +1147,18 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
      *  transaction did not pay what its memo claims. A settled transaction never changes. */
     private val checkedTips = java.util.concurrent.ConcurrentHashMap<String, java.util.Optional<Pair<String, Long>>>()
 
+    override fun listBounties(onSuccess: (List<CloudSave.Bounty>) -> Unit, onError: (Exception) -> Unit) {
+        Concurrency.run("WalletListBounties") {
+            try {
+                val bounties = memoHistory(treasurySkrAccount().base58()).mapNotNull { CloudSave.parseBounty(it.first) }
+                launchOnGLThread { onSuccess(bounties) }
+            } catch (ex: Exception) {
+                Log.error("Failed to list bounties", ex)
+                launchOnGLThread { onError(ex) }
+            }
+        }
+    }
+
     override fun listSaveTips(authors: Map<String, String>, onSuccess: (Map<String, Long>) -> Unit, onError: (Exception) -> Unit) {
         Concurrency.run("WalletListTips") {
             try {
@@ -1379,20 +1391,37 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
         onSuccess: (txSignature: String) -> Unit,
         onError: (Exception) -> Unit
     ) {
+        // Keep the memo well within Solana's ~1232 byte tx size limit - gameId is a UUID
+        // (36 chars), the hash 64, the name capped at 64 with ':' stripped (the field
+        // delimiter), and each Arweave id 43: one per 90 KiB of save, so even a large
+        // late-game save stays a few hundred bytes (CloudSave.Record.memo)
+        val memoText = record.memo()
+        if (memoText.length >= 900) return onError(IllegalStateException("This save is too large to record in one transaction"))
+        sendMemoWithSkrFee(memoText, "WalletRecordSaveHash", onSuccess, onError)
+    }
+
+    override fun postBounty(bounty: CloudSave.Bounty, onSuccess: (txSignature: String) -> Unit, onError: (Exception) -> Unit) {
+        // Posted like a save record, 1 SKR to the treasury: so the treasury's history - which the
+        // gallery reads anyway - lists it, and a bounty costs something to post
+        sendMemoWithSkrFee(bounty.memo(), "WalletPostBounty", onSuccess, onError)
+    }
+
+    /** [memoText] as a Memo-program instruction signed by the connected wallet, with the 1 SKR fee
+     *  to the treasury in the same transaction. */
+    private fun sendMemoWithSkrFee(
+        memoText: String,
+        threadName: String,
+        onSuccess: (txSignature: String) -> Unit,
+        onError: (Exception) -> Unit
+    ) {
         val token = authToken
         if (token == null) {
             onError(IllegalStateException("No wallet connected"))
             return
         }
 
-        Concurrency.run("WalletRecordSaveHash") {
+        Concurrency.run(threadName) {
             try {
-                // Keep the memo well within Solana's ~1232 byte tx size limit - gameId is a UUID
-                // (36 chars), the hash 64, the name capped at 64 with ':' stripped (the field
-                // delimiter), and each Arweave id 43: one per 90 KiB of save, so even a large
-                // late-game save stays a few hundred bytes (CloudSave.Record.memo)
-                val memoText = record.memo()
-                check(memoText.length < 900) { "This save is too large to record in one transaction" }
 
                 val blockhash = fetchLatestBlockhash()
 
@@ -1493,7 +1522,7 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
                     }
                 }
             } catch (ex: Exception) {
-                Log.error("Failed to record save hash on-chain", ex)
+                Log.error("Failed to send a memo with the SKR fee ($threadName)", ex)
                 launchOnGLThread { onError(ex) }
             }
         }

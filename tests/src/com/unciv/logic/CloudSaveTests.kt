@@ -110,6 +110,17 @@ class CloudSaveTests {
     }
 
     @Test
+    fun aBountyRoundTripsAndIsNeverMistakenForARecordOrATip() {
+        val b = CloudSave.Bounty("5DVjGn1R", 20, 50, "2hJFxhGzLqS5zjVqVzpAE46ECQPKV7okwbAhFeBD4Luu")
+        Assert.assertEquals(b, CloudSave.parseBounty("[${b.memo().length}] ${b.memo()}; [5] other"))
+        Assert.assertNull(CloudSave.parse(b.memo()))
+        Assert.assertNull(CloudSave.parseTip(b.memo()))
+        Assert.assertNull(CloudSave.parseBounty(CloudSave.tipMemo("5DVjGn1R", 17)))
+        Assert.assertNull(CloudSave.parseBounty("unwritages-bounty:sig:0:50:poster"))
+        Assert.assertNull(CloudSave.parseBounty("unwritages-bounty:sig:20:50"))
+    }
+
+    @Test
     fun tipMemosParseAsTheRpcReportsThem() {
         val memo = CloudSave.tipMemo("sigA", 17)
         Assert.assertEquals("sigA" to 17L, CloudSave.parseTip("[${memo.length}] $memo; [5] other"))

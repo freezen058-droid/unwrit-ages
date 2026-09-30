@@ -97,6 +97,16 @@ interface PlatformWalletService {
         onError(UnsupportedOperationException("Wallet integration is not available on this platform"))
     }
 
+    /** Posts [bounty] ([CloudSave.Bounty]) signed by the connected wallet, with the 1 SKR record fee. */
+    fun postBounty(bounty: CloudSave.Bounty, onSuccess: (txSignature: String) -> Unit, onError: (Exception) -> Unit) {
+        onError(UnsupportedOperationException("Wallet integration is not available on this platform"))
+    }
+
+    /** Every bounty posted, newest first - read from the treasury's history like the records. */
+    fun listBounties(onSuccess: (List<CloudSave.Bounty>) -> Unit, onError: (Exception) -> Unit) {
+        onError(UnsupportedOperationException("Wallet integration is not available on this platform"))
+    }
+
     /** The bytes [uploadCloudSave] stored under [arweaveIds], joined back in order. */
     fun downloadCloudSave(arweaveIds: List<String>, onSuccess: (ByteArray) -> Unit, onError: (Exception) -> Unit) {
         onError(UnsupportedOperationException("Wallet integration is not available on this platform"))

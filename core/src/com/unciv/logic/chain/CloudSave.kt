@@ -186,6 +186,30 @@ object CloudSave {
         return parts[0] to amount
     }
 
+    /**
+     * A bounty on a shared save (ROADMAP gallery, option A - manual, user 10-01): [skr] SKR to the first
+     * victory won from the save [saveSignature] within [turns] turns of taking it over, without
+     * AutoPlay. A promise, not an escrow: the poster pays by hand, on seeing the winner's certificate
+     * (it names the source save, the turn it was continued from and any AutoPlay). Posted as a memo
+     * with the 1 SKR record fee, so it is in the treasury's history beside the records.
+     */
+    data class Bounty(val saveSignature: String, val skr: Long, val turns: Int, val poster: String) {
+        fun memo() = "$BOUNTY_PREFIX$saveSignature:$skr:$turns:$poster"
+    }
+
+    const val BOUNTY_PREFIX = "unwritages-bounty:"
+
+    /** A [Bounty] from a memo field as the RPC reports it, or null. */
+    fun parseBounty(memoField: String): Bounty? {
+        val at = memoField.indexOf(BOUNTY_PREFIX)
+        if (at < 0) return null
+        val p = memoField.substring(at + BOUNTY_PREFIX.length).substringBefore(";").trim().split(":")
+        if (p.size < 4 || p[0].isBlank() || p[3].isBlank()) return null
+        val skr = p[1].toLongOrNull()?.takeIf { it > 0 } ?: return null
+        val turns = p[2].toIntOrNull()?.takeIf { it > 0 } ?: return null
+        return Bounty(p[0], skr, turns, p[3])
+    }
+
     /** The most the game's own tip buttons send at once. A memo only claims its amount; what counts
      *  is what the author received, checked against the transaction (listSaveTips), so larger tips
      *  sent some other way still count once they are real. */

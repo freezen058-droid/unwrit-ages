@@ -47,6 +47,8 @@ class SaveGalleryPopup(private val screen: BaseScreen) : Popup(screen) {
     private val list = Table()
     private var records: List<CloudSave.Record> = emptyList()
     private val tips = mutableMapOf<String, Long>()
+    /** The largest bounty on each save, by its record's signature. */
+    private val bounties = mutableMapOf<String, CloudSave.Bounty>()
     private var mine: Set<String> = emptySet()
     private var sort = MOST_TIPPED
     private var civ = ALL_CIVS
@@ -74,6 +76,10 @@ class SaveGalleryPopup(private val screen: BaseScreen) : Popup(screen) {
             // A gallery without its tips still lists every save, by date
             val authors = shared.mapNotNull { r -> r.meta?.author?.let { r.signature to it } }.toMap()
             wallet.listSaveTips(authors, onError = { show() }, onSuccess = { tips.putAll(it); show() })
+            wallet.listBounties(onError = {}, onSuccess = { list ->
+                for (b in list) if ((bounties[b.saveSignature]?.skr ?: 0) < b.skr) bounties[b.saveSignature] = b
+                show()
+            })
             if (ChainWallet.isConnected)
                 wallet.listSaveRecords(false, onError = {}, onSuccess = { own -> mine = own.map { it.signature }.toSet(); show() })
         })
@@ -126,11 +132,15 @@ class SaveGalleryPopup(private val screen: BaseScreen) : Popup(screen) {
         if (isGenesis) button.add("Genesis - the first save ever shared".toLabel(Color.GOLD)).left().colspan(2).row()
         button.add(record.name.toLabel(hideIcons = true)).left().growX()
         val tipped = tips[record.signature] ?: 0
-        button.add((if (tipped > 0) "[$tipped] SKR tipped".tr() else "").toLabel(Color.GOLD)).right().row()
+        val bounty = bounties[record.signature]
+        button.add(listOfNotNull(
+            bounty?.let { "Bounty [${it.skr}] SKR".tr() },
+            if (tipped > 0) "[$tipped] SKR tipped".tr() else null
+        ).joinToString("  ·  ").toLabel(Color.GOLD)).right().row()
         button.add(describe(record).toLabel(fontSize = Constants.defaultFontSize - 4, hideIcons = true)).left().colspan(2)
         button.touchable = com.badlogic.gdx.scenes.scene2d.Touchable.enabled
         val parentName = record.meta?.parent?.takeIf { it.isNotEmpty() }?.let { p -> records.firstOrNull { it.signature == p }?.name }
-        button.onClick { SaveGalleryDetailPopup(screen, record, isMine(record), isGenesis, parentName, relays(record)) { amount ->
+        button.onClick { SaveGalleryDetailPopup(screen, record, isMine(record), isGenesis, parentName, relays(record), bounty) { amount ->
             tips[record.signature] = (tips[record.signature] ?: 0) + amount
             show()
         } }
@@ -158,6 +168,7 @@ private class SaveGalleryDetailPopup(
     genesis: Boolean,
     private val parentName: String?,
     private val relayCount: Int,
+    private val bounty: CloudSave.Bounty?,
     private val onTipped: (Long) -> Unit
 ) : Popup(screen) {
 
@@ -228,6 +239,13 @@ private class SaveGalleryDetailPopup(
             side.add(chips).row()
             side.add("17: Unciv was born in 2017".toLabel(Color.GOLD, fontSize = small - 2)).row()
         }
+        if (bounty != null)
+            side.add(("Bounty: [${bounty.skr}] SKR to the first victory won from here within [${bounty.turns}] turns, without AutoPlay. " +
+                "The author pays it by hand, on seeing the certificate.").tr().toLabel(Color.GOLD, fontSize = small - 2).apply { wrap = true })
+                .width(screen.stage.width * 0.3f).padTop(8f).row()
+        // The author offers a bounty on their own save (manual, option A)
+        if (mine && ChainWallet.isConnected)
+            side.add("Offer a bounty".toTextButton().apply { onClick { BountyPopup(screen, record) { status.setText(it) } } }).padTop(8f).row()
         body.add(side).top().growX()
         pack()
         setPosition((stage.width - width) / 2, (stage.height - height) / 2)
@@ -312,5 +330,44 @@ private class TipAmountPopup(screen: BaseScreen, private val onChosen: (Long) ->
     private fun set(value: Long) {
         amount = value.coerceIn(1L, CloudSave.MAX_TIP_SKR)
         shown.setText("[$amount] SKR".tr())
+    }
+}
+
+/** The author's bounty on their shared save: how much, within how many turns - then posted with the
+ *  1 SKR record fee. The words say plainly it is a promise the author keeps by hand. */
+private class BountyPopup(screen: BaseScreen, private val record: CloudSave.Record, private val onResult: (String) -> Unit) : Popup(screen) {
+    private var skr = 20L
+    private var turns = 50
+    private val skrLabel = "".toLabel(fontSize = Constants.headingFontSize)
+    private val turnsLabel = "".toLabel(fontSize = Constants.headingFontSize)
+
+    init {
+        addGoodSizedLabel("Offer a bounty").row()
+        addGoodSizedLabel("You pay it yourself, by hand, to the first player whose certificate shows a victory won from this save within the turns you set, without AutoPlay.",
+            size = Constants.defaultFontSize - 4).row()
+        fun stepper(label: com.badlogic.gdx.scenes.scene2d.ui.Label, steps: List<Int>, change: (Int) -> Unit) = Table().apply {
+            defaults().pad(3f).minWidth(64f)
+            for (step in steps.filter { it < 0 }) add((step.toString()).toTextButton().apply { onClick { change(step) } })
+            add(label).minWidth(160f)
+            for (step in steps.filter { it > 0 }) add(("+$step").toTextButton().apply { onClick { change(step) } })
+        }
+        add(stepper(skrLabel, listOf(-10, -1, 1, 10)) { skr = (skr + it).coerceIn(1L, CloudSave.MAX_TIP_SKR); refresh() }).row()
+        add(stepper(turnsLabel, listOf(-10, 10)) { turns = (turns + it).coerceIn(10, 300); refresh() }).row()
+        refresh()
+        addCloseButton()
+        addOKButton("Post the bounty (1 SKR)") {
+            val poster = ChainWallet.service.connectedAddress ?: return@addOKButton
+            onResult("Waiting for your wallet...".tr())
+            ChainWallet.service.postBounty(CloudSave.Bounty(record.signature, skr, turns, poster),
+                onError = { onResult(it.message ?: it.javaClass.simpleName) },
+                onSuccess = { onResult("Bounty posted - it shows in the gallery once the network has it.".tr()) })
+        }
+        equalizeLastTwoButtonWidths()
+        open(force = true)
+    }
+
+    private fun refresh() {
+        skrLabel.setText("[$skr] SKR".tr())
+        turnsLabel.setText("Within [$turns] turns".tr())
     }
 }
