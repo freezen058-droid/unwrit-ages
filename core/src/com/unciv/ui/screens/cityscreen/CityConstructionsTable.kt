@@ -192,6 +192,20 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
             if (cityScreen.canCityBeChanged() && !queueExpander.isOpen && selectedQueueEntry in 1..4)
                 buttonsTable.add(getRemoveFromQueueButton(selectedQueueEntry)).padLeft(10f)
         }
+        if (selectedQueueEntry in 0..<queue.size && cityScreen.canCityBeChanged()
+                && cityView.constructions.getConstruction(queue[selectedQueueEntry]) is BaseUnit)
+            buttonsTable.add(getRepeatButton(queue[selectedQueueEntry])).padLeft(10f)
+    }
+
+    private fun getRepeatButton(name: String): Actor {
+        val repeated = cityView.constructions.isRepeated(name)
+        val button = (if (repeated) "Stop repeating" else "Repeat").toTextButton()
+        button.onClick {
+            cityView.trySetRepeated(name, !repeated)
+            cityScreen.update()
+            updateQueueAndButtons(cityScreen.selectedConstruction)
+        }
+        return button
     }
 
     private fun updateConstructionQueue() {
@@ -419,6 +433,7 @@ class CityConstructionsTable(private val cityScreen: CityScreen) {
         var text = constructionName.tr(true) +
                 if (constructionName in PerpetualConstruction.perpetualConstructionsMap) "\n" + Fonts.infinity
                 else cityConstructions.getTurnsToConstructionString(construction, isFirstConstructionOfItsKind)
+        if (cityConstructions.isRepeated(constructionName)) text += "\n" + "Repeating".tr()
 
         val constructionResource = cityView.getResourceRequirementsPerTurn(construction)
         for ((resourceName, amount) in constructionResource) {

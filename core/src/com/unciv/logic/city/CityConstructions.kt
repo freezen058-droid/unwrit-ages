@@ -86,6 +86,8 @@ class CityConstructions : IsPartOfGameInfoSerialization {
     var currentConstructionIsUserSet = false
     var constructionQueue = ArrayList<String>(queueMaxSize)
     var productionOverflow = 0
+    /** Units the player marked "repeat": when one is finished, it goes back to the end of the queue */
+    var repeatedConstructions = HashSet<String>()
 
     /** Maps cities by id to a set of the buildings they received (by nation equivalent name)
      *  Source: [UniqueType.GainFreeBuildings]
@@ -102,6 +104,7 @@ class CityConstructions : IsPartOfGameInfoSerialization {
         toReturn.currentConstructionIsUserSet = currentConstructionIsUserSet
         toReturn.constructionQueue.addAll(constructionQueue)
         toReturn.productionOverflow = productionOverflow
+        toReturn.repeatedConstructions.addAll(repeatedConstructions)
         toReturn.freeBuildingsProvidedFromThisCity.putAll(freeBuildingsProvidedFromThisCity)
         return toReturn
     }
@@ -567,8 +570,12 @@ class CityConstructions : IsPartOfGameInfoSerialization {
 
         if (construction.name in inProgressConstructions)
             inProgressConstructions.remove(construction.name)
-        if (construction.name == currentConstructionName())
+        if (construction.name == currentConstructionName()) {
+            // Queue the repeat before removing the finished one, so the queue never runs empty in between
+            if (construction is BaseUnit && construction.name in repeatedConstructions)
+                addToQueue(construction)
             removeCurrentConstruction()
+        }
 
         validateConstructionQueue() // if we've built e.g. the Great Lighthouse, then Lighthouse is no longer relevant in the queue
 
@@ -986,8 +993,17 @@ class CityConstructions : IsPartOfGameInfoSerialization {
     /** Remove one entry from the queue by index.
      *  @param automatic  If this was done automatically, we should automatically try to choose a new construction and treat it as such
      */
+    @Readonly fun isRepeated(constructionName: String) = constructionName in repeatedConstructions
+
+    /** Only units repeat; buildings and wonders are built once */
+    fun setRepeated(constructionName: String, repeat: Boolean) {
+        if (repeat && getConstruction(constructionName) is BaseUnit) repeatedConstructions.add(constructionName)
+        else repeatedConstructions.remove(constructionName)
+    }
+
     fun removeFromQueue(constructionQueueIndex: Int, automatic: Boolean) {
         val constructionName = constructionQueue.removeAt(constructionQueueIndex)
+        if (constructionName !in constructionQueue) repeatedConstructions.remove(constructionName)
 
         // UniqueType.CreatesOneImprovement support
         val construction = getConstruction(constructionName)

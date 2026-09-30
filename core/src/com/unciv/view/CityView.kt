@@ -187,6 +187,11 @@ class CityView(city: City,
         city.cityConstructions.removeFromQueue(index, automatic)
         return true
     }
+    fun trySetRepeated(name: String, repeat: Boolean): Boolean {
+        if (!canChangeState()) return false
+        city.cityConstructions.setRepeated(name, repeat)
+        return true
+    }
     fun tryRaisePriority(index: Int): Int? {
         if (!canChangeState()) return null
         return city.cityConstructions.raisePriority(index)

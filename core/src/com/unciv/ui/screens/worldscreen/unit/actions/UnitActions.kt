@@ -106,7 +106,9 @@ object UnitActions {
      */
     private val actionTypeToPageGetter = linkedMapOf<UnitActionType, (unit: MapUnit) -> Int>(
         UnitActionType.Automate to { unit ->
-            if (unit.cache.hasUniqueToBuildImprovements || unit.hasUnique(UniqueType.AutomationPrimaryAction)) 0 else 1
+            // Military units too (1.0.3): late-game armies are where handing units over saves the most taps
+            if (unit.cache.hasUniqueToBuildImprovements || unit.hasUnique(UniqueType.AutomationPrimaryAction)
+                || unit.isMilitary()) 0 else 1
         },
         UnitActionType.Fortify to { unit ->
             // Fortify moves to second page if current action is FortifyUntilHealed or if unit is wounded and it's not already the current action
@@ -154,6 +156,7 @@ object UnitActions {
         addExplorationActions(unit)
 
         addSkipAction(unit)
+        addFortifyAllIdleAction(unit)
 
         // From here we have actions defaulting to the second page
         if (unit.isMoving()) {
@@ -291,6 +294,18 @@ object UnitActions {
                 .takeIf { !unit.isFortifyingUntilHealed() && unit.canHealInCurrentTile() },
             useFrequency = 45f
         ))
+    }
+
+    private suspend fun SequenceScope<UnitAction>.addFortifyAllIdleAction(unit: MapUnit) {
+        if (!unit.isMilitary()) return
+        val idle = unit.civ.units.getDueUnits().filter { it.isMilitary() && it.hasMovement() }.toList()
+        if (idle.size < 2) return
+        yield(UnitAction(UnitActionType.FortifyAllIdle, 5f,
+            title = "Fortify all idle units ([${idle.size}])") {
+            for (idleUnit in idle)
+                if (idleUnit.canFortify()) idleUnit.fortify()
+                else idleUnit.action = UnitActionType.Sleep.value
+        })
     }
 
     private suspend fun SequenceScope<UnitAction>.addSleepActions(unit: MapUnit, tile: Tile) {

@@ -9,6 +9,7 @@ import com.unciv.ui.components.extensions.disable
 import com.unciv.ui.components.extensions.enable
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.popups.ConfirmPopup
+import com.unciv.ui.popups.Popup
 import com.unciv.ui.screens.cityscreen.CityScreen
 import com.unciv.ui.screens.overviewscreen.EspionageOverviewScreen
 import com.unciv.ui.screens.pickerscreens.DiplomaticVotePickerScreen
@@ -55,7 +56,29 @@ enum class NextTurnAction(protected val text: String, val color: Color) {
             getCityWithNoProductionSet(worldScreen) != null
         override fun action(worldScreen: WorldScreen) {
             val city = getCityWithNoProductionSet(worldScreen) ?: return
-            worldScreen.game.pushScreen(CityScreen(worldScreen.selectedGameView.getCityView(city)))
+            val openCity = { worldScreen.game.pushScreen(CityScreen(worldScreen.selectedGameView.getCityView(city))) }
+            val settings = worldScreen.game.settings
+            // Asked once, when there is a second city to manage; never in the teaching game, whose tasks pick by hand
+            if (settings.autoAssignCityProduction || settings.autoProductionOffered
+                    || worldScreen.gameInfo.isTutorialGame || city.civ.cities.size < 2) {
+                openCity()
+                return
+            }
+            settings.autoProductionOffered = true
+            settings.save()
+            Popup(worldScreen).apply {
+                addGoodSizedLabel("Let cities choose their own production when their queue runs out?").row()
+                addGoodSizedLabel("You can still set any city's queue yourself. Change this later in Options > Automation.",
+                    Constants.defaultFontSize - 4).padTop(10f).row()
+                addOKButton("Let them choose") {
+                    settings.autoAssignCityProduction = true
+                    settings.save()
+                    for (ownCity in city.civ.cities) ownCity.cityConstructions.chooseNextConstruction()
+                    worldScreen.shouldUpdate = true
+                }
+                addCloseButton("I'll choose", action = openCity)
+                equalizeLastTwoButtonWidths()
+            }.open()
         }
     },
     PickTech("Pick a tech", Color.SKY) {

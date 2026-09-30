@@ -21,6 +21,7 @@ class CityConstructionsView(private val cityConstructions: CityConstructions, pr
     @Readonly fun getConstruction(name: String): IConstruction = cityConstructions.getConstruction(name)
     @Readonly fun isFirstConstructionOfItsKind(index: Int, name: String): Boolean = cityConstructions.isFirstConstructionOfItsKind(index, name)
     @Readonly fun isBuilt(name: String): Boolean = cityConstructions.isBuilt(name)
+    @Readonly fun isRepeated(name: String): Boolean = cityConstructions.isRepeated(name)
     @Readonly fun getTurnsToConstructionString(construction: IConstruction, isFirst: Boolean = true): String = cityConstructions.getTurnsToConstructionString(construction, isFirst)
     @Readonly fun getWorkDone(name: String): Int = cityConstructions.getWorkDone(name)
     @Readonly fun shouldBeDisplayed(construction: IConstruction): Boolean = construction.shouldBeDisplayed(cityConstructions)

@@ -96,6 +96,35 @@ class CityTest {
     }
 
     @Test
+    fun `repeated unit goes back to the queue when finished`() {
+        val constructions = capitalCity.cityConstructions
+        constructions.constructionQueue.clear()
+        constructions.addToQueue("Warrior")
+        constructions.addToQueue("Monument")
+        constructions.setRepeated("Warrior", true)
+
+        constructions.completeConstruction(testGame.ruleset.units["Warrior"]!!)
+
+        assertEquals(listOf("Monument", "Warrior"), constructions.constructionQueue)
+        assertTrue(constructions.isRepeated("Warrior"))
+    }
+
+    @Test
+    fun `only units can repeat, and removing the last entry clears the mark`() {
+        val constructions = capitalCity.cityConstructions
+        constructions.constructionQueue.clear()
+        constructions.addToQueue("Monument")
+        constructions.addToQueue("Warrior")
+        constructions.setRepeated("Monument", true)
+        constructions.setRepeated("Warrior", true)
+        assertFalse(constructions.isRepeated("Monument"))
+
+        constructions.removeFromQueue(1, false)
+
+        assertFalse(constructions.isRepeated("Warrior"))
+    }
+
+    @Test
     fun `should mark selected owned tile when queueing CreatesOneImprovement building`() {
         val farm = testGame.ruleset.tileImprovements["Farm"]!!
         testCiv.tech.techsResearched.add(farm.techRequired!!)

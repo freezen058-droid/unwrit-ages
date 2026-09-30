@@ -173,6 +173,9 @@ enum class UnitActionType(
         { ImageGetter.getUnitActionPortrait("Fortify") }, UncivSound.Fortify),
     FortifyUntilHealed("Fortify until healed",
         { ImageGetter.getUnitActionPortrait("FortifyUntilHealed") }, UncivSound.Fortify),
+    /** Every idle military unit fortifies (or sleeps, if it cannot fortify) in one tap */
+    FortifyAllIdle("Fortify all idle units",
+        { ImageGetter.getUnitActionPortrait("Fortify") }, UncivSound.Fortify, defaultPage = 1),
     Guard("Guard",
         { ImageGetter.getUnitActionPortrait("Guard") }, UncivSound.Fortify, defaultPage = 0),
     Explore("Explore",
