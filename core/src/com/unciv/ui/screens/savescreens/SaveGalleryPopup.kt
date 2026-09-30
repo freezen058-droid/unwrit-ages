@@ -81,6 +81,9 @@ class SaveGalleryPopup(private val screen: BaseScreen) : Popup(screen) {
     private fun isMine(record: CloudSave.Record) =
         record.signature in mine || (record.meta?.author != null && record.meta.author == ChainWallet.service.connectedAddress)
 
+    /** The first save ever shared - on the chain's clock, so nobody can move it (user 09-30). */
+    private val genesis get() = records.filter { it.blockTime > 0 }.minByOrNull { it.blockTime }?.signature
+
     private fun show() {
         buildFilters()
         val shown = records
@@ -90,7 +93,7 @@ class SaveGalleryPopup(private val screen: BaseScreen) : Popup(screen) {
             .sortedWith(
                 if (sort == MOST_TIPPED) compareByDescending<CloudSave.Record> { tips[it.signature] ?: 0 }.thenByDescending { it.blockTime }
                 else compareByDescending { it.blockTime }
-            )
+            ).sortedByDescending { it.signature == genesis }     // stable: Genesis first, the rest as sorted
         status.setText(when {
             records.isEmpty() -> "No one has shared a save yet.".tr()
             shown.isEmpty() -> "No shared save matches these filters.".tr()
@@ -115,14 +118,17 @@ class SaveGalleryPopup(private val screen: BaseScreen) : Popup(screen) {
 
     private fun row(record: CloudSave.Record): Table {
         val button = Table(BaseScreen.skin)
-        button.background = BaseScreen.skinStrings.getUiBackground("General/Border", tintColor = Color(0.2f, 0.25f, 0.35f, 1f))
+        val isGenesis = record.signature == genesis
+        button.background = BaseScreen.skinStrings.getUiBackground("General/Border",
+            tintColor = if (isGenesis) Color(0.55f, 0.42f, 0.12f, 1f) else Color(0.2f, 0.25f, 0.35f, 1f))
         button.pad(8f)
+        if (isGenesis) button.add("Genesis - the first save ever shared".toLabel(Color.GOLD)).left().colspan(2).row()
         button.add(record.name.toLabel(hideIcons = true)).left().growX()
         val tipped = tips[record.signature] ?: 0
         button.add((if (tipped > 0) "[$tipped] SKR tipped".tr() else "").toLabel(Color.GOLD)).right().row()
         button.add(describe(record).toLabel(fontSize = Constants.defaultFontSize - 4, hideIcons = true)).left().colspan(2)
         button.touchable = com.badlogic.gdx.scenes.scene2d.Touchable.enabled
-        button.onClick { SaveGalleryDetailPopup(screen, record, isMine(record)) { amount ->
+        button.onClick { SaveGalleryDetailPopup(screen, record, isMine(record), isGenesis) { amount ->
             tips[record.signature] = (tips[record.signature] ?: 0) + amount
             show()
         } }
@@ -142,19 +148,19 @@ private class SaveGalleryDetailPopup(
     private val screen: BaseScreen,
     private val record: CloudSave.Record,
     private val mine: Boolean,
+    genesis: Boolean,
     private val onTipped: (Long) -> Unit
 ) : Popup(screen) {
 
     private val status = "Downloading...".toLabel().apply { wrap = true; setAlignment(Align.center) }
     private val body = Table()
-    private val actions = Table()
     private var texture: Texture? = null
 
     init {
         addGoodSizedLabel(record.name).row()
+        if (genesis) addGoodSizedLabel("Genesis - the first save ever shared", color = Color.GOLD).row()
         add(body).row()
         add(status).width(screen.stage.width * 0.6f).row()
-        add(actions).row()
         addCloseButton { texture?.dispose() }
         open(force = true)
         ChainWallet.service.downloadCloudSave(record.arweaveIds, onError = ::failed, onSuccess = { bytes ->
@@ -177,21 +183,19 @@ private class SaveGalleryDetailPopup(
         val civ = game.getCurrentPlayerCivilization()
         texture = mapPreview(game, 480, 300)
         body.defaults().pad(6f)
-        body.add(Image(texture)).size(screen.stage.height * 0.55f * 1.6f, screen.stage.height * 0.55f)
-        val facts = Table().apply { defaults().left().pad(2f) }
+        // Two columns (user 10-01): the map left; facts, Play and the tips right. Stacked under the
+        // map, the buttons fell below the popup's fold on a phone held sideways.
+        body.add(Image(texture)).size(screen.stage.height * 0.5f * 1.6f, screen.stage.height * 0.5f).top()
+        val side = Table().apply { defaults().left().pad(2f) }
         val map = game.tileMap.mapParameters
+        val small = Constants.defaultFontSize - 2
         for (line in listOf(
-            civ.civName.tr(),
-            civ.getEra().name.tr(),
-            "Turn [${game.turns}]".tr(),
-            "Cities: [${civ.cities.size}]".tr(),
-            map.type.tr() + " " + map.mapSize.name.tr(),
-            game.difficulty.tr(),
+            civ.civName.tr() + "  ·  " + civ.getEra().name.tr(),
+            "Turn [${game.turns}]".tr() + "  ·  " + "Cities: [${civ.cities.size}]".tr(),
+            map.type.tr() + " " + map.mapSize.name.tr() + "  ·  " + game.difficulty.tr(),
             record.meta?.author?.let { "Shared by [${it.take(4)}…${it.takeLast(4)}]".tr() } ?: ""
-        )) if (line.isNotEmpty()) facts.add(line.toLabel(hideIcons = true)).row()
-        body.add(facts).top()
+        )) if (line.isNotEmpty()) side.add(line.toLabel(fontSize = small, hideIcons = true)).row()
 
-        actions.defaults().pad(4f)
         val play = "Play from here".toTextButton()
         play.onClick {
             status.setText("Checking...".tr())
@@ -199,10 +203,21 @@ private class SaveGalleryDetailPopup(
                 playRestored(game, record, takenOver = !mine, onLoading = { texture?.dispose(); close() }, onError = ::failed)
             }
         }
-        actions.add(play)
+        side.add(play).growX().padTop(10f).row()
+
         val author = record.meta?.author
-        if (!mine && author != null && ChainWallet.service.isAvailable)
-            for (amount in listOf(1L, 5L)) actions.add("Tip [$amount] SKR".toTextButton().apply { onClick { tip(author, amount) } })
+        if (!mine && author != null && ChainWallet.service.isAvailable) {
+            side.add("Tip the author (SKR)".toLabel(fontSize = small)).padTop(10f).row()
+            val chips = Table().apply { defaults().pad(3f).uniformX().fillX() }
+            chips.add("1".toTextButton().apply { onClick { tip(author, 1L) } })
+            chips.add("10".toTextButton().apply { onClick { tip(author, 10L) } })
+            // The commemorative tip (user 09-30): 17 for Unciv, whose repository opened on 2017-11-21
+            chips.add("17".toTextButton().apply { label.color = Color.GOLD; onClick { tip(author, 17L) } })
+            chips.add("Other...".toTextButton().apply { onClick { TipAmountPopup(screen) { tip(author, it) } } })
+            side.add(chips).row()
+            side.add("17: Unciv was born in 2017".toLabel(Color.GOLD, fontSize = small - 2)).row()
+        }
+        body.add(side).top().growX()
         pack()
         setPosition((stage.width - width) / 2, (stage.height - height) / 2)
     }
@@ -261,4 +276,30 @@ fun mapPreviewPixmap(game: GameInfo, width: Int, height: Int): Pixmap {
         }
     }
     return pixmap
+}
+
+/** Any tip from 1 to [CloudSave.MAX_TIP_SKR] SKR, set with buttons - no keyboard, which on a phone
+ *  covered the field it was typing into. */
+private class TipAmountPopup(screen: BaseScreen, private val onChosen: (Long) -> Unit) : Popup(screen) {
+    private var amount = 5L
+    private val shown = "".toLabel(fontSize = Constants.headingFontSize)
+
+    init {
+        addGoodSizedLabel("Tip the author (SKR)").row()
+        add(shown).pad(10f).row()
+        val steps = Table().apply { defaults().pad(4f).minWidth(70f) }
+        for (step in listOf(-10L, -1L, 1L, 10L))
+            steps.add((if (step > 0) "+$step" else "$step").toTextButton().apply { onClick { set(amount + step) } })
+        add(steps).row()
+        set(amount)
+        addCloseButton()
+        addOKButton("Tip") { onChosen(amount) }
+        equalizeLastTwoButtonWidths()
+        open(force = true)
+    }
+
+    private fun set(value: Long) {
+        amount = value.coerceIn(1L, CloudSave.MAX_TIP_SKR)
+        shown.setText("[$amount] SKR".tr())
+    }
 }
