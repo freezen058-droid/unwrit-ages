@@ -1,8 +1,53 @@
-# CivilWars
+# Unwrit Ages
 
-*A fork of [Unciv](https://github.com/yairm210/Unciv), MPL-2.0 licensed - see [LICENSE](LICENSE) / [NOTICE.md](NOTICE.md).*
+A turn-based 4X strategy game for Android, built for the Solana Seeker and live on the Solana dApp Store.
+Found a city with one settler and take it from pottery to spaceflight; win by conquest, science,
+culture or diplomacy. No ads, no pay-to-win, and it plays offline.
 
+**Unwrit Ages is a fork of [Unciv](https://github.com/yairm210/Unciv) by Yair Morgenstern and
+contributors, MPL-2.0 licensed** - see [LICENSE](LICENSE), [NOTICE.md](NOTICE.md) and
+[MPL-NOTICE.md](MPL-NOTICE.md). The first commit in this repository (`4.21.13`) is Unciv's own
+release, unchanged; every commit after it is ours. The game rules, map, AI and most of the engine
+are Unciv's work.
 
+## What this fork adds
+
+On Solana, through the Mobile Wallet Adapter (`core/src/com/unciv/logic/chain/`,
+`android/src/com/unciv/app/AndroidWalletService.kt`):
+
+- **Victory certificate** - win, and mint the victory as an NFT (Metaplex Core): a painted stele that
+  records who won, how, on which turn and with how many AutoPlay turns. The art and metadata are
+  stored on Arweave. The fee (US$0.90) is paid in SOL at the Pyth price, in the same transaction.
+- **Anchored start** - opt in, and a free signed memo transaction seeds the map, so anyone can check
+  the game was played from turn 1 on the map that signature produced.
+- **Cloud saves (1 SKR each)** - record a save on-chain: it is uploaded to Arweave and named in a memo.
+  Private saves are AES-256-GCM encrypted with a key derived from a wallet signature, so the same
+  wallet restores them on any phone and nothing secret is stored. Shared saves let anyone continue
+  the game; a victory won from one says "Continued from turn N" on its certificate.
+
+For the phone:
+
+- New look (UI skin, tileset, icons, launcher art), text sized for a phone, a first-launch tour,
+  a new-player guide, and full Traditional and Simplified Chinese.
+- Fewer taps per turn (1.0.3): repeat a unit in a city's production queue, fortify all idle
+  units at once, Automate on the first page, and cities that choose their own production.
+
+## Build and run
+
+Requirements: JDK 21 and the Android SDK (set `sdk.dir` in `local.properties`).
+
+```
+./gradlew :android:assembleDebug        # APK in android/build/outputs/apk/debug/
+./gradlew :desktop:run                  # the desktop version, without the wallet features
+./gradlew :tests:test                   # unit tests
+```
+
+The debug APK runs on any Android phone with a Solana wallet app (the Seeker has one built in). Release signing reads its keystore from `local.properties` and is not part of
+this repository.
+
+---
+
+*What follows is Unciv's own README.*
 
 ## What is this?
 

@@ -88,6 +88,11 @@ object AndroidImagePacker {
             atlasList += packFileName
             packImagesIfOutdated(defaultSettings, file, output, packFileName)
         }
+        // Atlases whose source folder is kept out of git (ConstructionIcons) are committed packed;
+        // a fresh clone has the atlas but not the folder, and must still list it.
+        for (name in listOf("ConstructionIcons"))
+            if (name !in atlasList && File(output, "$name.atlas").exists() && File(output, "$name.png").exists())
+                atlasList += name
         val listFile = File("$output${File.separator}Atlases.json")
         if (atlasList.isEmpty()) listFile.delete()
         else listFile.writeText(atlasList.sorted().joinToString(",","[","]"))
