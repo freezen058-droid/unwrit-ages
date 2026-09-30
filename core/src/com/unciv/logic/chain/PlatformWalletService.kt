@@ -81,6 +81,20 @@ interface PlatformWalletService {
         onError(UnsupportedOperationException("Wallet integration is not available on this platform"))
     }
 
+    /**
+     * Sends [wholeSkr] SKR from the connected wallet to [author], the wallet that shared the save
+     * recorded by [saveSignature], with the tip memo ([CloudSave.tipMemo]) and the gallery's tip
+     * reference in the same transaction - the gallery's rating is what players tipped.
+     */
+    fun tipSaveAuthor(author: String, saveSignature: String, wholeSkr: Long, onSuccess: (txSignature: String) -> Unit, onError: (Exception) -> Unit) {
+        onError(UnsupportedOperationException("Wallet integration is not available on this platform"))
+    }
+
+    /** Whole SKR tipped per shared save, keyed by its record's transaction signature ([CloudSave.tally]). */
+    fun listSaveTips(onSuccess: (Map<String, Long>) -> Unit, onError: (Exception) -> Unit) {
+        onError(UnsupportedOperationException("Wallet integration is not available on this platform"))
+    }
+
     /** The bytes [uploadCloudSave] stored under [arweaveIds], joined back in order. */
     fun downloadCloudSave(arweaveIds: List<String>, onSuccess: (ByteArray) -> Unit, onError: (Exception) -> Unit) {
         onError(UnsupportedOperationException("Wallet integration is not available on this platform"))

@@ -65,4 +65,48 @@ class CloudSaveTests {
         Assert.assertNull(CloudSave.parse("[10] hello"))
         Assert.assertNull(CloudSave.parse("unwritages-start:g1"))
     }
+
+    private val meta = CloudSave.Meta("Rome", "Pangaea", "Tiny", "Classical era", 59, "Settler",
+        "2hJFxhGzLqS5zjVqVzpAE46ECQPKV7okwbAhFeBD4Luu")
+
+    @Test
+    fun aSharedRecordCarriesItsGalleryDetails() {
+        val r = CloudSave.Record("g", "Rome - 59 turns", "b".repeat(64), CloudSave.SHARED, "", listOf("id"), meta = meta)
+        val back = CloudSave.parse("[${r.memo().length}] ${r.memo()}; [5] other")!!
+        Assert.assertEquals(meta, back.meta)
+        Assert.assertEquals(listOf("id"), back.arweaveIds)
+        Assert.assertTrue(r.memo().length < 900)
+    }
+
+    @Test
+    fun aPrivateRecordSaysNothingAboutItsGame() {
+        val r = CloudSave.Record("g", "Rome", "b".repeat(64), CloudSave.PRIVATE, "abcd", listOf("id"), meta = meta)
+        Assert.assertFalse(r.memo().contains("Pangaea"))
+        Assert.assertNull(CloudSave.parse(r.memo())!!.meta)
+    }
+
+    @Test
+    fun theGalleryDetailsCannotBreakTheMemo() {
+        val odd = meta.copy(civ = "Ro:me|x;y", mapType = "M".repeat(80))
+        val r = CloudSave.Record("g", "a;b", "b".repeat(64), CloudSave.SHARED, "", listOf("id"), meta = odd)
+        val back = CloudSave.parse(r.memo())!!
+        val m = back.meta!!
+        Assert.assertEquals("Romexy", m.civ)
+        Assert.assertEquals(32, m.mapType.length)
+        Assert.assertEquals("ab", back.name)
+        Assert.assertEquals(meta.author, m.author)
+    }
+
+    @Test
+    fun tipsAreTalliedPerSaveAndImpossibleClaimsIgnored() {
+        val memos = listOf(
+            "[${CloudSave.tipMemo("sigA", 5).length + 2}] " + CloudSave.tipMemo("sigA", 5),
+            CloudSave.tipMemo("sigA", 1),
+            CloudSave.tipMemo("sigB", 1) + "; [5] other",
+            CloudSave.tipMemo("sigB", 1_000_000),   // more than the game ever offers: not counted
+            CloudSave.tipMemo("sigC", 0),
+            "unwritages-save:g:x:" + "a".repeat(64)
+        )
+        Assert.assertEquals(mapOf("sigA" to 6L, "sigB" to 1L), CloudSave.tally(memos))
+    }
 }

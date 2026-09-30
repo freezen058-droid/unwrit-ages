@@ -90,7 +90,7 @@ class LoadGameScreen : LoadOrSaveScreen() {
         // marked "Continued from turn N" (ROADMAP "Provenance", user 09-26)
         if (ChainWallet.service.isAvailable) {
             add("Restore from the chain".toTextButton().apply { onClick { ChainSavesPopup(this@LoadGameScreen, shared = false) } }).row()
-            add("Shared saves".toTextButton().apply { onClick { ChainSavesPopup(this@LoadGameScreen, shared = true) } }).row()
+            add("Shared saves".toTextButton().apply { onClick { SaveGalleryPopup(this@LoadGameScreen) } }).row()
         }
     }
 

@@ -116,7 +116,9 @@ object CloudSave {
         val arweaveIds: List<String> = emptyList(),
         /** From the transaction, not the memo: its signature and time (seconds), when listed. */
         val signature: String = "",
-        val blockTime: Long = 0
+        val blockTime: Long = 0,
+        /** What the shared-save gallery sorts and filters by; shared records since 09-30 only. */
+        val meta: Meta? = null
     ) {
         val restorable get() = arweaveIds.isNotEmpty()
         val shared get() = visibility == SHARED
@@ -124,12 +126,70 @@ object CloudSave {
         fun memo(): String {
             val base = MEMO_PREFIX + "$gameId:${safeName(name)}:$hashHex"
             if (arweaveIds.isEmpty()) return base
-            return "$base:$visibility:$keyFingerprint:" + arweaveIds.joinToString(",")
+            val cloud = "$base:$visibility:$keyFingerprint:" + arweaveIds.joinToString(",")
+            // Only a shared record says what is in it: a private one stays a name and a hash
+            return if (shared && meta != null) "$cloud:${meta.encode()}" else cloud
         }
     }
 
-    /** Colons are the memo's field separator; the name is capped so the transaction stays small. */
-    fun safeName(name: String) = name.replace(":", "").take(64)
+    /**
+     * A shared save described for the gallery, as a seventh memo field: `civ|map type|map size|era|
+     * turn|difficulty|author`. Readers before 09-30 stop at the sixth field, so they still list and
+     * load the save. [author] is the recording wallet, where tips go - in the memo because listing
+     * reads memos only, not the transaction's signer.
+     */
+    data class Meta(
+        val civ: String,
+        val mapType: String,
+        val mapSize: String,
+        val era: String,
+        val turn: Int,
+        val difficulty: String,
+        val author: String
+    ) {
+        /** The words are capped to keep the memo small; the author's address never is - cut, tips go nowhere. */
+        fun encode() = (listOf(civ, mapType, mapSize, era, turn.toString(), difficulty).map { safeField(it).take(32) } +
+            safeField(author)).joinToString("|")
+
+        companion object {
+            fun decode(field: String): Meta? {
+                val p = field.split("|")
+                if (p.size < 7) return null
+                return Meta(p[0], p[1], p[2], p[3], p[4].toIntOrNull() ?: 0, p[5], p[6])
+            }
+            private fun safeField(text: String) = text.replace(Regex("[:|;]"), "")
+        }
+    }
+
+    /** Colons are the memo's field separator and the RPC joins memos with "; " - neither may be in
+     *  the name; it is capped so the transaction stays small. */
+    fun safeName(name: String) = name.replace(":", "").replace(";", "").take(64)
+
+    /**
+     * A tip to a shared save's author: an SKR transfer to them, with this memo naming the save by its
+     * record's transaction signature. Every tip also carries one fixed reference account, so one
+     * getSignaturesForAddress on it lists every tip there is - the gallery's rating.
+     */
+    const val TIP_PREFIX = "unwritages-tip:"
+
+    fun tipMemo(saveSignature: String, wholeSkr: Long) = "$TIP_PREFIX$saveSignature:$wholeSkr"
+
+    /** (save signature, whole SKR) from a memo field as the RPC reports it, or null. */
+    fun parseTip(memoField: String): Pair<String, Long>? {
+        val at = memoField.indexOf(TIP_PREFIX)
+        if (at < 0) return null
+        val parts = memoField.substring(at + TIP_PREFIX.length).substringBefore(";").trim().split(":")
+        if (parts.size < 2 || parts[0].isBlank()) return null
+        val amount = parts[1].toLongOrNull()?.takeIf { it in 1..MAX_TIP_SKR } ?: return null
+        return parts[0] to amount
+    }
+
+    /** A memo claims its amount; a claim above what the game ever offers is not counted at all. */
+    const val MAX_TIP_SKR = 100L
+
+    /** SKR tipped per save signature, from the tip memos of successful transactions. */
+    fun tally(memoFields: List<String>): Map<String, Long> =
+        memoFields.mapNotNull { parseTip(it) }.groupBy({ it.first }, { it.second }).mapValues { it.value.sum() }
 
     /**
      * The record in a memo as the RPC reports it - getSignaturesForAddress prefixes each memo
@@ -146,6 +206,7 @@ object CloudSave {
         if (hash.length != 64) return null
         if (parts.size < 6) return Record(gameId, name, hash, signature = signature, blockTime = blockTime)
         val ids = parts[5].split(",").filter { it.isNotBlank() }
-        return Record(gameId, name, hash, parts[3], parts[4], ids, signature, blockTime)
+        val meta = parts.getOrNull(6)?.let { Meta.decode(it) }
+        return Record(gameId, name, hash, parts[3], parts[4], ids, signature, blockTime, meta)
     }
 }

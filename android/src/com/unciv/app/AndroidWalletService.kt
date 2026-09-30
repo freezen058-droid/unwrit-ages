@@ -158,6 +158,10 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
         private const val SKR_PRICE_COINGECKO = "https://api.coingecko.com/api/v3/simple/price?ids=seeker&vs_currencies=usd"
         /** A price outside this band is treated as broken: the fee would be 900 SKR or 0.9 SKR. */
         private const val SKR_USD_MIN = 0.001
+
+        /** Every gallery tip carries this account (CloudSave.TIP_PREFIX). Base58 of
+         *  SHA-256("unwritages:gallery-tips:v1"): an address nobody holds a key for. */
+        private const val TIP_REFERENCE = "44BCs5bxqSWJ4pw12hJUBibeLtbA34cvKztYCpCq68Q9"
         private const val SKR_USD_MAX = 1.0
 
         // A Solana transaction has to fit in 1232 bytes and the certificate name is player-derived
@@ -1086,41 +1090,131 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
                 // Every record pays its fee into the treasury's SKR account, so that account's
                 // history is everyone's records; the treasury's own address is not in them
                 val address = if (shared) treasurySkrAccount().base58() else own!!
-                val requestBody = kotlinx.serialization.json.buildJsonObject {
-                    put("jsonrpc", kotlinx.serialization.json.JsonPrimitive("2.0"))
-                    put("id", kotlinx.serialization.json.JsonPrimitive(1))
-                    put("method", kotlinx.serialization.json.JsonPrimitive("getSignaturesForAddress"))
-                    put("params", kotlinx.serialization.json.buildJsonArray {
-                        add(kotlinx.serialization.json.JsonPrimitive(address))
-                        add(kotlinx.serialization.json.buildJsonObject {
-                            put("limit", kotlinx.serialization.json.JsonPrimitive(1000))
-                        })
-                    })
-                }
-                val response: kotlinx.serialization.json.JsonObject = httpClient.post(RPC_ENDPOINT) {
-                    contentType(ContentType.Application.Json)
-                    setBody(requestBody)
-                }.body()
-                (response["error"] as? kotlinx.serialization.json.JsonObject)?.let { err ->
-                    throw IllegalStateException("The network refused the list: " +
-                        ((err["message"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: err.toString()))
-                }
-                val entries = response["result"] as? kotlinx.serialization.json.JsonArray ?: emptyList()
-                val records = entries.mapNotNull { e ->
-                    val o = e as? kotlinx.serialization.json.JsonObject ?: return@mapNotNull null
-                    val err = o["err"]
-                    if (err != null && err !is kotlinx.serialization.json.JsonNull) return@mapNotNull null
-                    val memo = (o["memo"] as? kotlinx.serialization.json.JsonPrimitive)?.takeIf { it.isString }?.content
-                        ?: return@mapNotNull null
-                    CloudSave.parse(
-                        memo,
-                        (o["signature"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: "",
-                        (o["blockTime"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.toLongOrNull() ?: 0
-                    )
+                val records = memoHistory(address).mapNotNull { (memo, signature, blockTime) ->
+                    CloudSave.parse(memo, signature, blockTime)
                 }.filter { if (shared) it.shared && it.restorable else true }
                 launchOnGLThread { onSuccess(records) }
             } catch (ex: Exception) {
                 Log.error("Failed to list save records", ex)
+                launchOnGLThread { onError(ex) }
+            }
+        }
+    }
+
+    /** (memo, signature, block time) of the successful transactions that touched [address], newest
+     *  first, those with a memo only - as getSignaturesForAddress reports them, up to 1000. */
+    private suspend fun memoHistory(address: String): List<Triple<String, String, Long>> {
+        val requestBody = kotlinx.serialization.json.buildJsonObject {
+            put("jsonrpc", kotlinx.serialization.json.JsonPrimitive("2.0"))
+            put("id", kotlinx.serialization.json.JsonPrimitive(1))
+            put("method", kotlinx.serialization.json.JsonPrimitive("getSignaturesForAddress"))
+            put("params", kotlinx.serialization.json.buildJsonArray {
+                add(kotlinx.serialization.json.JsonPrimitive(address))
+                add(kotlinx.serialization.json.buildJsonObject {
+                    put("limit", kotlinx.serialization.json.JsonPrimitive(1000))
+                })
+            })
+        }
+        val response: kotlinx.serialization.json.JsonObject = httpClient.post(RPC_ENDPOINT) {
+            contentType(ContentType.Application.Json)
+            setBody(requestBody)
+        }.body()
+        (response["error"] as? kotlinx.serialization.json.JsonObject)?.let { err ->
+            throw IllegalStateException("The network refused the list: " +
+                ((err["message"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: err.toString()))
+        }
+        val entries = response["result"] as? kotlinx.serialization.json.JsonArray ?: emptyList()
+        return entries.mapNotNull { e ->
+            val o = e as? kotlinx.serialization.json.JsonObject ?: return@mapNotNull null
+            val err = o["err"]
+            if (err != null && err !is kotlinx.serialization.json.JsonNull) return@mapNotNull null
+            val memo = (o["memo"] as? kotlinx.serialization.json.JsonPrimitive)?.takeIf { it.isString }?.content
+                ?: return@mapNotNull null
+            Triple(
+                memo,
+                (o["signature"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: "",
+                (o["blockTime"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.toLongOrNull() ?: 0L
+            )
+        }
+    }
+
+    override fun listSaveTips(onSuccess: (Map<String, Long>) -> Unit, onError: (Exception) -> Unit) {
+        Concurrency.run("WalletListTips") {
+            try {
+                val tips = CloudSave.tally(memoHistory(TIP_REFERENCE).map { it.first })
+                launchOnGLThread { onSuccess(tips) }
+            } catch (ex: Exception) {
+                Log.error("Failed to list save tips", ex)
+                launchOnGLThread { onError(ex) }
+            }
+        }
+    }
+
+    override fun tipSaveAuthor(author: String, saveSignature: String, wholeSkr: Long, onSuccess: (txSignature: String) -> Unit, onError: (Exception) -> Unit) {
+        val tipper = _connectedAddress
+        if (authToken == null || tipper == null) {
+            onError(IllegalStateException("No wallet connected"))
+            return
+        }
+        Concurrency.run("WalletTipSave") {
+            try {
+                check(wholeSkr in 1..CloudSave.MAX_TIP_SKR) { "A tip is 1 to ${CloudSave.MAX_TIP_SKR} SKR" }
+                check(author != tipper) { "This is your own save" }
+                val amount = wholeSkr * 1_000_000L
+                val tipperKey = SolanaPublicKey.from(tipper)
+                val authorKey = SolanaPublicKey.from(author)
+                val skrMint = SolanaPublicKey.from(SKR_MINT)
+                val from = skrAccount(tipperKey)
+                val to = skrAccount(authorKey)
+                val balance = skrBalance(from)
+                check(balance >= amount) { "This wallet has ${balance / 1_000_000} SKR; the tip is $wholeSkr SKR" }
+
+                val builder = Message.Builder()
+                // An author paid 1 SKR to share, so their SKR account exists - unless they emptied
+                // and closed it since; then the tipper opens it, as a fee payer does for the treasury
+                if (!accountExists(to)) builder.addInstruction(
+                    AssociatedTokenProgram.createAssociatedTokenAccount(
+                        mint = skrMint, associatedAccount = to, owner = authorKey, payer = tipperKey
+                    )
+                )
+                // The reference rides on the transfer as a read-only, non-signer account (Solana
+                // Pay's pattern): the token program ignores it, and getSignaturesForAddress on it
+                // finds every tip. Not on the memo - the Memo program requires every account to sign.
+                val transfer = TokenProgram.transferChecked(
+                    from = from, to = to, amount = amount, decimals = SKR_DECIMALS, owner = tipperKey, mint = skrMint
+                )
+                val transferWithReference = TransactionInstruction(
+                    transfer.programId,
+                    transfer.accounts + AccountMeta(SolanaPublicKey.from(TIP_REFERENCE), isSigner = false, isWritable = false),
+                    transfer.data
+                )
+                val memo = TransactionInstruction(
+                    memoProgramId,
+                    listOf(AccountMeta(tipperKey, isSigner = true, isWritable = false)),
+                    CloudSave.tipMemo(saveSignature, wholeSkr).encodeToByteArray()
+                )
+                val message = builder
+                    .addInstruction(transferWithReference)
+                    .addInstruction(memo)
+                    .setRecentBlockhash(fetchLatestBlockhash())
+                    .build()
+                val unsignedTx = Transaction(message)
+                val result = withWakeLock {
+                    withBridge { sender ->
+                        walletAdapter.transact(sender) { signAndSendTransactions(arrayOf(unsignedTx.serialize())) }
+                    }
+                }
+                when (result) {
+                    is TransactionResult.Success -> {
+                        val sigBytes = result.successPayload?.signatures?.firstOrNull()
+                        if (sigBytes == null) launchOnGLThread { onError(IllegalStateException("Wallet did not return a transaction signature")) }
+                        else launchOnGLThread { onSuccess(base58Encode(sigBytes)) }
+                    }
+                    is TransactionResult.NoWalletFound -> launchOnGLThread { onError(Exception("No MWA-compatible wallet app found")) }
+                    is TransactionResult.Failure -> launchOnGLThread { onError(result.e) }
+                }
+            } catch (ex: Exception) {
+                Log.error("Failed to tip a save's author", ex)
                 launchOnGLThread { onError(ex) }
             }
         }

@@ -16,6 +16,7 @@ import com.unciv.ui.popups.Popup
 import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.utils.Concurrency
 import com.unciv.utils.launchOnGLThread
+import kotlinx.coroutines.CoroutineScope
 import java.util.Date
 
 /**
@@ -95,26 +96,37 @@ class ChainSavesPopup(private val screen: BaseScreen, private val shared: Boolea
         status.setText("Checking...".tr())
         Concurrency.run("RestoreCloudSave") {
             val game: GameInfo = try {
-                val json = CloudSave.unpack(bytes, key)
-                if (ChainWallet.sha256Hex(json) != record.hashHex)
-                    throw IllegalStateException("The downloaded save does not match its record on the chain, so it was not loaded.".tr())
-                UncivFiles.gameInfoFromString(json)
+                decodeCloudSave(record, bytes, key)
             } catch (ex: Exception) {
                 launchOnGLThread { failed(ex) }
                 return@run
             }
-            if (takenOver) game.continuedFromTurn = game.turns
-            val files = UncivGame.Current.files
-            var name = record.name.ifBlank { "Restored" }
-            if (files.getSave(name).exists()) name += " (" + "restored".tr() + ")"
-            files.saveGame(game, name)
-            launchOnGLThread { close() }
-            try {
-                UncivGame.Current.loadGame(game, callFromLoadScreen = true)
-            } catch (ex: Exception) {
-                // Saved to the device either way - it is in the load list now
-                launchOnGLThread { open(force = true); failed(ex) }
-            }
+            playRestored(game, record, takenOver, onLoading = { close() }, onError = { open(force = true); failed(it) })
         }
+    }
+}
+
+/** The game in a downloaded cloud save, refused unless it is exactly what [record] was recorded with. */
+internal fun decodeCloudSave(record: CloudSave.Record, bytes: ByteArray, key: ByteArray?): GameInfo {
+    val json = CloudSave.unpack(bytes, key)
+    if (ChainWallet.sha256Hex(json) != record.hashHex)
+        throw IllegalStateException("The downloaded save does not match its record on the chain, so it was not loaded.".tr())
+    return UncivFiles.gameInfoFromString(json)
+}
+
+/** Saves [game] to this device under [record]'s name and opens it - "Continued from turn N" when it
+ *  is someone else's ([takenOver]). Off the GL thread; the callbacks run on it. */
+internal suspend fun CoroutineScope.playRestored(game: GameInfo, record: CloudSave.Record, takenOver: Boolean, onLoading: () -> Unit, onError: (Exception) -> Unit) {
+    if (takenOver) game.continuedFromTurn = game.turns
+    val files = UncivGame.Current.files
+    var name = record.name.ifBlank { "Restored" }
+    if (files.getSave(name).exists()) name += " (" + "restored".tr() + ")"
+    files.saveGame(game, name)
+    launchOnGLThread { onLoading() }
+    try {
+        UncivGame.Current.loadGame(game, callFromLoadScreen = true)
+    } catch (ex: Exception) {
+        // Saved to the device either way - it is in the load list now
+        launchOnGLThread { onError(ex) }
     }
 }

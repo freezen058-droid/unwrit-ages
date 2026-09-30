@@ -231,7 +231,8 @@ class UncivFiles(
                     game.gameId, saveName, hash,
                     visibility = if (key == null) CloudSave.SHARED else CloudSave.PRIVATE,
                     keyFingerprint = key?.let { CloudSave.keyFingerprint(it) } ?: "",
-                    arweaveIds = ids
+                    arweaveIds = ids,
+                    meta = if (key == null) galleryMeta(game) else null
                 )
                 ChainWallet.service.recordSaveHash(record, onError = ::failed, onSuccess = { tx ->
                     debug("Recorded save %s on-chain, tx %s", game.gameId, tx)
@@ -244,6 +245,14 @@ class UncivFiles(
 
         if (shared) uploadAndRecord(null)
         else ChainWallet.service.cloudSaveKey(onError = ::failed, onSuccess = { uploadAndRecord(it) })
+    }
+
+    /** What the shared-save gallery lists this save under: the player's civ and era, the map. */
+    private fun galleryMeta(game: GameInfo): CloudSave.Meta? {
+        val author = ChainWallet.service.connectedAddress ?: return null
+        val civ = game.getCurrentPlayerCivilization()
+        val map = game.tileMap.mapParameters
+        return CloudSave.Meta(civ.civName, map.type, map.mapSize.name, civ.getEra().name, game.turns, game.difficulty, author)
     }
 
     /**
