@@ -30,6 +30,7 @@ import com.unciv.logic.GameInfoSerializationVersion
 import com.unciv.logic.HasGameInfoSerializationVersion
 import com.unciv.utils.Log
 import com.unciv.utils.debug
+import com.unciv.utils.launchOnGLThread
 import kotlinx.coroutines.Job
 import java.io.Writer
 
@@ -205,7 +206,12 @@ class UncivFiles(
     private fun recordSaveHashOnChainIfEnabled(game: GameInfo, saveName: String) {
         val settings = UncivGame.Current.settings
         if (!settings.recordSavesOnChain) return
-        if (!ChainWallet.isConnected) return
+        if (!ChainWallet.isConnected) {
+            // Silent before (BUGS #19): after an app update the wallet is disconnected, and a player
+            // who ticked "record on-chain" believed every save was on the chain
+            reportOnChainResult("[$saveName] is saved on this device only: no wallet is connected, so it was not recorded on the blockchain. Connect one in Wallet and save again.".tr())
+            return
+        }
         // The hash is of exactly the JSON that is uploaded, so a restore can check it
         val json = json().toJson(game)
         val hash = ChainWallet.sha256Hex(json)
@@ -264,15 +270,22 @@ class UncivFiles(
      * believing their save was on the chain when it was not. A paid action needs a receipt.
      */
     private fun reportOnChainResult(message: String) {
-        Concurrency.runOnGLThread {
-            val screen = UncivGame.Current.screen as? BaseScreen ?: return@runOnGLThread
-            // Stays until closed, success or failure: it is the receipt for a paid action, and one
-            // that vanished after five seconds left the player (09-26) not knowing what happened
-            Popup(screen).apply {
-                addGoodSizedLabel(message).row()
-                addCloseButton()
-                open(force = true)
-            }
+        Concurrency.run("OnChainReceipt") {
+            // The save screen closes right after a save: a popup put on it went with it, unseen.
+            // A moment's wait puts it on the screen the player returns to (BUGS #19, 10-01).
+            kotlinx.coroutines.delay(600)
+            launchOnGLThread { showOnChainResult(message) }
+        }
+    }
+
+    private fun showOnChainResult(message: String) {
+        val screen = UncivGame.Current.screen as? BaseScreen ?: return
+        // Stays until closed, success or failure: it is the receipt for a paid action, and one
+        // that vanished after five seconds left the player (09-26) not knowing what happened
+        Popup(screen).apply {
+            addGoodSizedLabel(message).row()
+            addCloseButton()
+            open(force = true)
         }
     }
 

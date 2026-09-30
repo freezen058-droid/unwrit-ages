@@ -99,6 +99,7 @@ open class AndroidLauncher : AndroidApplication() {
         } else {
             view.setPadding(0, 0, 0, 0)
         }
+        game?.onImeHeight(insets.getInsets(WindowInsetsCompat.Type.ime()).bottom)
 
         return insets
     }

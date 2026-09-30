@@ -36,7 +36,8 @@ internal class ConsoleGameCommands : ConsoleCommandNode {
             DevConsoleResponse.hint("[${civ.civName}] wins by [$victoryType] - close the console to see it")
         },
 
-        // Draws this game's certificate as the mint would, into the save folder, without spending
+        // Draws this game's certificate as the mint would, beside the save folder (in it, it showed in
+        // the load list), without spending
         // anything - the way to check the picture on a real device.
         "certificate" to ConsoleAction("game certificate") { console, _ ->
             val civ = console.screen.selectedCiv
@@ -46,7 +47,7 @@ internal class ConsoleGameCommands : ConsoleCommandNode {
                 com.unciv.logic.chain.CertificateEmblem(record.nation, record.emblemOuter, record.emblemInner),
                 record.anchored
             ) ?: throw ConsoleErrorException("This platform cannot draw a certificate")
-            val file = com.unciv.UncivGame.Current.files.getSave("certificate-preview.jpg")
+            val file = com.unciv.UncivGame.Current.files.getSave("certificate-preview.jpg").parent().parent().child("certificate-preview.jpg")
             file.writeBytes(jpeg, false)
             DevConsoleResponse.hint("[${jpeg.size}] bytes written to [${file.path()}]")
         },

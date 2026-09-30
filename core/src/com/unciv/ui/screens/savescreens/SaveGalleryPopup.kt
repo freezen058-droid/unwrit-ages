@@ -287,7 +287,7 @@ private class TipAmountPopup(screen: BaseScreen, private val onChosen: (Long) ->
 
     init {
         addGoodSizedLabel("Tip the author (SKR)").row()
-        add(shown).pad(10f).row()
+        add(shown).pad(10f).center().row()
         val steps = Table().apply { defaults().pad(4f).minWidth(70f) }
         for (step in listOf(-10L, -1L, 1L, 10L))
             steps.add((if (step > 0) "+$step" else "$step").toTextButton().apply { onClick { set(amount + step) } })

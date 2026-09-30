@@ -81,7 +81,10 @@ open class TextFieldWithFixes private constructor(text: String, style: TextField
     }
 
     fun copyTextAndSelection(textField: TextFieldWithFixes) {
-        text = textField.text
+        // setText, not `text =`: inside a TextField subclass Kotlin resolves `text` to Gdx's protected
+        // field, so the text changed but what the field draws did not - the stand-in popup's OK
+        // seemed to do nothing (10-01, found with logs on the Seeker)
+        setText(textField.text)
         hasSelection = textField.hasSelection
         cursor = textField.cursor
         selectionStart = textField.selectionStart

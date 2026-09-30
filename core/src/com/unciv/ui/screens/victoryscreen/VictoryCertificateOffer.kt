@@ -47,10 +47,15 @@ class VictoryCertificateOffer(
         /** Said only when an upload is already paid for, because it changes what a retry costs. */
         const val RETRY_HINT = "\nThe certificate is stored - retrying only mints."
 
-        /** The offer on screen now. A mint outlives the offer that started it: coming back from the
-         *  wallet rebuilds the victory screen, so its progress and result go to whichever offer is
-         *  showing by then, not to one that is gone. */
-        var current: VictoryCertificateOffer? = null
+        /** The offers built so far. A mint outlives the offer that started it: coming back from the
+         *  wallet rebuilds the victory screen, so its progress and result go to every offer still on
+         *  a stage - the popup's and the victory tab's behind it alike. Before (BUGS #17) only the
+         *  newest was told, and the tab kept offering to mint a certificate that already existed. */
+        val offers = mutableListOf<VictoryCertificateOffer>()
+        fun onScreen(fallback: VictoryCertificateOffer): List<VictoryCertificateOffer> {
+            offers.removeAll { it.stage == null && it !== fallback }
+            return offers.filter { it.stage != null }.ifEmpty { listOf(fallback) }
+        }
         /** The last progress line of a mint still running, for an offer built while it runs. */
         var mintStatus: String? = null
     }
@@ -75,7 +80,7 @@ class VictoryCertificateOffer(
         add(status).width(500f).row()
         add(picture).row()
         add(result).row()
-        current = this
+        offers += this
         val address = gameInfo.certificateAddress
         val running = mintStatus
         if (address != null) showMinted(address)
@@ -105,24 +110,25 @@ class VictoryCertificateOffer(
             onProgress = { progress(it.tr()) },
             onSuccess = { address ->
                 mintStatus = null
-                (current ?: this).showMinted(address)
+                for (offer in onScreen(this)) offer.showMinted(address)
             },
             onError = {
                 mintStatus = null
                 val paid = VictoryCertificateService.alreadyMintedUpload(gameInfo) != null
-                val offer = current ?: this
-                offer.status.setText(
-                    (it.localizedMessage ?: "Could not mint the certificate".tr()) +
-                        (if (paid) RETRY_HINT.tr() else "")
-                )
-                offer.setButtonsEnabled(true)
+                for (offer in onScreen(this)) {
+                    offer.status.setText(
+                        (it.localizedMessage ?: "Could not mint the certificate".tr()) +
+                            (if (paid) RETRY_HINT.tr() else "")
+                    )
+                    offer.setButtonsEnabled(true)
+                }
             }
         )
     }
 
     private fun progress(text: String) {
         mintStatus = text
-        (current ?: this).status.setText(text)
+        for (offer in onScreen(this)) offer.status.setText(text)
     }
 
     /** Before: a line of small text holding a 44-character address, which a player who just
@@ -161,7 +167,8 @@ class VictoryCertificateOffer(
                 val image = Image(texture)
                 image.onClick { CertificatePicturePopup(stage, texture) }
                 picture.clear()
-                picture.add(image).size(stage.height * 0.5f)
+                // 0.5 of the height pushed "View certificate" below the popup's fold (BUGS #17)
+                picture.add(image).size(stage.height * 0.4f)
                 picture.invalidateHierarchy()
                 // A popup is sized and centred once, when it opens - before this picture existed -
                 // so it grew upwards from where it stood. Size and centre it again around it.

@@ -74,6 +74,23 @@ class AndroidGame(private val activity: Activity) : UncivGame() {
         })
     }
 
+    /** The on-screen keyboard's height in view pixels, from the window insets (AndroidLauncher). The
+     *  visible-frame listener above never sees the keyboard when the game runs full screen - its
+     *  frame stays the whole screen - so a text field it covered was neither scrolled into view nor
+     *  given the stand-in popup (BUGS #19, the save name on the Seeker, 10-01). */
+    private var lastImeHeight = 0
+    fun onImeHeight(imeHeight: Int) {
+        if (imeHeight == lastImeHeight || !isInitialized) return
+        lastImeHeight = imeHeight
+        val contentView = (Gdx.graphics as AndroidGraphics).view
+        if (contentView.height == 0) return
+        Concurrency.runOnGLThread {
+            val stage = (screen as? BaseScreen)?.stage ?: return@runOnGLThread
+            val covered = imeHeight * stage.height / contentView.height
+            EventBus.send(UncivStage.VisibleAreaChanged(Rectangle(0f, covered, stage.width, stage.height - covered)))
+        }
+    }
+
     /** This is needed in onCreate _and_ onNewIntent to open links and notifications
      *  correctly even if the app was not running */
     fun setDeepLinkedGame(intent: Intent) {

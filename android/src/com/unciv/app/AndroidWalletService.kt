@@ -1276,7 +1276,8 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
                             if (response.status.value == 200) { bytes = response.body<ByteArray>(); break }
                         } catch (_: Exception) { }
                     }
-                    out.write(bytes ?: throw IllegalStateException("Could not download part $id of the save"))
+                    out.write(bytes ?: throw IllegalStateException("Could not download part $id of the save. " +
+                        "A save recorded in the last few minutes may not have reached the network yet - try again shortly."))
                 }
                 launchOnGLThread { onSuccess(out.toByteArray()) }
             } catch (ex: Exception) {

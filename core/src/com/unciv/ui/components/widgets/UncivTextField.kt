@@ -1,5 +1,6 @@
 package com.unciv.ui.components.widgets
 
+import com.badlogic.gdx.Application
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.scenes.scene2d.Actor
@@ -16,7 +17,9 @@ import com.unciv.ui.components.extensions.getOverlap
 import com.unciv.ui.components.extensions.right
 import com.unciv.ui.components.extensions.stageBoundingBox
 import com.unciv.ui.components.extensions.top
+import com.unciv.ui.components.extensions.toTextButton
 import com.unciv.ui.components.input.keyShortcuts
+import com.unciv.ui.components.input.onClick
 import com.unciv.ui.popups.Popup
 import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.screens.basescreen.UncivStage
@@ -44,7 +47,9 @@ open class UncivTextField(
     preEnteredText: String = "",
     private val onFocusChange: (TextField.(Boolean) -> Unit)? = null
 ) : TextFieldWithFixes(preEnteredText, BaseScreen.skin) {
-    private val isAndroid = false // disabled for now since it's not actually working // Gdx.app.type == Application.ApplicationType.Android
+    // Upstream turned this off ("not actually working"): the keyboard never showed up in the visible
+    // area it listened to. AndroidGame.onImeHeight now reports it from the window insets (10-01).
+    private val isAndroid = Gdx.app.type == Application.ApplicationType.Android
 
     init {
         messageText = hint.tr()
@@ -79,8 +84,10 @@ open class UncivTextField(
                             // when screen dimensions change, we don't want an animation for scrolling, just show the textfield immediately
                             scrollPane?.updateVisualScroll()
                         } else {
-                            // We can't scroll the text field into view, so we need to show a popup
-                            TextfieldPopup().open()
+                            // We can't scroll the text field into view, so we need to show a popup -
+                            // one: the keyboard reports its height more than once as it settles, and
+                            // each report opened another, stacked under the one being typed in (10-01)
+                            if (standIn == null) standIn = TextfieldPopup().apply { open() }
                         }
                     }
                 }
@@ -146,28 +153,27 @@ open class UncivTextField(
         return true
     }
 
+    private var standIn: TextfieldPopup? = null
+
     private inner class TextfieldPopup : Popup(stage) {
         val popupTextfield = TextFieldWithFixes(this@UncivTextField)
         init {
-            addGoodSizedLabel(popupTextfield.messageText)
-                .colspan(2)
-                .row()
-
-            add(popupTextfield)
-                .width(stageToShowOn.width / 2)
-                .colspan(2)
-                .row()
-
-            addCloseButton(Constants.cancel)
-                .left()
-            addOKButton { this@UncivTextField.copyTextAndSelection(popupTextfield) }
-                .right()
-                .row()
+            // No title row: a phone's keyboard held sideways leaves about a quarter of the screen, and
+            // with three rows the field itself was the one scrolled out of sight (10-01, Seeker).
+            // The field shows the same words as its hint while empty.
+            // ... and the field and its buttons share one row, so the popup is one row tall
+            add(popupTextfield).width(stageToShowOn.width / 2).padRight(8f)
+            add(Constants.cancel.toTextButton().apply { onClick { close() } }).padRight(4f)
+            add(Constants.OK.toTextButton().apply { onClick {
+                this@UncivTextField.copyTextAndSelection(popupTextfield)
+                close()
+            } }).row()
 
             showListeners.add {
                 stageToShowOn.keyboardFocus = popupTextfield
             }
             closeListeners.add {
+                standIn = null
                 stageToShowOn.keyboardFocus = null
                 Gdx.input.setOnscreenKeyboardVisible(false)
             }

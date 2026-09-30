@@ -123,7 +123,7 @@ class DemoCommandReceiver : BroadcastReceiver() {
                 civ.getDiplomacyManager(other)!!.declareWar(); "ok"
             }
             "endturn" -> { ws.nextTurn(); "ending turn" }
-            // The certificate as a mint would draw it, into SaveFiles/certificate-preview.jpg, nothing
+            // The certificate as a mint would draw it, beside SaveFiles (certificate-preview.jpg - in it, it showed in the load list), nothing
             // spent - to compare phones and settings (BUGS #18: high-contrast text, 10-01)
             "certificate" -> {
                 val record = com.unciv.logic.chain.VictoryCertificate.record(info, civ)
@@ -132,7 +132,7 @@ class DemoCommandReceiver : BroadcastReceiver() {
                     com.unciv.logic.chain.CertificateEmblem(record.nation, record.emblemOuter, record.emblemInner),
                     record.anchored
                 ) ?: error("cannot draw")
-                val file = game.files.getSave("certificate-preview.jpg")
+                val file = game.files.getSave("certificate-preview.jpg").parent().parent().child("certificate-preview.jpg")
                 file.writeBytes(jpeg, false)
                 "wrote ${jpeg.size} bytes to ${file.path()}"
             }
