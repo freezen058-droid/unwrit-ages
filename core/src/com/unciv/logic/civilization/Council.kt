@@ -30,6 +30,8 @@ class Council : IsPartOfGameInfoSerialization {
         const val ASK_AGAIN_AFTER = 5
         /** [answered]'s key for the empire-wide unhappiness report. */
         const val UNHAPPY = "unhappy"
+        /** Era number the military advisor arrives in: 2 = Medieval, the Royal Court. */
+        const val MILITARY_ADVISOR_ERA = 2
     }
 
     @Transient
@@ -58,6 +60,10 @@ class Council : IsPartOfGameInfoSerialization {
 
     /** Cities the council took over because of a threat: offered back when it has passed. */
     var takenForThreat = HashSet<String>()
+
+    /** The military advisor garrisons cities with the player's idle military units (it joins the
+     *  council in the Medieval era, as the ROADMAP's era table has it). */
+    var garrisonCities = false
 
     enum class Order(
         val label: String,
@@ -98,7 +104,11 @@ class Council : IsPartOfGameInfoSerialization {
         it.answered.putAll(answered)
         it.standingAnswer = standingAnswer
         it.takenForThreat.addAll(takenForThreat)
+        it.garrisonCities = garrisonCities
     }
+
+    /** The military advisor sits on the council from the Medieval era (the Royal Court) on. */
+    fun hasMilitaryAdvisor() = civ.getEra().eraNumber >= MILITARY_ADVISOR_ERA
 
     /** The advisor chose [construction] for [city] (CityConstructions.chooseNextConstruction). */
     fun chose(city: City, construction: String) {
@@ -163,8 +173,38 @@ class Council : IsPartOfGameInfoSerialization {
                 if (fortified > 0) note(city, "[${city.name}]: [$fortified] idle units hold the city ([${order.label}])")
             }
         }
+        if (garrisonCities && hasMilitaryAdvisor()) garrison()
         watchForThreats()
         watchHappiness()
+    }
+
+    /**
+     * Idle military units - the "due" ones Next unit would cycle through - go to the nearest of our
+     * cities with no military unit in it and fortify there; one in a city already fortifies. Units
+     * with orders, automated or fortified are the player's business and are not touched.
+     */
+    private fun garrison() {
+        val empty = civ.cities.filter { it.getCenterTile().militaryUnit == null }.toMutableList()
+        var sent = 0
+        var fortified = 0
+        for (unit in civ.units.getDueUnits().filter { it.isMilitary() && it.hasMovement() }.toList()) {
+            val here = unit.getTile()
+            if (here.isCityCenter() && here.getOwner() == civ) {
+                if (unit.canFortify()) unit.fortify() else unit.action = UnitActionType.Sleep.value
+                fortified++
+                continue
+            }
+            val city = empty.filter { unit.movement.canReach(it.getCenterTile()) }
+                .minByOrNull { it.getCenterTile().aerialDistanceTo(here) } ?: continue
+            empty.remove(city)
+            val reached = unit.movement.headTowards(city.getCenterTile())
+            if (reached == city.getCenterTile()) { unit.fortifyIfCan(); fortified++ } else sent++
+        }
+        if (sent + fortified > 0) {
+            val line = "The military advisor garrisons our cities: [$sent] units on the way, [$fortified] fortified"
+            report.add(line)
+            civ.addNotification(line, NotificationCategory.Units, NotificationIcon.City)
+        }
     }
 
     /** The empire is unhappy: the council proposes its largest city not already on culture. Asked

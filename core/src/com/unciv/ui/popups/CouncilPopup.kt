@@ -58,6 +58,18 @@ class CouncilPopup(private val worldScreen: WorldScreen) : Popup(worldScreen, Sc
         })
         add(standing).row()
 
+        // The military advisor: from the Medieval era, it garrisons cities with idle units
+        val military = Table().apply { defaults().pad(4f) }
+        if (council.hasMilitaryAdvisor()) {
+            val mine = "Idle units are mine"
+            val garrison = "Garrison our cities with idle units"
+            military.add("Military advisor:".toLabel(fontSize = Constants.defaultFontSize - 2))
+            military.add(TranslatedSelectBox(listOf(mine, garrison), if (council.garrisonCities) garrison else mine).apply {
+                onChange { council.garrisonCities = selected.value == garrison }
+            })
+        } else military.add("The military advisor joins the council in the Medieval era.".toLabel(Color.LIGHT_GRAY, Constants.defaultFontSize - 4))
+        add(military).row()
+
         val report = council.report
         addGoodSizedLabel(if (report.isEmpty()) "The council has nothing to report this turn." else "This turn:",
             size = Constants.defaultFontSize - 2).padTop(10f).row()

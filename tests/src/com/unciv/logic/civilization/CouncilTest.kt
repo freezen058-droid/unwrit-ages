@@ -141,4 +141,22 @@ class CouncilTest {
         civ.council.startTurn()
         assertTrue(civ.council.reports.none { it.startsWith("unhappy:") })   // answered: not again so soon
     }
+
+    @Test
+    fun theMilitaryAdvisorGarrisonsAnEmptyCityFromTheMedievalEra() {
+        val second = testGame.addCity(civ, testGame.getTile(0, 3))
+        val warrior = testGame.addUnit("Warrior", civ, testGame.getTile(1, 2))
+        civ.council.garrisonCities = true
+
+        civ.council.startTurn()                          // Ancient: no military advisor yet
+        assertNull(warrior.action)
+
+        val medieval = testGame.ruleset.eras.values.first { it.eraNumber == Council.MILITARY_ADVISOR_ERA }
+        for (tech in testGame.ruleset.technologies.values.filter { it.era() == medieval.name }.take(1))
+            civ.tech.addTechnology(tech.name)
+        assertTrue(civ.council.hasMilitaryAdvisor())
+        civ.council.startTurn()
+        assertTrue(warrior.getTile() == second.getCenterTile() || warrior.getTile() == city.getCenterTile())
+        assertTrue(warrior.isFortified() || warrior.isSleeping())
+    }
 }
