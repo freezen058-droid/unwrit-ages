@@ -24,7 +24,7 @@ import com.unciv.utils.Concurrency
  *
  * Results go to logcat, tag UACMD. Commands: state | center x y | move id x y | attack id x y |
  * bombard city x y | action id SetUp|Fortify|Sleep|Explore|... | promote id name | build city name |
- * buy city name | tech name | policy name | war civ | peace-no | endturn | certificate
+ * buy city name | tech name | policy name | war civ | peace-no | endturn | certificate | seeker address
  */
 class DemoCommandReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -123,6 +123,13 @@ class DemoCommandReceiver : BroadcastReceiver() {
                 civ.getDiplomacyManager(other)!!.declareWar(); "ok"
             }
             "endturn" -> { ws.nextTurn(); "ending turn" }
+            // Whether an address holds a Seeker Genesis Token, as the gallery's Seeker mark decides it
+            "seeker" -> {
+                com.unciv.logic.chain.ChainWallet.service.seekerOwners(setOf(a[1]),
+                    onError = { android.util.Log.i("UACMD", "seeker ERR ${it.message}") },
+                    onSuccess = { android.util.Log.i("UACMD", "seeker ${a[1]} -> ${a[1] in it}") })
+                "checking"
+            }
             // The certificate as a mint would draw it, beside SaveFiles (certificate-preview.jpg - in it, it showed in the load list), nothing
             // spent - to compare phones and settings (BUGS #18: high-contrast text, 10-01)
             "certificate" -> {

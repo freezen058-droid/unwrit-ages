@@ -162,6 +162,12 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
         /** Every gallery tip carries this account (CloudSave.TIP_PREFIX). Base58 of
          *  SHA-256("unwritages:gallery-tips:v1"): an address nobody holds a key for. */
         private const val TIP_REFERENCE = "44BCs5bxqSWJ4pw12hJUBibeLtbA34cvKztYCpCq68Q9"
+
+        /** Seeker Genesis Token (docs.solanamobile.com, "Seeker Genesis Token"): a Token-2022 mint
+         *  whose MetadataPointer and TokenGroupMember both name this group. Checked 10-01 against two
+         *  real SGTs (member numbers 113174, 113703): mint authority GT2zuHVa..., these extensions. */
+        private const val SGT_GROUP = "GT22s89nU4iWFkNXj1Bw6uYhJJWDRPpShHt4Bk8f99Te"
+        private const val TOKEN_2022_PROGRAM = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
         private const val SKR_USD_MAX = 1.0
 
         // A Solana transaction has to fit in 1232 bytes and the certificate name is player-derived
@@ -1157,6 +1163,67 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
                 launchOnGLThread { onError(ex) }
             }
         }
+    }
+
+    /** Addresses already checked for a Seeker Genesis Token. A token moves only between one owner's
+     *  Seed Vault accounts, so an answer holds for the session. */
+    private val seekerChecked = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
+
+    override fun seekerOwners(addresses: Set<String>, onSuccess: (Set<String>) -> Unit, onError: (Exception) -> Unit) {
+        Concurrency.run("WalletSeekerOwners") {
+            try {
+                for (address in addresses) if (!seekerChecked.containsKey(address))
+                    seekerChecked[address] = holdsSeekerToken(address)
+                launchOnGLThread { onSuccess(addresses.filter { seekerChecked[it] == true }.toSet()) }
+            } catch (ex: Exception) {
+                Log.error("Failed to check Seeker Genesis Tokens", ex)
+                launchOnGLThread { onError(ex) }
+            }
+        }
+    }
+
+    private suspend fun rpcJson(method: String, params: kotlinx.serialization.json.JsonArray): JsonObject {
+        val body = kotlinx.serialization.json.buildJsonObject {
+            put("jsonrpc", kotlinx.serialization.json.JsonPrimitive("2.0"))
+            put("id", kotlinx.serialization.json.JsonPrimitive(1))
+            put("method", kotlinx.serialization.json.JsonPrimitive(method))
+            put("params", params)
+        }
+        val response: JsonObject = httpClient.post(RPC_ENDPOINT) {
+            contentType(ContentType.Application.Json)
+            setBody(body)
+        }.body()
+        (response["error"] as? JsonObject)?.let { throw IllegalStateException("RPC $method: ${it["message"]?.jsonPrimitive?.content}") }
+        return response
+    }
+
+    /** Whether [owner] holds, with a balance, a Token-2022 mint that is a member of the SGT group. */
+    private suspend fun holdsSeekerToken(owner: String): Boolean {
+        val accounts = rpcJson("getTokenAccountsByOwner", kotlinx.serialization.json.buildJsonArray {
+            add(kotlinx.serialization.json.JsonPrimitive(owner))
+            add(kotlinx.serialization.json.buildJsonObject { put("programId", kotlinx.serialization.json.JsonPrimitive(TOKEN_2022_PROGRAM)) })
+            add(kotlinx.serialization.json.buildJsonObject { put("encoding", kotlinx.serialization.json.JsonPrimitive("jsonParsed")) })
+        })["result"]?.jsonObject?.get("value") as? kotlinx.serialization.json.JsonArray ?: return false
+        // An SGT is one token with no decimals; anything else cannot be one
+        val mints = accounts.mapNotNull {
+            val info = it.jsonObject["account"]?.jsonObject?.get("data")?.jsonObject?.get("parsed")?.jsonObject?.get("info")?.jsonObject
+            val amount = info?.get("tokenAmount")?.jsonObject?.get("amount")?.jsonPrimitive?.content
+            if (amount == "1") info["mint"]?.jsonPrimitive?.content else null
+        }
+        for (mint in mints) {
+            val value = rpcJson("getAccountInfo", kotlinx.serialization.json.buildJsonArray {
+                add(kotlinx.serialization.json.JsonPrimitive(mint))
+                add(kotlinx.serialization.json.buildJsonObject { put("encoding", kotlinx.serialization.json.JsonPrimitive("jsonParsed")) })
+            })["result"]?.jsonObject?.get("value") as? JsonObject ?: continue
+            if (value["owner"]?.jsonPrimitive?.content != TOKEN_2022_PROGRAM) continue
+            val extensions = value["data"]?.jsonObject?.get("parsed")?.jsonObject?.get("info")?.jsonObject
+                ?.get("extensions") as? kotlinx.serialization.json.JsonArray ?: continue
+            fun state(name: String) = extensions.map { it.jsonObject }
+                .firstOrNull { it["extension"]?.jsonPrimitive?.content == name }?.get("state")?.jsonObject
+            if (state("metadataPointer")?.get("metadataAddress")?.jsonPrimitive?.content == SGT_GROUP &&
+                state("tokenGroupMember")?.get("group")?.jsonPrimitive?.content == SGT_GROUP) return true
+        }
+        return false
     }
 
     override fun listSaveTips(authors: Map<String, String>, onSuccess: (Map<String, Long>) -> Unit, onError: (Exception) -> Unit) {

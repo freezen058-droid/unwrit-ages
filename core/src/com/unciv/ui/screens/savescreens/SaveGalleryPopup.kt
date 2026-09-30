@@ -50,6 +50,8 @@ class SaveGalleryPopup(private val screen: BaseScreen) : Popup(screen) {
     /** The largest bounty on each save, by its record's signature. */
     private val bounties = mutableMapOf<String, CloudSave.Bounty>()
     private var mine: Set<String> = emptySet()
+    /** Authors who hold a Seeker Genesis Token - one per Seeker phone. */
+    private var seekers: Set<String> = emptySet()
     private var sort = MOST_TIPPED
     private var civ = ALL_CIVS
     private var mapType = ALL_MAPS
@@ -76,6 +78,7 @@ class SaveGalleryPopup(private val screen: BaseScreen) : Popup(screen) {
             // A gallery without its tips still lists every save, by date
             val authors = shared.mapNotNull { r -> r.meta?.author?.let { r.signature to it } }.toMap()
             wallet.listSaveTips(authors, onError = { show() }, onSuccess = { tips.putAll(it); show() })
+            wallet.seekerOwners(authors.values.toSet(), onError = {}, onSuccess = { seekers = it; show() })
             wallet.listBounties(onError = {}, onSuccess = { list ->
                 for (b in list) if ((bounties[b.saveSignature]?.skr ?: 0) < b.skr) bounties[b.saveSignature] = b
                 show()
@@ -137,10 +140,12 @@ class SaveGalleryPopup(private val screen: BaseScreen) : Popup(screen) {
             bounty?.let { "Bounty [${it.skr}] SKR".tr() },
             if (tipped > 0) "[$tipped] SKR tipped".tr() else null
         ).joinToString("  ·  ").toLabel(Color.GOLD)).right().row()
-        button.add(describe(record).toLabel(fontSize = Constants.defaultFontSize - 4, hideIcons = true)).left().colspan(2)
+        val seeker = record.meta?.author in seekers
+        button.add(((if (seeker) "Seeker".tr() + "  ·  " else "") + describe(record))
+            .toLabel(fontSize = Constants.defaultFontSize - 4, hideIcons = true)).left().colspan(2)
         button.touchable = com.badlogic.gdx.scenes.scene2d.Touchable.enabled
         val parentName = record.meta?.parent?.takeIf { it.isNotEmpty() }?.let { p -> records.firstOrNull { it.signature == p }?.name }
-        button.onClick { SaveGalleryDetailPopup(screen, record, isMine(record), isGenesis, parentName, relays(record), bounty) { amount ->
+        button.onClick { SaveGalleryDetailPopup(screen, record, isMine(record), isGenesis, parentName, relays(record), bounty, seeker) { amount ->
             tips[record.signature] = (tips[record.signature] ?: 0) + amount
             show()
         } }
@@ -169,6 +174,7 @@ private class SaveGalleryDetailPopup(
     private val parentName: String?,
     private val relayCount: Int,
     private val bounty: CloudSave.Bounty?,
+    private val seekerAuthor: Boolean,
     private val onTipped: (Long) -> Unit
 ) : Popup(screen) {
 
@@ -213,7 +219,8 @@ private class SaveGalleryDetailPopup(
             civ.civName.tr() + "  ·  " + civ.getEra().name.tr(),
             "Turn [${game.turns}]".tr() + "  ·  " + "Cities: [${civ.cities.size}]".tr(),
             map.type.tr() + " " + map.mapSize.name.tr() + "  ·  " + game.difficulty.tr(),
-            record.meta?.author?.let { "Shared by [${it.take(4)}…${it.takeLast(4)}]".tr() } ?: "",
+            record.meta?.author?.let { "Shared by [${it.take(4)}…${it.takeLast(4)}]".tr() +
+                (if (seekerAuthor) "  ·  " + "Seeker owner".tr() else "") } ?: "",
             parentName?.let { "Continued from [$it]".tr() } ?: "",
             if (relayCount > 0) "Relayed [$relayCount] times".tr() else ""
         )) if (line.isNotEmpty()) side.add(line.toLabel(fontSize = small, hideIcons = true)).row()

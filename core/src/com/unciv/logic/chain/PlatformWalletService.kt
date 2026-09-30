@@ -107,6 +107,12 @@ interface PlatformWalletService {
         onError(UnsupportedOperationException("Wallet integration is not available on this platform"))
     }
 
+    /** Which of [addresses] hold a Seeker Genesis Token - the NFT every Seeker phone's owner gets,
+     *  one per device - for the gallery's Seeker mark. Public data; nothing is signed. */
+    fun seekerOwners(addresses: Set<String>, onSuccess: (Set<String>) -> Unit, onError: (Exception) -> Unit) {
+        onError(UnsupportedOperationException("Wallet integration is not available on this platform"))
+    }
+
     /** The bytes [uploadCloudSave] stored under [arweaveIds], joined back in order. */
     fun downloadCloudSave(arweaveIds: List<String>, onSuccess: (ByteArray) -> Unit, onError: (Exception) -> Unit) {
         onError(UnsupportedOperationException("Wallet integration is not available on this platform"))
