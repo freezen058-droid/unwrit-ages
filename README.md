@@ -33,6 +33,10 @@ On Solana, through the Mobile Wallet Adapter (`core/src/com/unciv/logic/chain/`,
   itself) before loading it. Players tip authors in SKR (1, 10, 17 for Unciv's founding year, or any
   amount); a tip counts only once its transaction shows the author received it. The first save ever
   shared is marked Genesis.
+  A game taken over from a shared save and shared again names its parent, so the gallery shows each
+  save's line of players ("relayed N times"), and a certificate won from a shared save names it.
+  Authors can post a bounty on their save - SKR for the first victory won from it within N turns,
+  without AutoPlay - paid by hand on seeing the winner's certificate.
 
 For the phone:
 
