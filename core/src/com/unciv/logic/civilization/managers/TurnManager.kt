@@ -75,6 +75,9 @@ class TurnManager(val civInfo: Civilization) {
 
         for (unit in civInfo.units.getCivUnits()) UnitTurnManager(unit).startTurn()
 
+        // After the cities and units are up to date for the turn: the advisors act on what they see
+        if (civInfo.playerType == PlayerType.Human) civInfo.council.startTurn()
+
         if (civInfo.playerType == PlayerType.Human && UncivGame.Current.settings.automatedUnitsMoveOnTurnStart) {
             civInfo.hasMovedAutomatedUnits = true
             for (unit in civInfo.units.getCivUnits())

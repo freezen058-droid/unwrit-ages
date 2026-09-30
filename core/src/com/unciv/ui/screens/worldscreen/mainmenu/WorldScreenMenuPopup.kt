@@ -37,7 +37,7 @@ class WorldScreenMenuPopup(
         val showSave = !worldScreen.gameInfo.gameParameters.isOnlineMultiplayer
         val showMusic = worldScreen.game.musicController.isMusicAvailable()
         val showConsole = WorldScreen.DEVELOPER_CONSOLE_OPEN && showSave && expertMode
-        val buttonCount = 9 + (if (showSave) 1 else 0) + (if (showMusic) 1 else 0) + (if (showConsole) 1 else 0)
+        val buttonCount = 10 + (if (showSave) 1 else 0) + (if (showMusic) 1 else 0) + (if (showConsole) 1 else 0)
 
         val emptyPrefHeight = this.prefHeight
         val firstCell = addButton("Main menu") {
@@ -72,6 +72,11 @@ class WorldScreenMenuPopup(
         addButton("Start new game", KeyboardBinding.NewGame) {
             close()
             worldScreen.openNewGameScreen()
+        }.nextColumn()
+        // The council (phase 1): named for the era - Council of Elders, Royal Court, Privy Council, Cabinet
+        addButton(worldScreen.selectedCiv.council.name(), KeyboardBinding.None) {
+            close()
+            com.unciv.ui.popups.CouncilPopup(worldScreen)
         }.nextColumn()
         addButton("Victory status", KeyboardBinding.VictoryScreen) {
             close()

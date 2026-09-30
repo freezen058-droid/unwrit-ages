@@ -881,7 +881,13 @@ class CityConstructions : IsPartOfGameInfoSerialization {
 
         val isCurrentPlayersTurn = city.civ.gameInfo.isUsersTurn()
                 || !city.civ.gameInfo.gameParameters.isOnlineMultiplayer
-        if ((isCurrentPlayersTurn && (UncivGame.Current.settings.autoAssignCityProduction
+        val councilOrder = if (city.civ.isHuman()) city.civ.council.orderOf(city) else null
+        if (councilOrder != null) {
+            val before = currentConstructionName()
+            ConstructionAutomation(this, councilOrder.personality, stockpileMilitary = councilOrder.stockpiles).chooseNextConstruction()
+            if (currentConstructionName() != before) city.civ.council.chose(city, currentConstructionName())
+        }
+        else if ((isCurrentPlayersTurn && (UncivGame.Current.settings.autoAssignCityProduction
                 || UncivGame.Current.worldScreen?.autoPlay?.isAutoPlayingAndFullAutoPlayAI() == true)) // only automate if the active human player has the setting to automate production
                 || city.civ.isAI() || city.isPuppet) {
             ConstructionAutomation(this).chooseNextConstruction()

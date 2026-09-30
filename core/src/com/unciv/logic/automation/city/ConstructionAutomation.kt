@@ -17,6 +17,7 @@ import com.unciv.models.ruleset.IConstruction
 import com.unciv.models.ruleset.INonPerpetualConstruction
 import com.unciv.models.ruleset.MilestoneType
 import com.unciv.models.ruleset.PerpetualConstruction
+import com.unciv.models.ruleset.nation.Personality
 import com.unciv.models.ruleset.nation.PersonalityValue
 import com.unciv.models.ruleset.unique.GameContext
 import com.unciv.models.ruleset.unique.UniqueType
@@ -30,7 +31,14 @@ import kotlin.math.max
 import kotlin.math.sqrt
 import com.unciv.logic.automation.Timers.Companion.timeThis
 
-class ConstructionAutomation(val cityConstructions: CityConstructions) {
+/** @param personalityOverride what the council's advisor weighs by, for a city handed to it
+ *  (Council.Order.personality); null = the civ's own personality.
+ *  @param stockpileMilitary a council order that wants units whenever the city can train them. */
+class ConstructionAutomation(
+    val cityConstructions: CityConstructions,
+    personalityOverride: Personality? = null,
+    private val stockpileMilitary: Boolean = false
+) {
 
     private val city = cityConstructions.city
     private val civInfo = city.civ
@@ -39,7 +47,7 @@ class ConstructionAutomation(val cityConstructions: CityConstructions) {
     private val cityState = city.state
     private val cityStats = city.cityStats
 
-    private val personality = civInfo.getPersonality()
+    private val personality = personalityOverride ?: civInfo.getPersonality()
 
     private val constructionsToAvoid = personality.getMatchingUniques(UniqueType.WillNotBuild, cityState)
         .map{ it.params[0] }
@@ -153,11 +161,11 @@ class ConstructionAutomation(val cityConstructions: CityConstructions) {
     }
 
     private fun addMilitaryUnitChoice() {
-        if (!isAtWar && !cityIsOverAverageProduction) return // don't make any military units here. Infrastructure first!
+        if (!stockpileMilitary && !isAtWar && !cityIsOverAverageProduction) return // don't make any military units here. Infrastructure first!
         // There is a risk however, that these cities run out of things to build, and start to construct nothing
         if (civInfo.stats.getUnitSupplyDeficit() > 0) return // we don't want more units if it's already hurting our empire
         // todo: add worker disbandment and consumption of great persons if under attack & short on unit supply
-        if (!isAtWar && (civInfo.stats.statsForNextTurn.gold < 0 || militaryUnits > max(7, cities * 5))) return
+        if (!stockpileMilitary && !isAtWar && (civInfo.stats.statsForNextTurn.gold < 0 || militaryUnits > max(7, cities * 5))) return
         if (civInfo.gold < -50) return
 
         val militaryUnit = Automation.chooseMilitaryUnit(city, units) ?: return
@@ -174,7 +182,7 @@ class ConstructionAutomation(val cityConstructions: CityConstructions) {
                 && city.getCenterTile().getTilesInDistance(city.getExpandRange()).none { it.militaryUnit?.civ == civInfo })
             modifier = 5f // there's a settler just sitting here, doing nothing - BAD
 
-        if (!civInfo.isAIOrAutoPlaying()) modifier /= 2 // Players prefer to make their own unit choices usually
+        if (!civInfo.isAIOrAutoPlaying() && !stockpileMilitary) modifier /= 2 // Players prefer to make their own unit choices usually
         modifier *= personality.modifierFocus(PersonalityValue.Military, .3f)
         addChoice(relativeCostEffectiveness, militaryUnit, modifier)
     }

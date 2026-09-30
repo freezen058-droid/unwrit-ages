@@ -163,6 +163,9 @@ class Civilization : IsPartOfGameInfoSerialization {
     var tech = TechManager()
     var policies = PolicyManager()
     var civConstructions = CivConstructions()
+
+    /** The player's council of advisors ([Council]); empty for AI civs, which never use it. */
+    var council = Council()
     var questManager = QuestManager()
     var religionManager = ReligionManager()
     var goldenAges = GoldenAgeManager()
@@ -313,6 +316,7 @@ class Civilization : IsPartOfGameInfoSerialization {
         toReturn.tech = tech.clone()
         toReturn.policies = policies.clone()
         toReturn.civConstructions = civConstructions.clone().also { it.setTransients(toReturn) }
+        toReturn.council = council.clone().also { it.setTransients(toReturn) }
         toReturn.religionManager = religionManager.clone()
         toReturn.questManager = questManager.clone()
         toReturn.goldenAges = goldenAges.clone()
@@ -961,6 +965,7 @@ class Civilization : IsPartOfGameInfoSerialization {
         goldenAges.civInfo = this
         greatPeople.civInfo = this
         civConstructions.setTransients(civInfo = this)
+        council.setTransients(this)
         policies.setTransients(this)
         questManager.setTransients(this)
         religionManager.setTransients(this) // needs to be before tech, since tech setTransients looks at all uniques
