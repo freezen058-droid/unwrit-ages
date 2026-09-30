@@ -78,6 +78,9 @@ open class AndroidLauncher : AndroidApplication() {
         // can be triggered via `adb shell am start -a android.intent.action.VIEW -d https://unciv.app/g/G-ef0f5e5a-f1db-4a54-9d94-92ca986afe8a-9 com.unciv.app`
         // or whatever your game id is
         game!!.setDeepLinkedGame(intent)
+        if (BuildConfig.DEMO_COMMANDS)
+            androidx.core.content.ContextCompat.registerReceiver(this, DemoCommandReceiver(),
+                android.content.IntentFilter("com.unwritages.app.CMD"), androidx.core.content.ContextCompat.RECEIVER_EXPORTED)
         game!!.addScreenObscuredListener()
         processPossibleFriendDeepLink(intent)
     }

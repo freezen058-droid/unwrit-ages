@@ -80,12 +80,22 @@ android {
     buildTypes {
         debug {
             isDebuggable = true
+            buildConfigField("boolean", "DEMO_COMMANDS", "false")
+        }
+        create("demo") {
+            // Store signing + DemoCommandReceiver (adb-driven play for demo recording). Never shipped.
+            initWith(getByName("release"))
+            buildConfigField("boolean", "DEMO_COMMANDS", "true")
+            matchingFallbacks += "release"
+            signingConfig = signingConfigs.getByName("release")
+            isDebuggable = false
         }
         release {
             // If you make this true you get a version of the game that just flat-out doesn't run
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             isDebuggable = false
+            buildConfigField("boolean", "DEMO_COMMANDS", "false")
             signingConfig = signingConfigs.getByName("release")
         }
     }
@@ -94,6 +104,7 @@ android {
         disable += "MissingTranslation"   // see res/values/strings.xml
     }
     compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
         isCoreLibraryDesugaringEnabled = true
     }
@@ -103,6 +114,7 @@ android {
     }
     buildFeatures {
         aidl = true
+        buildConfig = true
     }
 }
 
