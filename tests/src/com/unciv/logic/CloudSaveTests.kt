@@ -98,15 +98,12 @@ class CloudSaveTests {
     }
 
     @Test
-    fun tipsAreTalliedPerSaveAndImpossibleClaimsIgnored() {
-        val memos = listOf(
-            "[${CloudSave.tipMemo("sigA", 5).length + 2}] " + CloudSave.tipMemo("sigA", 5),
-            CloudSave.tipMemo("sigA", 1),
-            CloudSave.tipMemo("sigB", 1) + "; [5] other",
-            CloudSave.tipMemo("sigB", 1_000_000),   // more than the game ever offers: not counted
-            CloudSave.tipMemo("sigC", 0),
-            "unwritages-save:g:x:" + "a".repeat(64)
-        )
-        Assert.assertEquals(mapOf("sigA" to 6L, "sigB" to 1L), CloudSave.tally(memos))
+    fun tipMemosParseAsTheRpcReportsThem() {
+        val memo = CloudSave.tipMemo("sigA", 17)
+        Assert.assertEquals("sigA" to 17L, CloudSave.parseTip("[${memo.length}] $memo; [5] other"))
+        // Large claims parse - whether they were paid is checked against the transaction
+        Assert.assertEquals("sigB" to 1_000L, CloudSave.parseTip(CloudSave.tipMemo("sigB", 1_000)))
+        Assert.assertNull(CloudSave.parseTip(CloudSave.tipMemo("sigC", 0)))
+        Assert.assertNull(CloudSave.parseTip("unwritages-save:g:x:" + "a".repeat(64)))
     }
 }

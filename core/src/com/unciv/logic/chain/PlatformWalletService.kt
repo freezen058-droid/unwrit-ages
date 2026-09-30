@@ -90,8 +90,10 @@ interface PlatformWalletService {
         onError(UnsupportedOperationException("Wallet integration is not available on this platform"))
     }
 
-    /** Whole SKR tipped per shared save, keyed by its record's transaction signature ([CloudSave.tally]). */
-    fun listSaveTips(onSuccess: (Map<String, Long>) -> Unit, onError: (Exception) -> Unit) {
+    /** Whole SKR tipped per shared save, keyed by its record's transaction signature. [authors] maps
+     *  each save to its author: a tip counts only if that author's SKR balance grew by at least what
+     *  its memo claims, in that transaction. */
+    fun listSaveTips(authors: Map<String, String>, onSuccess: (Map<String, Long>) -> Unit, onError: (Exception) -> Unit) {
         onError(UnsupportedOperationException("Wallet integration is not available on this platform"))
     }
 

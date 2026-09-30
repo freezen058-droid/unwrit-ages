@@ -1138,16 +1138,59 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
         }
     }
 
-    override fun listSaveTips(onSuccess: (Map<String, Long>) -> Unit, onError: (Exception) -> Unit) {
+    /** Tip transactions already checked: signature -> (save signature, whole SKR), or null when the
+     *  transaction did not pay what its memo claims. A settled transaction never changes. */
+    private val checkedTips = java.util.concurrent.ConcurrentHashMap<String, java.util.Optional<Pair<String, Long>>>()
+
+    override fun listSaveTips(authors: Map<String, String>, onSuccess: (Map<String, Long>) -> Unit, onError: (Exception) -> Unit) {
         Concurrency.run("WalletListTips") {
             try {
-                val tips = CloudSave.tally(memoHistory(TIP_REFERENCE).map { it.first })
+                for ((memo, txSignature, _) in memoHistory(TIP_REFERENCE)) {
+                    if (checkedTips.containsKey(txSignature)) continue
+                    val (save, wholeSkr) = CloudSave.parseTip(memo) ?: continue
+                    val author = authors[save] ?: continue
+                    val paid = skrReceived(txSignature, author) ?: continue     // not readable yet: next time
+                    checkedTips[txSignature] = java.util.Optional.ofNullable(
+                        if (paid >= wholeSkr * 1_000_000L) save to wholeSkr else null)
+                }
+                val tips = checkedTips.values.mapNotNull { it.orElse(null) }
+                    .groupBy({ it.first }, { it.second }).mapValues { it.value.sum() }
                 launchOnGLThread { onSuccess(tips) }
             } catch (ex: Exception) {
                 Log.error("Failed to list save tips", ex)
                 launchOnGLThread { onError(ex) }
             }
         }
+    }
+
+    /** SKR base units [owner] gained in transaction [signature] (its token balances after minus before);
+     *  0 when it failed or moved none to them, null when the transaction cannot be read yet. */
+    private suspend fun skrReceived(signature: String, owner: String): Long? {
+        val requestBody = kotlinx.serialization.json.buildJsonObject {
+            put("jsonrpc", kotlinx.serialization.json.JsonPrimitive("2.0"))
+            put("id", kotlinx.serialization.json.JsonPrimitive(1))
+            put("method", kotlinx.serialization.json.JsonPrimitive("getTransaction"))
+            put("params", kotlinx.serialization.json.buildJsonArray {
+                add(kotlinx.serialization.json.JsonPrimitive(signature))
+                add(kotlinx.serialization.json.buildJsonObject {
+                    put("encoding", kotlinx.serialization.json.JsonPrimitive("jsonParsed"))
+                    put("maxSupportedTransactionVersion", kotlinx.serialization.json.JsonPrimitive(0))
+                })
+            })
+        }
+        val response: JsonObject = httpClient.post(RPC_ENDPOINT) {
+            contentType(ContentType.Application.Json)
+            setBody(requestBody)
+        }.body()
+        val result = response["result"] as? JsonObject ?: return null
+        val meta = result["meta"] as? JsonObject ?: return null
+        val err = meta["err"]
+        if (err != null && err !is kotlinx.serialization.json.JsonNull) return 0L
+        fun total(field: String) = (meta[field] as? kotlinx.serialization.json.JsonArray).orEmpty()
+            .mapNotNull { it as? JsonObject }
+            .filter { it["mint"]?.jsonPrimitive?.content == SKR_MINT && it["owner"]?.jsonPrimitive?.content == owner }
+            .sumOf { it["uiTokenAmount"]?.jsonObject?.get("amount")?.jsonPrimitive?.content?.toLongOrNull() ?: 0L }
+        return total("postTokenBalances") - total("preTokenBalances")
     }
 
     override fun tipSaveAuthor(author: String, saveSignature: String, wholeSkr: Long, onSuccess: (txSignature: String) -> Unit, onError: (Exception) -> Unit) {

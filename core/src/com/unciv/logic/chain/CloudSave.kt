@@ -180,16 +180,14 @@ object CloudSave {
         if (at < 0) return null
         val parts = memoField.substring(at + TIP_PREFIX.length).substringBefore(";").trim().split(":")
         if (parts.size < 2 || parts[0].isBlank()) return null
-        val amount = parts[1].toLongOrNull()?.takeIf { it in 1..MAX_TIP_SKR } ?: return null
+        val amount = parts[1].toLongOrNull()?.takeIf { it > 0 } ?: return null
         return parts[0] to amount
     }
 
-    /** A memo claims its amount; a claim above what the game ever offers is not counted at all. */
+    /** The most the game's own tip buttons send at once. A memo only claims its amount; what counts
+     *  is what the author received, checked against the transaction (listSaveTips), so larger tips
+     *  sent some other way still count once they are real. */
     const val MAX_TIP_SKR = 100L
-
-    /** SKR tipped per save signature, from the tip memos of successful transactions. */
-    fun tally(memoFields: List<String>): Map<String, Long> =
-        memoFields.mapNotNull { parseTip(it) }.groupBy({ it.first }, { it.second }).mapValues { it.value.sum() }
 
     /**
      * The record in a memo as the RPC reports it - getSignaturesForAddress prefixes each memo

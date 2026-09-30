@@ -72,7 +72,8 @@ class SaveGalleryPopup(private val screen: BaseScreen) : Popup(screen) {
         wallet.listSaveRecords(true, onError = ::failed, onSuccess = { shared ->
             records = shared
             // A gallery without its tips still lists every save, by date
-            wallet.listSaveTips(onError = { show() }, onSuccess = { tips.putAll(it); show() })
+            val authors = shared.mapNotNull { r -> r.meta?.author?.let { r.signature to it } }.toMap()
+            wallet.listSaveTips(authors, onError = { show() }, onSuccess = { tips.putAll(it); show() })
             if (ChainWallet.isConnected)
                 wallet.listSaveRecords(false, onError = {}, onSuccess = { own -> mine = own.map { it.signature }.toSet(); show() })
         })
