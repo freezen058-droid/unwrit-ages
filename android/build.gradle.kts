@@ -102,6 +102,9 @@ android {
 
     lint {
         disable += "MissingTranslation"   // see res/values/strings.xml
+        // POST_NOTIFICATIONS is removed in the manifest on purpose (09-26): only upstream's multiplayer
+        // turn checker posts notifications, and we ship without it. Lint's error stopped CI's `check`.
+        disable += "NotificationPermission"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8

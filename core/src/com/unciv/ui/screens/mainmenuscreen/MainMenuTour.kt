@@ -178,18 +178,17 @@ class MainMenuTour(
 
     private fun outline(left: Float, bottom: Float, right: Float, top: Float) {
         val t = 3f
-        for ((x, y, w, h) in listOf(
-            listOf(left, bottom, right - left, t),
-            listOf(left, top - t, right - left, t),
-            listOf(left, bottom, t, top - bottom),
-            listOf(right - t, bottom, t, top - bottom),
-        )) {
+        fun line(x: Float, y: Float, w: Float, h: Float) {
             val line = ImageGetter.getWhiteDot()
             line.color = accent
             line.setBounds(x, y, w, h)
             line.touchable = Touchable.disabled
             addActor(line)
         }
+        line(left, bottom, right - left, t)
+        line(left, top - t, right - left, t)
+        line(left, bottom, t, top - bottom)
+        line(right - t, bottom, t, top - bottom)
     }
 
     private companion object {
