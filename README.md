@@ -46,7 +46,7 @@ For the phone:
   a new-player guide, and full Traditional and Simplified Chinese.
 - Fewer taps per turn (1.0.3): repeat a unit in a city's production queue, fortify all idle
   units at once, Automate on the first page, and cities that choose their own production.
-- The Council (in progress): hand a city to the domestic advisor with an order - grow, production,
+- The Council (in progress, coming in 1.1): hand a city to the domestic advisor with an order - grow, production,
   research, treasury, culture, stockpile the military, hold - and it runs the city with the game's
   own AI, weighted by the order, reporting everything it does. When enemies mass near a city, the
   council asks what to do, with one-tap answers.
