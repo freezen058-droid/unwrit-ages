@@ -4,8 +4,8 @@ package com.unciv.build
 object BuildConfig {
     /** Display name of this fork, shown as the app name and in store listings */
     const val appName = "Unwrit Ages"
-    const val appCodeNumber = 3
-    const val appVersion = "1.0.2"
+    const val appCodeNumber = 4
+    const val appVersion = "1.0.3"
 
     /** Kotlin/R-class package namespace. Kept as the upstream Unciv package so we don't
      * have to rewrite every source file's `package` declaration and R references. */

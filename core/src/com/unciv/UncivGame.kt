@@ -494,7 +494,7 @@ private fun logRunningThreads() {
         // CompatibilityVersion.compareTo only compares its own `number`
         // (CURRENT_COMPATIBILITY_NUMBER), never the Version it carries.
         //region AUTOMATICALLY GENERATED VERSION DATA - DO NOT CHANGE THIS REGION, INCLUDING THIS COMMENT
-        val VERSION = Version("1.0.2", 3)
+        val VERSION = Version("1.0.3", 4)
         //endregion
 
         /** Global reference to the one Gdx.Game instance created by the platform launchers - do not use without checking [isCurrentInitialized] first. */
