@@ -62,7 +62,7 @@ class SaveGalleryPopup(private val screen: BaseScreen) : Popup(screen) {
 
     init {
         addGoodSizedLabel("Shared saves").row()
-        add("Download a world online, then play offline. No wallet needed to play."
+        add("Download a shared save online, then play offline. No wallet needed to play."
             .toLabel().apply { wrap = true }).width(screen.stage.width * 0.7f).row()
         add(navigation).width(screen.stage.width * 0.7f).row()
         add(filters).row()
@@ -113,13 +113,13 @@ class SaveGalleryPopup(private val screen: BaseScreen) : Popup(screen) {
         navigation.defaults().pad(4f)
         val parent = continuationOf
         if (parent != null) {
-            navigation.add("Next chapters of [${parent.name}]".toLabel(hideIcons = true).apply { wrap = true })
+            navigation.add("Continuations of [${parent.name}]".toLabel(hideIcons = true).apply { wrap = true })
                 .width(screen.stage.width * 0.43f).left()
             navigation.add("All shared saves".toTextButton().apply {
                 onClick { continuationOf = null; show() }
             })
         } else {
-            navigation.add("How to share your next chapter".toTextButton().apply {
+            navigation.add("How to share a save".toTextButton().apply {
                 onClick { SharedWorldHelpPopup(screen) }
             })
         }
@@ -133,7 +133,7 @@ class SaveGalleryPopup(private val screen: BaseScreen) : Popup(screen) {
                 else compareByDescending { it.blockTime }
             ).sortedByDescending { parent == null && it.signature == genesis }
         status.setText(when {
-            parent != null && shown.isEmpty() -> "No next chapters are listed yet. Play this world and share your own continuation.".tr()
+            parent != null && shown.isEmpty() -> "No continuations yet. Load this save and share your progress.".tr()
             records.isEmpty() -> "No one has shared a save yet.".tr()
             shown.isEmpty() -> "No shared save matches these filters.".tr()
             else -> ""
@@ -230,8 +230,8 @@ private class SaveGalleryDetailPopup(
         if (genesis) addGoodSizedLabel("Genesis - the first save ever shared", color = Color.GOLD).row()
         add(body).row()
         add(status).width(screen.stage.width * 0.6f).row()
-        addButton("View next chapters") { close(); onContinuations() }
-        if (source != null) addButton("View source world") { close(); onSource() }
+        addButton("View continuations") { close(); onContinuations() }
+        if (source != null) addButton("View source save") { close(); onSource() }
         addCloseButton()
         closeListeners.add { closed = true; texture?.dispose(); texture = null }
         open(force = true)
@@ -336,13 +336,13 @@ private class SaveGalleryDetailPopup(
 /** Reading this guide never connects a wallet or requests a transaction. */
 private class SharedWorldHelpPopup(screen: BaseScreen) : Popup(screen) {
     init {
-        addGoodSizedLabel("Share a world, continue a story").row()
+        addGoodSizedLabel("Share and continue saves").row()
         val textWidth = screen.stage.width * 0.65f
         for (line in listOf(
-            "Choose a shared world and tap Play from here. Downloading needs internet; playing and local saves do not need a wallet.",
-            "To publish your next chapter, connect your wallet and enable on-chain saves in Wallet. In your game, open Save game, choose a name and enable Share this save.",
-            "Publishing costs 1 SKR plus the SOL network fee. Shared saves are public. Publishing a continuation keeps its link to the world you loaded.",
-            "Open that world's View next chapters to see how others continued it. Return to All shared saves to explore more worlds."
+            "Choose a shared save and tap Play from here. Downloading needs internet; playing and local saves do not need a wallet.",
+            "To share a save, connect your wallet and enable on-chain saves in Wallet. In your game, open Save game, choose a name and enable Share this save.",
+            "Sharing costs 1 SKR plus the SOL network fee. Shared saves are public. Sharing a continued save preserves its link to the source save.",
+            "Use View continuations to see progress shared from this save. Return to All shared saves to browse other saves."
         )) add(line.toLabel().apply { wrap = true }).width(textWidth).pad(8f).row()
         addCloseButton()
         open(force = true)
