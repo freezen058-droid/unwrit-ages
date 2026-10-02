@@ -7,6 +7,10 @@ import com.badlogic.gdx.utils.Align
 import com.unciv.models.translations.tr
 import com.unciv.ui.components.extensions.addSeparator
 import com.unciv.ui.components.extensions.toLabel
+import com.unciv.ui.components.extensions.toTextButton
+import com.unciv.ui.components.input.KeyCharAndCode
+import com.unciv.ui.components.input.keyShortcuts
+import com.unciv.ui.components.input.onClick
 import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.images.ImageGetter
 
@@ -15,6 +19,13 @@ class UnwritAgesFeaturesPopup(stage: Stage, onDismiss: () -> Unit = {}) : Popup(
     private val content = Table(BaseScreen.skin)
     private val textWidth = minOf(stage.width * 0.72f, 720f)
     private var index = 0
+    private val skipButton = "Skip".toTextButton().apply {
+        onClick {
+            close()
+            ToastPopup("Replay anytime: Guide > Sharing & keepsakes.".tr(), stage, 4000)
+        }
+        keyShortcuts.add(KeyCharAndCode.BACK)
+    }
     private val backButton = addButton("Back") { showPage(index - 1) }.actor
     private val nextButton = addButton("Next") {
         if (index == pages.lastIndex) close() else showPage(index + 1)
@@ -22,7 +33,6 @@ class UnwritAgesFeaturesPopup(stage: Stage, onDismiss: () -> Unit = {}) : Popup(
 
     init {
         add(content).width(textWidth).row()
-        addCloseButton("Skip")
         clickBehindToClose = false
         closeListeners.add(onDismiss)
         showPage(0)
@@ -32,8 +42,11 @@ class UnwritAgesFeaturesPopup(stage: Stage, onDismiss: () -> Unit = {}) : Popup(
         index = pageIndex
         content.clearChildren()
         content.defaults().pad(4f).fillX()
-        content.add(("Unwrit Ages features".tr() + "  ${index + 1}/${pages.size}")
-            .toLabel(accent, 18)).width(textWidth).row()
+        val header = Table(BaseScreen.skin)
+        header.add(("Unwrit Ages features".tr() + "  ${index + 1}/${pages.size}")
+            .toLabel(accent, 18)).growX().left()
+        header.add(skipButton).width(72f).height(32f).padLeft(20f).right()
+        content.add(header).width(textWidth).row()
         addIntroContent(content, pages[index], introductions[index], textWidth)
         backButton.isDisabled = index == 0
         nextButton.setText((if (index == pages.lastIndex) "Got it" else "Next").tr())
@@ -54,25 +67,25 @@ class UnwritAgesFeaturesPopup(stage: Stage, onDismiss: () -> Unit = {}) : Popup(
         private class Intro(val icons: List<Pair<String, String>>, val points: List<String>)
         private val introductions = listOf(
             Intro(listOf("Shield" to "Fortify all", "Resume" to "Repeat", "Cities" to "Auto production"), listOf(
-                "Play offline. No wallet needed.",
+                "Build your civilization offline.",
                 "Spend fewer taps on routine work.",
                 "Guide: learn in a practice game.")),
             Intro(listOf("Load" to "Save", "Link" to "Same wallet", "Load" to "Restore"), listOf(
                 "Private saves: encrypted for your wallet.",
                 "1 SKR per save + SOL network fee.",
-                "Load game > Restore from the chain.")),
+                "Route: Load game > Restore from the chain.")),
             Intro(listOf("Load" to "Load", "Resume" to "Play", "Link" to "Share"), listOf(
-                "Load and play free. No wallet needed.",
+                "Continue another player's civilization.",
                 "Share publicly: 1 SKR + SOL network fee.",
-                "Shared saves > View continuations.")),
+                "Route: Shared saves > View continuations.")),
             Intro(listOf("New" to "New game", "Link" to "Approve", "Checkmark" to "Start record"), listOf(
-                "Optional: record your starting map on-chain.",
-                "New game > Anchor the start on-chain.",
-                "SOL network fee. No cheat-free guarantee.")),
+                "Record your civilization's beginning on-chain.",
+                "Only the SOL network fee.",
+                "Route: New game > Anchor the start on-chain.")),
             Intro(listOf("Capital" to "Win", "Banner" to "Certificate", "Link" to "Your wallet"), listOf(
-                "Optional victory certificate in your wallet.",
+                "Collect your victory certificate in your wallet.",
                 "US$0.90 in SOL or SKR + network fee.",
-                "Mint after winning, or finish without it."))
+                "Mint your certificate after winning."))
         )
         private val pages = listOf(
             Feature("Your empire, your choice",
@@ -98,6 +111,9 @@ class UnwritAgesFeaturesPopup(stage: Stage, onDismiss: () -> Unit = {}) : Popup(
             table.pad(10f)
             table.defaults().pad(8f).fillX()
             val textWidth = width - 60f
+            table.add("Replay feature introduction".toTextButton().apply {
+                onClick { stage?.let { UnwritAgesFeaturesPopup(it).open(true) } }
+            }).width(textWidth).padBottom(12f).row()
             for ((index, feature) in pages.drop(1).withIndex()) {
                 if (index > 0) table.addSeparator(Color.GRAY).padTop(12f).padBottom(12f)
                 addPageContent(table, feature, textWidth)
