@@ -38,6 +38,17 @@ class DemoCommandReceiver : BroadcastReceiver() {
 
     private fun run(a: List<String>): String {
         val game = UncivGame.Current
+        // Internal demo only: replay first-entry guidance without clearing saves or other preferences.
+        if (a[0] == "onboarding") {
+            val settings = game.settings
+            val previous = "menu=${settings.mainMenuTourShown} features=${settings.unwritAgesFeaturesVersion} guide=${settings.guideTourShown}"
+            settings.mainMenuTourShown = false
+            settings.unwritAgesFeaturesVersion = 0
+            settings.guideTourShown = false
+            settings.save()
+            game.replaceCurrentScreen(com.unciv.ui.screens.mainmenuscreen.MainMenuScreen())
+            return "onboarding replay; previous: $previous; existing saves preserved"
+        }
         val ws = game.worldScreen ?: return "ERR no world screen"
         val info = ws.gameInfo
         val civ = info.getCurrentPlayerCivilization()
