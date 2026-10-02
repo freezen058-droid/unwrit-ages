@@ -68,9 +68,7 @@ class TutorialGuidePopup(
             "War" to listOf(
                 "Combat", "Injured Units", "Experience", "BarbarianEncountered", "Enemy City",
                 "EnemyCityNeedsConqueringWithMeleeUnit", "After Conquering", "Pillaging"),
-            // The certificate belongs with victory: it is what a win is *for*, if you want one.
-            "Victory and keepsakes" to listOf(
-                "Victory Types", "Victory Certificate", "Your Wallet", "Recording Saves On-Chain"),
+            "Victory" to listOf("Victory Types"),
         )
     }
 
@@ -101,7 +99,7 @@ class TutorialGuidePopup(
             tabs.addPage(title, page, ImageGetter.getImage("OtherIcons/Quickstart"), 24f)
         }
 
-        tabs.addPage("Unwrit Ages features", UnwritAgesFeaturesPopup.guidePage(tabMaxWidth),
+        tabs.addPage("Sharing & keepsakes", UnwritAgesFeaturesPopup.guidePage(tabMaxWidth),
             ImageGetter.getImage("OtherIcons/Quickstart"), 24f)
 
         // Last tab: the whole list with what is done and what each undone one is waiting for.

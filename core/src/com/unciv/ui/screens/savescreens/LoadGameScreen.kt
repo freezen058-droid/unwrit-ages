@@ -85,12 +85,9 @@ class LoadGameScreen : LoadOrSaveScreen() {
         add(errorLabel).width(stage.width / 2).center().row()
         add(deleteSaveButton).row()
         add(showAutosavesCheckbox).row()
-        // Saves recorded on the chain (cloud saves): your own back onto this device, or another
-        // player's shared one to play on - the one way in for a game from elsewhere, and it is
-        // marked "Continued from turn N" (ROADMAP "Provenance", user 09-26)
+        // Restore your own cloud saves here. Public worlds have their own main-menu entry.
         if (ChainWallet.service.isAvailable) {
             add("Restore from the chain".toTextButton().apply { onClick { ChainSavesPopup(this@LoadGameScreen, shared = false) } }).row()
-            add("Shared saves".toTextButton().apply { onClick { SaveGalleryPopup(this@LoadGameScreen) } }).row()
         }
     }
 

@@ -67,13 +67,13 @@ class UnwritAgesFeaturesPopup(stage: Stage, onDismiss: () -> Unit = {}) : Popup(
                 "Choose whether to mint on the victory screen. You can also finish the game without minting anything.")
         )
 
-        /** The same information stays available from the Guide after dismissing the tour. */
+        /** Optional sharing and keepsakes stay available without repeating the basic gameplay chapter. */
         fun guidePage(width: Float): Table {
             val table = Table(BaseScreen.skin)
             table.pad(10f)
             table.defaults().pad(8f).fillX()
             val textWidth = width - 60f
-            for ((index, feature) in pages.withIndex()) {
+            for ((index, feature) in pages.drop(1).withIndex()) {
                 if (index > 0) table.addSeparator(Color.GRAY).padTop(12f).padBottom(12f)
                 addPageContent(table, feature, textWidth)
             }
