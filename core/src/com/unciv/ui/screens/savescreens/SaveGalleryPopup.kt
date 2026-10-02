@@ -44,6 +44,7 @@ class SaveGalleryPopup(private val screen: BaseScreen) : Popup(screen) {
 
     private val status = "Loading...".toLabel().apply { wrap = true }
     private val filters = Table()
+    private val navigation = Table()
     private val list = Table()
     private var records: List<CloudSave.Record> = emptyList()
     private val tips = mutableMapOf<String, Long>()
@@ -56,19 +57,30 @@ class SaveGalleryPopup(private val screen: BaseScreen) : Popup(screen) {
     private var civ = ALL_CIVS
     private var mapType = ALL_MAPS
     private var era = ALL_ERAS
+    private var continuationOf: CloudSave.Record? = null
+    private var closed = false
 
     init {
         addGoodSizedLabel("Shared saves").row()
+        add("Download a world online, then play offline. No wallet needed to play."
+            .toLabel().apply { wrap = true }).width(screen.stage.width * 0.7f).row()
+        add(navigation).width(screen.stage.width * 0.7f).row()
         add(filters).row()
         add(status).width(screen.stage.width * 0.7f).row()
         add(AutoScrollPane(list)).maxHeight(screen.stage.height * 0.5f).width(screen.stage.width * 0.7f).row()
         addCloseButton()
+        closeListeners.add { closed = true }
         open(force = true)
+        show()
+        status.setText("Loading...".tr())
         fetch()
     }
 
     private fun failed(ex: Exception) {
+        if (closed) return
         status.setText("Could not restore the save:".tr() + "\n" + (ex.message ?: ex.javaClass.simpleName))
+        pack()
+        fitOrCenterContentIntoVisibleArea()
     }
 
     private fun fetch() {
@@ -95,26 +107,46 @@ class SaveGalleryPopup(private val screen: BaseScreen) : Popup(screen) {
     private val genesis get() = records.filter { it.blockTime > 0 }.minByOrNull { it.blockTime }?.signature
 
     private fun show() {
+        if (closed) return
         buildFilters()
+        navigation.clear()
+        navigation.defaults().pad(4f)
+        val parent = continuationOf
+        if (parent != null) {
+            navigation.add("Next chapters of [${parent.name}]".toLabel(hideIcons = true).apply { wrap = true })
+                .width(screen.stage.width * 0.43f).left()
+            navigation.add("All shared saves".toTextButton().apply {
+                onClick { continuationOf = null; show() }
+            })
+        } else {
+            navigation.add("How to share your next chapter".toTextButton().apply {
+                onClick { SharedWorldHelpPopup(screen) }
+            })
+        }
         val shown = records
-            .filter { civ == ALL_CIVS || it.meta?.civ == civ }
-            .filter { mapType == ALL_MAPS || it.meta?.mapType == mapType }
-            .filter { era == ALL_ERAS || it.meta?.era == era }
+            .filter { parent == null || it.meta?.parent == parent.signature }
+            .filter { parent != null || civ == ALL_CIVS || it.meta?.civ == civ }
+            .filter { parent != null || mapType == ALL_MAPS || it.meta?.mapType == mapType }
+            .filter { parent != null || era == ALL_ERAS || it.meta?.era == era }
             .sortedWith(
                 if (sort == MOST_TIPPED) compareByDescending<CloudSave.Record> { tips[it.signature] ?: 0 }.thenByDescending { it.blockTime }
                 else compareByDescending { it.blockTime }
-            ).sortedByDescending { it.signature == genesis }     // stable: Genesis first, the rest as sorted
+            ).sortedByDescending { parent == null && it.signature == genesis }
         status.setText(when {
+            parent != null && shown.isEmpty() -> "No next chapters are listed yet. Play this world and share your own continuation.".tr()
             records.isEmpty() -> "No one has shared a save yet.".tr()
             shown.isEmpty() -> "No shared save matches these filters.".tr()
             else -> ""
         })
         list.clear()
         for (record in shown) list.add(row(record)).growX().pad(4f).row()
+        pack()
+        fitOrCenterContentIntoVisibleArea()
     }
 
     private fun buildFilters() {
         filters.clear()
+        if (continuationOf != null) return
         filters.defaults().pad(4f)
         fun box(all: String, values: List<String?>, current: String, set: (String) -> Unit) =
             TranslatedSelectBox(listOf(all) + values.filterNotNull().distinct().sorted(), current).apply {
@@ -144,12 +176,20 @@ class SaveGalleryPopup(private val screen: BaseScreen) : Popup(screen) {
         button.add(((if (seeker) "Seeker".tr() + "  ·  " else "") + describe(record))
             .toLabel(fontSize = Constants.defaultFontSize - 4, hideIcons = true)).left().colspan(2)
         button.touchable = com.badlogic.gdx.scenes.scene2d.Touchable.enabled
-        val parentName = record.meta?.parent?.takeIf { it.isNotEmpty() }?.let { p -> records.firstOrNull { it.signature == p }?.name }
-        button.onClick { SaveGalleryDetailPopup(screen, record, isMine(record), isGenesis, parentName, relays(record), bounty, seeker) { amount ->
-            tips[record.signature] = (tips[record.signature] ?: 0) + amount
-            show()
-        } }
+        button.onClick { openDetails(record) }
         return button
+    }
+
+    private fun openDetails(record: CloudSave.Record) {
+        val source = record.meta?.parent?.takeIf { it.isNotEmpty() }?.let { p -> records.firstOrNull { it.signature == p } }
+        SaveGalleryDetailPopup(screen, record, isMine(record), record.signature == genesis, source, relays(record),
+            bounties[record.signature], record.meta?.author in seekers,
+            onSource = { source?.let { openDetails(it) } },
+            onContinuations = { continuationOf = record; show() },
+            onTipped = { amount ->
+                tips[record.signature] = (tips[record.signature] ?: 0) + amount
+                show()
+            })
     }
 
     /** How many shared saves were taken over from [record] and shared again. */
@@ -171,23 +211,29 @@ private class SaveGalleryDetailPopup(
     private val record: CloudSave.Record,
     private val mine: Boolean,
     genesis: Boolean,
-    private val parentName: String?,
+    private val source: CloudSave.Record?,
     private val relayCount: Int,
     private val bounty: CloudSave.Bounty?,
     private val seekerAuthor: Boolean,
+    private val onSource: () -> Unit,
+    private val onContinuations: () -> Unit,
     private val onTipped: (Long) -> Unit
 ) : Popup(screen) {
 
     private val status = "Downloading...".toLabel().apply { wrap = true; setAlignment(Align.center) }
     private val body = Table()
     private var texture: Texture? = null
+    private var closed = false
 
     init {
         addGoodSizedLabel(record.name).row()
         if (genesis) addGoodSizedLabel("Genesis - the first save ever shared", color = Color.GOLD).row()
         add(body).row()
         add(status).width(screen.stage.width * 0.6f).row()
-        addCloseButton { texture?.dispose() }
+        addButton("View next chapters") { close(); onContinuations() }
+        if (source != null) addButton("View source world") { close(); onSource() }
+        addCloseButton()
+        closeListeners.add { closed = true; texture?.dispose(); texture = null }
         open(force = true)
         ChainWallet.service.downloadCloudSave(record.arweaveIds, onError = ::failed, onSuccess = { bytes ->
             Concurrency.run("GalleryPreview") {
@@ -201,10 +247,12 @@ private class SaveGalleryDetailPopup(
     }
 
     private fun failed(ex: Exception) {
+        if (closed) return
         status.setText("Could not restore the save:".tr() + "\n" + (ex.message ?: ex.javaClass.simpleName))
     }
 
     private fun show(game: GameInfo) {
+        if (closed) return
         status.setText("")
         val civ = game.getCurrentPlayerCivilization()
         texture = mapPreview(game, 480, 300)
@@ -221,19 +269,33 @@ private class SaveGalleryDetailPopup(
             map.type.tr() + " " + map.mapSize.name.tr() + "  ·  " + game.difficulty.tr(),
             record.meta?.author?.let { "Shared by [${it.take(4)}…${it.takeLast(4)}]".tr() +
                 (if (seekerAuthor) "  ·  " + "Seeker owner".tr() else "") } ?: "",
-            parentName?.let { "Continued from [$it]".tr() } ?: "",
+            source?.let { "Continued from [${it.name}]".tr() }
+                ?: record.meta?.parent?.takeIf { it.isNotEmpty() }?.let { "The source save is not in the current listing.".tr() } ?: "",
             if (relayCount > 0) "Relayed [$relayCount] times".tr() else ""
-        )) if (line.isNotEmpty()) side.add(line.toLabel(fontSize = small, hideIcons = true)).row()
+        )) if (line.isNotEmpty()) side.add(line.toLabel(fontSize = small, hideIcons = true).apply { wrap = true })
+            .width(screen.stage.width * 0.34f).row()
 
         val play = "Play from here".toTextButton()
         play.onClick {
+            val application = com.unciv.UncivGame.Current
+            val previousGame = application.gameInfo
+            play.isDisabled = true
             status.setText("Checking...".tr())
             Concurrency.run("GalleryPlay") {
-                playRestored(game, record, takenOver = !mine, onLoading = { texture?.dispose(); close() }, onError = ::failed)
+                playRestored(game, record, takenOver = !mine, onLoading = { close() }, onError = { ex ->
+                    // loadGame assigns gameInfo before validating. The menu autosaves it,
+                    // so restore the previous game before recovering from a failed load.
+                    application.gameInfo = previousGame
+                    val errorScreen = application.goToMainMenu()
+                    Popup(errorScreen).apply {
+                        addGoodSizedLabel("Could not restore the save:".tr() + "\n" + (ex.message ?: ex.javaClass.simpleName)).row()
+                        addCloseButton()
+                        open(force = true)
+                    }
+                })
             }
         }
         side.add(play).growX().padTop(10f).row()
-
         val author = record.meta?.author
         if (!mine && author != null && ChainWallet.service.isAvailable) {
             side.add("Tip the author (SKR)".toLabel(fontSize = small)).padTop(10f).row()
@@ -255,7 +317,7 @@ private class SaveGalleryDetailPopup(
             side.add("Offer a bounty".toTextButton().apply { onClick { BountyPopup(screen, record) { status.setText(it) } } }).padTop(8f).row()
         body.add(side).top().growX()
         pack()
-        setPosition((stage.width - width) / 2, (stage.height - height) / 2)
+        fitOrCenterContentIntoVisibleArea()
     }
 
     private fun tip(author: String, amount: Long) {
@@ -268,6 +330,22 @@ private class SaveGalleryDetailPopup(
         }
         if (ChainWallet.isConnected) send()
         else ChainWallet.service.connect(onConnected = { send() }, onError = ::failed)
+    }
+}
+
+/** Reading this guide never connects a wallet or requests a transaction. */
+private class SharedWorldHelpPopup(screen: BaseScreen) : Popup(screen) {
+    init {
+        addGoodSizedLabel("Share a world, continue a story").row()
+        val textWidth = screen.stage.width * 0.65f
+        for (line in listOf(
+            "Choose a shared world and tap Play from here. Downloading needs internet; playing and local saves do not need a wallet.",
+            "To publish your next chapter, connect your wallet and enable on-chain saves in Wallet. In your game, open Save game, choose a name and enable Share this save.",
+            "Publishing costs 1 SKR plus the SOL network fee. Shared saves are public. Publishing a continuation keeps its link to the world you loaded.",
+            "Open that world's View next chapters to see how others continued it. Return to All shared saves to explore more worlds."
+        )) add(line.toLabel().apply { wrap = true }).width(textWidth).pad(8f).row()
+        addCloseButton()
+        open(force = true)
     }
 }
 

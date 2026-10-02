@@ -101,6 +101,9 @@ class TutorialGuidePopup(
             tabs.addPage(title, page, ImageGetter.getImage("OtherIcons/Quickstart"), 24f)
         }
 
+        tabs.addPage("Unwrit Ages features", UnwritAgesFeaturesPopup.guidePage(tabMaxWidth),
+            ImageGetter.getImage("OtherIcons/Quickstart"), 24f)
+
         // Last tab: the whole list with what is done and what each undone one is waiting for.
         // The chapters say how the game works; this says where the player is in learning it.
         val game = gameInfo

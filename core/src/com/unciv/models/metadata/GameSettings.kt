@@ -211,6 +211,9 @@ class GameSettings {
     /** Whether the main menu has walked the player through its Guide and Wallet buttons (MainMenuTour) */
     var mainMenuTourShown = false
 
+    /** Last introduction seen for this fork; old installs default to zero and see new features. */
+    var unwritAgesFeaturesVersion = 0
+
     /** Whether the Guide has pointed at its "Start a tutorial game" button (first open only) */
     var guideTourShown = false
 

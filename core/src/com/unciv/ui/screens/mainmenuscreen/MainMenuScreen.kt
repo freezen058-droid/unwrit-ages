@@ -11,6 +11,7 @@ import com.unciv.GUI
 import com.unciv.UncivGame
 import com.unciv.logic.GameInfo
 import com.unciv.logic.GameStarter
+import com.unciv.logic.chain.ChainWallet
 import com.unciv.logic.HolidayDates
 import com.unciv.logic.UncivShowableException
 import com.unciv.logic.map.MapParameters
@@ -47,6 +48,7 @@ import com.unciv.ui.popups.ConfirmPopup
 import com.unciv.ui.popups.Popup
 import com.unciv.ui.popups.ToastPopup
 import com.unciv.ui.popups.TutorialGuidePopup
+import com.unciv.ui.popups.UnwritAgesFeaturesPopup
 import com.unciv.ui.popups.WalletPopup
 import com.unciv.ui.popups.closeAllPopups
 import com.unciv.ui.popups.hasOpenPopups
@@ -59,6 +61,7 @@ import com.unciv.ui.screens.mapeditorscreen.EditorMapHolder
 import com.unciv.ui.screens.newgamescreen.NewGameScreen
 import com.unciv.ui.screens.savescreens.LoadGameScreen
 import com.unciv.ui.screens.savescreens.QuickSave
+import com.unciv.ui.screens.savescreens.SaveGalleryPopup
 import com.unciv.ui.screens.worldscreen.BackgroundActor
 import com.unciv.ui.screens.worldscreen.WorldScreen
 import com.unciv.ui.screens.worldscreen.mainmenu.WorldScreenMenuPopup
@@ -172,6 +175,11 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
                 game.pushScreen(LoadGameScreen())
             })
 
+            if (ChainWallet.service.isAvailable)
+                add(getMenuButton("Shared saves", "OtherIcons/Load", KeyboardBinding.None) {
+                    SaveGalleryPopup(this@MainMenuScreen)
+                })
+
             add(getMenuButton("Guide", "OtherIcons/Quickstart", KeyboardBinding.None) {
                 TutorialGuidePopup(stage, getCivilopediaRuleset(), startTutorialGame = { startTutorialGame() }).open(true)
             }.also { guideButton = it })
@@ -249,12 +257,17 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
         stage.addActor(versionTable)
 
         if (!game.settings.mainMenuTourShown) startTour(guideButton, newGameButton, walletButton)
+        else if (game.settings.unwritAgesFeaturesVersion < UnwritAgesFeaturesPopup.CURRENT_VERSION)
+            stage.addAction(Actions.delay(0.4f, Actions.run {
+                if (game.screen === this@MainMenuScreen) showFeatureTour()
+            }))
     }
 
     /** Shown once, on the first main menu after install; see [MainMenuTour]. Started after a short
      *  delay because the buttons have no stage position until the menu has been laid out. */
     private fun startTour(guideButton: Table, newGameButton: Table, walletButton: Table) {
         stage.addAction(Actions.delay(0.4f, Actions.run {
+            if (game.screen !== this@MainMenuScreen) return@run
             MainMenuTour(stage, listOf(
                 MainMenuTour.Step(guideButton,
                     "New here? The Guide teaches the game in six short chapters, with a starter game to learn in."),
@@ -265,8 +278,17 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
             )) {
                 game.settings.mainMenuTourShown = true
                 game.settings.save()
+                showFeatureTour()
             }.show()
         }))
+    }
+
+    private fun showFeatureTour() {
+        if (game.settings.unwritAgesFeaturesVersion >= UnwritAgesFeaturesPopup.CURRENT_VERSION) return
+        UnwritAgesFeaturesPopup(stage) {
+            game.settings.unwritAgesFeaturesVersion = UnwritAgesFeaturesPopup.CURRENT_VERSION
+            game.settings.save()
+        }.open()
     }
 
     private fun startBackgroundMapGeneration() {
