@@ -3,10 +3,12 @@ package com.unciv.ui.popups
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.ui.Table
+import com.badlogic.gdx.utils.Align
 import com.unciv.models.translations.tr
 import com.unciv.ui.components.extensions.addSeparator
 import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.screens.basescreen.BaseScreen
+import com.unciv.ui.images.ImageGetter
 
 /** Discover the fork's additions without connecting a wallet or starting a transaction. */
 class UnwritAgesFeaturesPopup(stage: Stage, onDismiss: () -> Unit = {}) : Popup(stage) {
@@ -29,10 +31,10 @@ class UnwritAgesFeaturesPopup(stage: Stage, onDismiss: () -> Unit = {}) : Popup(
     private fun showPage(pageIndex: Int) {
         index = pageIndex
         content.clearChildren()
-        content.defaults().pad(8f).fillX()
+        content.defaults().pad(4f).fillX()
         content.add(("Unwrit Ages features".tr() + "  ${index + 1}/${pages.size}")
-            .toLabel(accent, 20)).width(textWidth).row()
-        addPageContent(content, pages[index], textWidth)
+            .toLabel(accent, 18)).width(textWidth).row()
+        addIntroContent(content, pages[index], introductions[index], textWidth)
         backButton.isDisabled = index == 0
         nextButton.setText((if (index == pages.lastIndex) "Got it" else "Next").tr())
         innerTable.invalidateHierarchy()
@@ -49,6 +51,29 @@ class UnwritAgesFeaturesPopup(stage: Stage, onDismiss: () -> Unit = {}) : Popup(
         const val CURRENT_VERSION = 1
         private val accent = Color.valueOf("d3ac6c")
         private class Feature(val title: String, val body: String, val location: String)
+        private class Intro(val icons: List<Pair<String, String>>, val points: List<String>)
+        private val introductions = listOf(
+            Intro(listOf("Shield" to "Fortify all", "Resume" to "Repeat", "Cities" to "Auto production"), listOf(
+                "Play offline. No wallet needed.",
+                "Spend fewer taps on routine work.",
+                "Guide: learn in a practice game.")),
+            Intro(listOf("Load" to "Save", "Link" to "Same wallet", "Load" to "Restore"), listOf(
+                "Private saves: encrypted for your wallet.",
+                "1 SKR per save + SOL network fee.",
+                "Load game > Restore from the chain.")),
+            Intro(listOf("Load" to "Load", "Resume" to "Play", "Link" to "Share"), listOf(
+                "Load and play free. No wallet needed.",
+                "Share publicly: 1 SKR + SOL network fee.",
+                "Shared saves > View continuations.")),
+            Intro(listOf("New" to "New game", "Link" to "Approve", "Checkmark" to "Start record"), listOf(
+                "Optional: record your starting map on-chain.",
+                "New game > Anchor the start on-chain.",
+                "SOL network fee. No cheat-free guarantee.")),
+            Intro(listOf("Capital" to "Win", "Banner" to "Certificate", "Link" to "Your wallet"), listOf(
+                "Optional victory certificate in your wallet.",
+                "US$0.90 in SOL or SKR + network fee.",
+                "Mint after winning, or finish without it."))
+        )
         private val pages = listOf(
             Feature("Your empire, your choice",
                 "Play the full game offline without a wallet. Use Fortify all, Repeat and automatic city production to spend fewer taps on routine work.",
@@ -84,6 +109,28 @@ class UnwritAgesFeaturesPopup(stage: Stage, onDismiss: () -> Unit = {}) : Popup(
             table.add(feature.title.toLabel(accent, 30).apply { wrap = true }).width(width).row()
             table.add(feature.body.toLabel(fontSize = 24).apply { wrap = true }).width(width).row()
             table.add(feature.location.toLabel(Color.LIGHT_GRAY, 21).apply { wrap = true }).width(width).row()
+        }
+
+        /** A glanceable overview; the Guide retains the detailed instructions above. */
+        private fun addIntroContent(table: Table, feature: Feature, intro: Intro, width: Float) {
+            table.add(feature.title.toLabel(accent, 28).apply { wrap = true; setAlignment(Align.center) })
+                .width(width).row()
+            val visual = Table(BaseScreen.skin)
+            for ((icon, caption) in intro.icons) {
+                val step = Table(BaseScreen.skin)
+                step.add(ImageGetter.getImage("OtherIcons/$icon").apply { color = accent }).size(30f).row()
+                step.add(caption.toLabel(Color.LIGHT_GRAY, 18).apply { wrap = true; setAlignment(Align.center) })
+                    .width(width / 3f - 16f).padTop(3f)
+                visual.add(step).width(width / 3f).top()
+            }
+            table.add(visual).width(width).padBottom(6f).row()
+            val bullets = Table(BaseScreen.skin)
+            for (point in intro.points) {
+                bullets.add("•".toLabel(accent, 22)).top().padRight(12f).padBottom(4f)
+                bullets.add(point.toLabel(fontSize = 22).apply { wrap = true })
+                    .width(width - 30f).left().padBottom(4f).row()
+            }
+            table.add(bullets).width(width).row()
         }
     }
 }
