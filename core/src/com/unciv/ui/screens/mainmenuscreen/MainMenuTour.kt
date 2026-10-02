@@ -146,6 +146,11 @@ class MainMenuTour(
         callout.setPosition(calloutX, calloutY)
         addActor(callout)
 
+        // On a short screen, clamping can move the callout over the arrow.
+        // Keep the highlighted button and readable text instead of drawing over it.
+        if (arrowX < calloutX + callout.width && arrowX + arrowSize > calloutX &&
+            arrowY < calloutY + callout.height && arrowY + arrowSize > calloutY) return
+
         val arrow = ImageGetter.getArrowImage(arrowAlign)
         arrow.color = accent
         arrow.setSize(arrowSize, arrowSize)
