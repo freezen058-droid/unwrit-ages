@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.ui.CheckBox
+import com.badlogic.gdx.scenes.scene2d.ui.Container
 import com.badlogic.gdx.scenes.scene2d.ui.SelectBox
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.utils.Align
@@ -25,6 +26,7 @@ import com.unciv.ui.components.InputDisabling
 import com.unciv.ui.components.extensions.getCloseButton
 import com.unciv.ui.components.extensions.pad
 import com.unciv.ui.components.extensions.toCheckBox
+import com.unciv.ui.components.extensions.surroundWithCircle
 import com.unciv.ui.components.extensions.toImageButton
 import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.extensions.toTextButton
@@ -188,7 +190,12 @@ class GameOptionsTable(
         checkbox.labelCell.width(anchorWidth - 98f).left()
         val anchorRow = Table().apply {
             add(checkbox).growX().left()
-            add("?".toTextButton().apply {
+            val helpIcon = "?".toLabel(Color.WHITE, UncivSlider.plusMinusFontSize)
+                .apply { setAlignment(Align.center) }
+                .surroundWithCircle(UncivSlider.plusMinusCircleSize, true, BaseScreen.skin.getColor("color"))
+            add(Container(helpIcon).apply {
+                size(UncivSlider.plusMinusCircleSize)
+                touchable = Touchable.enabled
                 name = "AnchorStartHelp"
                 onClick { showAnchorStartHelp() }
             }).size(44f).padLeft(8f)
@@ -425,7 +432,7 @@ class GameOptionsTable(
         if (cityStatesAvailable == 0) return
 
         add("{City-States}:".toLabel()).width((optionWidth - 20f) * 0.46f).left()
-        val slider = UncivSlider(0f, cityStatesAvailable.toFloat(), 1f, initial = gameParameters.numberOfCityStates.toFloat()) {
+        val slider = UncivSlider(0f, cityStatesAvailable.toFloat(), 1f, initial = gameParameters.numberOfCityStates.toFloat(), tipType = UncivSlider.TipType.Inline) {
             gameParameters.numberOfCityStates = it.toInt()
         }
         slider.isDisabled = locked
@@ -437,7 +444,7 @@ class GameOptionsTable(
             return null
 
         add("{Max Turns}:".toLabel()).width((optionWidth - 20f) * 0.46f).left()
-        val slider = UncivSlider(100f, 1500f, 5f, initial = gameParameters.maxTurns.toFloat()) {
+        val slider = UncivSlider(100f, 1500f, 5f, initial = gameParameters.maxTurns.toFloat(), tipType = UncivSlider.TipType.Inline) {
             gameParameters.maxTurns = it.toInt()
         }
         slider.isDisabled = locked

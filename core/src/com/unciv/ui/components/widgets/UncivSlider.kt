@@ -64,7 +64,7 @@ class UncivSlider (
     private val getTipText: ((Float) -> String)? = null,
     private val onChange: ((Float) -> Unit)? = null
 ): Table(BaseScreen.skin) {
-    enum class TipType { None, Auto, Permanent }
+    enum class TipType { None, Auto, Permanent, Inline }
 
     companion object {
         /** Can be passed directly to the [getTipText] constructor parameter */
@@ -162,12 +162,15 @@ class UncivSlider (
                 addToValue(-stepSize)
             }
             add(minusButton).apply {
+                if (tipType == TipType.Inline) size(plusMinusCircleSize)
                 if (vertical) padBottom(padding) else padLeft(padding)
             }
             if (vertical) row()
         } else minusButton = null
 
-        add(slider).pad(padding).fillY().growX()
+        add(slider).pad(padding).fillY().growX().apply {
+            if (tipType == TipType.Inline) minWidth(0f)
+        }
 
         if (plusMinus) {
             if (vertical) row()
@@ -178,10 +181,17 @@ class UncivSlider (
                 addToValue(stepSize)
             }
             add(plusButton).apply {
+                if (tipType == TipType.Inline) size(plusMinusCircleSize)
                 if (vertical) padTop(padding) else padRight(padding)
             }
         } else plusButton = null
 
+        // Keep the value inside its row instead of floating over another control.
+        if (tipType == TipType.Inline) {
+            if (vertical) row()
+            tipLabel.setAlignment(Align.right)
+            add(tipLabel).width(48f).padLeft(3f)
+        }
         row()
         value = initial  // set initial value late so the tooltip can work with the layout
 
@@ -248,6 +258,7 @@ class UncivSlider (
                 Timer.schedule(tipHideTask, hideDelay)
             }
             TipType.Permanent -> showTip()
+            TipType.Inline -> Unit
         }
         setPlusMinusEnabled()
     }
