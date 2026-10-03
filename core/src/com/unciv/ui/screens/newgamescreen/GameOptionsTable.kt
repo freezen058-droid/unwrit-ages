@@ -151,6 +151,7 @@ class GameOptionsTable(
                 it.add(statsTable).left()
             }
         }
+        expander.autoScrollOnToggle = false
         add(expander).pad(10f).row()
 
         if (!isPortrait)

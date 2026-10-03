@@ -195,7 +195,7 @@ class PlayerPickerTable(
         )
 
         val nationTable = getNationTable(player)
-        playerTable.add(nationTable).left()
+        playerTable.add(nationTable).minWidth(0f).growX().left()
 
         val playerTypeTextButton = player.playerType.name.toTextButton()
         playerTable.add(playerTypeTextButton).width(100f).pad(5f).right()
@@ -305,7 +305,10 @@ class PlayerPickerTable(
                 ImageGetter.getRandomNationPortrait(40f)
             else ImageGetter.getNationPortrait(nationImageName, 40f)
         nationTable.add(nationImage).pad(5f)
-        nationTable.add(player.chosenCiv.toLabel(hideIcons = true)).pad(5f)
+        nationTable.add(player.chosenCiv.toLabel(hideIcons = true).apply {
+            setWrap(true)
+            setAlignment(Align.left)
+        }).minWidth(0f).growX().pad(5f)
         nationTable.touchable = Touchable.enabled
         return nationTable
     }

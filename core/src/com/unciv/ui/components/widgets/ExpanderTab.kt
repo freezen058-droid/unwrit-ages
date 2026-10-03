@@ -71,6 +71,9 @@ class ExpanderTab(
     /** Additional elements can be added to the `ExpanderTab`'s header using this container, empty by default. */
     val headerContent = Table(skin)
 
+    /** Allow callers to keep their current viewport when expanding content. */
+    var autoScrollOnToggle = true
+
     private val headerLabel = title.toLabel(fontSize = fontSize, hideIcons = true)
     val headerIcon = ImageGetter.getImage(arrowImage)
     private val contentWrapper = Table()  // Wrapper for innerTable, this is what will be shown/hidden
@@ -156,6 +159,7 @@ class ExpanderTab(
     /** Toggle [isOpen], animated */
     fun toggle() {
         isOpen = !isOpen
+        if (!autoScrollOnToggle) return
 
         // In the common case where the expander is hosted in a Table within a ScrollPane...
         // try scrolling our header so it is visible (when toggled by keyboard)
