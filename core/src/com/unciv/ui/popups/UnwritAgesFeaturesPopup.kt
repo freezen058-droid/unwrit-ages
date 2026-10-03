@@ -1,5 +1,8 @@
 package com.unciv.ui.popups
 
+import com.badlogic.gdx.Gdx
+import com.badlogic.gdx.graphics.Texture
+import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.ui.Table
@@ -19,6 +22,7 @@ class UnwritAgesFeaturesPopup(stage: Stage, onDismiss: () -> Unit = {}) : Popup(
     private val content = Table(BaseScreen.skin)
     private val textWidth = minOf(stage.width * 0.72f, 720f)
     private var index = 0
+    private val certificateTextures = mutableMapOf<String, Texture>()
     private val skipButton = "Skip".toTextButton().apply {
         onClick {
             close()
@@ -35,6 +39,7 @@ class UnwritAgesFeaturesPopup(stage: Stage, onDismiss: () -> Unit = {}) : Popup(
         add(content).width(textWidth).row()
         clickBehindToClose = false
         closeListeners.add(onDismiss)
+        closeListeners.add { certificateTextures.values.forEach { it.dispose() }; certificateTextures.clear() }
         showPage(0)
     }
 
@@ -47,7 +52,7 @@ class UnwritAgesFeaturesPopup(stage: Stage, onDismiss: () -> Unit = {}) : Popup(
             .toLabel(accent, 18)).growX().left()
         header.add(skipButton).width(72f).height(32f).padLeft(20f).right()
         content.add(header).width(textWidth).row()
-        addIntroContent(content, pages[index], introductions[index], textWidth)
+        if (index == 3) addAnchorComparison() else addIntroContent(content, pages[index], introductions[index], textWidth)
         backButton.isDisabled = index == 0
         nextButton.setText((if (index == pages.lastIndex) "Got it" else "Next").tr())
         innerTable.invalidateHierarchy()
@@ -57,6 +62,39 @@ class UnwritAgesFeaturesPopup(stage: Stage, onDismiss: () -> Unit = {}) : Popup(
             updateVisualScroll()
         }
         fitOrCenterContentIntoVisibleArea()
+    }
+
+    private fun addAnchorComparison() {
+        content.add("Anchor for a gilded certificate".toLabel(accent, 28)).width(textWidth).row()
+        val body = Table(BaseScreen.skin)
+        val comparison = Table(BaseScreen.skin)
+        val cardWidth = textWidth * 0.36f / 2f - 8f
+        for ((file, caption) in listOf("stele.jpg" to "Standard certificate", "stele_anchored.jpg" to "Gilded certificate")) {
+            val texture = certificateTextures.getOrPut(file) {
+                Texture(Gdx.files.internal("certificate/$file")).apply {
+                    setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear)
+                }
+            }
+            val card = Table(BaseScreen.skin)
+            card.add(Image(texture)).size(cardWidth).row()
+            card.add(caption.toLabel(if (file == "stele_anchored.jpg") accent else Color.LIGHT_GRAY, 18).apply {
+                wrap = true; setAlignment(Align.center)
+            }).width(cardWidth).padTop(5f)
+            comparison.add(card).padRight(8f).top()
+        }
+        body.add(comparison).width(textWidth * 0.36f).top()
+        val explanation = Table(BaseScreen.skin)
+        val width = textWidth * 0.64f - 20f
+        for (point in listOf("Record only your starting point on-chain.",
+            "Only SOL network fees.", "Win and mint with the same wallet.")) {
+            explanation.add("•".toLabel(accent, 20)).top().padRight(8f).padBottom(5f)
+            explanation.add(point.toLabel(fontSize = 20).apply { wrap = true }).width(width - 20f).padBottom(5f).row()
+        }
+        body.add(explanation).width(width).top()
+        content.add(body).width(textWidth).row()
+        content.add("Route: New game > Anchor the start on-chain.".toLabel(Color.LIGHT_GRAY, 18).apply {
+            wrap = true
+        }).width(textWidth).row()
     }
 
     companion object {
@@ -79,11 +117,11 @@ class UnwritAgesFeaturesPopup(stage: Stage, onDismiss: () -> Unit = {}) : Popup(
                 "Share publicly: 1 SKR + SOL network fee.",
                 "Route: Shared saves > View continuations.")),
             Intro(listOf("New" to "New game", "Link" to "Approve", "Checkmark" to "Start record"), listOf(
-                "Record your civilization's beginning on-chain.",
+                "Record only your starting point on-chain.",
                 "Only the SOL network fee.",
                 "Route: New game > Anchor the start on-chain.")),
             Intro(listOf("Capital" to "Win", "Banner" to "Certificate", "Link" to "Your wallet"), listOf(
-                "Collect your victory certificate in your wallet.",
+                "Collect your victory certificate as an NFT.",
                 "US$0.90 in SOL or SKR + network fee.",
                 "Mint your certificate after winning."))
         )
