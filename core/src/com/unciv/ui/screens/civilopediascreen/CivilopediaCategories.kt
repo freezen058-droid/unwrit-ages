@@ -64,7 +64,7 @@ enum class CivilopediaCategories (
         "UnitTypeIcons/UnitTypes",
         { ruleset, _ -> BaseUnitType.getCivilopediaIterator(ruleset) }
     ),
-    Nation ("Nations",
+    Nation ("Civilizations",
         CivilopediaImageGetters.nation,
         KeyboardBinding.PediaNations,
         "OtherIcons/Nations",
@@ -153,7 +153,8 @@ enum class CivilopediaCategories (
 
     companion object {
         @Readonly fun fromLink(name: String): CivilopediaCategories? =
-            entries.firstOrNull { it.name == name }
+            (if (name == "Nations") Nation else null)
+            ?: entries.firstOrNull { it.name == name }
             ?: entries.firstOrNull { it.label == name }
 
         /** Get all Tutorials to be displayed in the Civilopedia (hiding is done later, however) */
