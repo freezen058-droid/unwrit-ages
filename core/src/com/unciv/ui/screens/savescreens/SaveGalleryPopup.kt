@@ -10,6 +10,8 @@ import com.unciv.Constants
 import com.unciv.logic.GameInfo
 import com.unciv.logic.chain.ChainWallet
 import com.unciv.logic.chain.CloudSave
+import com.unciv.logic.chain.SharedSaveIntent
+import com.unciv.logic.civilization.diplomacy.DiplomaticStatus
 import com.unciv.logic.map.HexMath
 import com.unciv.models.translations.tr
 import com.unciv.ui.components.extensions.UncivDateFormat.formatDate
@@ -24,6 +26,7 @@ import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.utils.Concurrency
 import com.unciv.utils.launchOnGLThread
 import java.util.Date
+import kotlin.math.roundToInt
 
 /**
  * The shared-save gallery (user 09-30: "園區" - shared saves sorted so they do not drift around the
@@ -222,12 +225,14 @@ private class SaveGalleryDetailPopup(
 
     private val status = "Downloading...".toLabel().apply { wrap = true; setAlignment(Align.center) }
     private val body = Table()
+    private val invitation = Table()
     private var texture: Texture? = null
     private var closed = false
 
     init {
         addGoodSizedLabel(record.name).row()
         if (genesis) addGoodSizedLabel("Genesis - the first save ever shared", color = Color.GOLD).row()
+        add(invitation).row()
         add(body).row()
         add(status).width(screen.stage.width * 0.6f).row()
         addButton("View continuations") { close(); onContinuations() }
@@ -255,18 +260,52 @@ private class SaveGalleryDetailPopup(
         if (closed) return
         status.setText("")
         val civ = game.getCurrentPlayerCivilization()
+        SharedSaveIntent.label(game.sharedSaveIntent)?.let {
+            invitation.add("Author's goal: [${it.tr()}]".tr().toLabel(Color.GOLD).apply { wrap = true })
+                .width(screen.stage.width * 0.7f).row()
+        }
+        if (game.victoryData != null)
+            invitation.add("This game's victory has already been decided.".toLabel(Color.GOLD)).row()
         texture = mapPreview(game, 480, 300)
         body.defaults().pad(6f)
         // Two columns (user 10-01): the map left; facts, Play and the tips right. Stacked under the
         // map, the buttons fell below the popup's fold on a phone held sideways.
-        body.add(Image(texture)).size(screen.stage.height * 0.5f * 1.6f, screen.stage.height * 0.5f).top()
+        val previewWidth = screen.stage.height * 0.5f * 1.6f
+        val preview = Table().apply { defaults().left() }
+        // Include Time even when the ruleset hides it from the victory-progress screen.
+        val victories = game.gameParameters.victoryTypes.mapNotNull { game.ruleset.victories[it] }
+        val victoryNames = victories.map { it.name.tr() }.joinToString(", ")
+        val rules = mutableListOf(
+            if (victories.isEmpty()) "No victory condition enabled.".tr()
+            else "Victory: [$victoryNames]".tr(),
+            if (victories.any { it.enablesMaxTurns() })
+                "Turns remaining: [${(game.gameParameters.maxTurns - game.turns).coerceAtLeast(0)}]".tr()
+            else "No turn limit".tr()
+        )
+        val parameters = game.gameParameters
+        val specialRules = buildList {
+            if (parameters.oneCityChallenge) add("One City Challenge".tr())
+            if (parameters.noCityRazing) add("No City Razing".tr())
+            if (parameters.noBarbarians) add("No Barbarians".tr())
+            else if (parameters.ragingBarbarians) add("Raging Barbarians".tr())
+            if (!parameters.nuclearWeaponsEnabled) add("Nuclear weapons disabled".tr())
+            if (parameters.espionageEnabled) add("Espionage enabled".tr())
+        }
+        for (rule in rules) preview.add(rule.toLabel(fontSize = Constants.defaultFontSize - 2).apply { wrap = true })
+            .width(previewWidth).padTop(4f).row()
+        preview.add(Image(texture)).size(previewWidth, screen.stage.height * 0.5f).padTop(6f).row()
+        if (specialRules.isNotEmpty()) preview.add(specialRules.joinToString(" · ")
+            .toLabel(fontSize = Constants.defaultFontSize - 2).apply { wrap = true })
+            .width(previewWidth).padTop(4f).row()
+        body.add(preview).top()
         val side = Table().apply { defaults().left().pad(2f) }
         val map = game.tileMap.mapParameters
         val small = Constants.defaultFontSize - 2
         for (line in listOf(
             civ.civName.tr() + "  ·  " + civ.getEra().name.tr(),
             "Turn [${game.turns}]".tr() + "  ·  " + "Cities: [${civ.cities.size}]".tr(),
-            map.type.tr() + " " + map.mapSize.name.tr() + "  ·  " + game.difficulty.tr(),
+            map.type.tr() + " " + map.mapSize.name.tr(),
+            game.difficulty.tr() + "  ·  " + game.gameParameters.speed.tr(),
             record.meta?.author?.let { "Shared by [${it.take(4)}…${it.takeLast(4)}]".tr() +
                 (if (seekerAuthor) "  ·  " + "Seeker owner".tr() else "") } ?: "",
             source?.let { "Continued from [${it.name}]".tr() }
@@ -275,8 +314,23 @@ private class SaveGalleryDetailPopup(
         )) if (line.isNotEmpty()) side.add(line.toLabel(fontSize = small, hideIcons = true).apply { wrap = true })
             .width(screen.stage.width * 0.34f).row()
 
-        val play = "Play from here".toTextButton()
-        play.onClick {
+        val income = civ.stats.statsForNextTurn.gold.roundToInt()
+        val rate = (if (income >= 0) "+" else "") + income
+        val research = civ.tech.techsToResearch.firstOrNull()?.tr()
+        // Only established diplomatic relationships; never inspect unseen units or rivals' stats.
+        val enemies = civ.diplomacy.values.filter {
+            it.diplomaticStatus == DiplomaticStatus.War && !it.otherCiv.isDefeated()
+        }.map { it.otherCiv.civName.tr() }.sorted()
+        for (line in listOf(
+            "Treasury: [${civ.gold}] · [$rate] per turn".tr(),
+            research?.let { "Research: [$it]".tr() } ?: "No research selected".tr(),
+            if (enemies.isEmpty()) "Not at war with other civilizations".tr()
+            else "At war with: [${enemies.joinToString(", ")}]".tr()
+        )) side.add(line.toLabel(fontSize = small, hideIcons = true).apply { wrap = true })
+            .width(screen.stage.width * 0.34f).padTop(3f).row()
+
+        lateinit var play: com.badlogic.gdx.scenes.scene2d.ui.TextButton
+        play = addButton("Play from here") {
             val application = com.unciv.UncivGame.Current
             val previousGame = application.gameInfo
             play.isDisabled = true
@@ -294,8 +348,7 @@ private class SaveGalleryDetailPopup(
                     }
                 })
             }
-        }
-        side.add(play).growX().padTop(10f).row()
+        }.actor
         val author = record.meta?.author
         if (!mine && author != null && ChainWallet.service.isAvailable) {
             side.add("Tip the author (SKR)".toLabel(fontSize = small)).padTop(10f).row()

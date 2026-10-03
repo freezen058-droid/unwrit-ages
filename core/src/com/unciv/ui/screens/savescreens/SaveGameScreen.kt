@@ -6,10 +6,13 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.unciv.UncivGame
 import com.unciv.logic.GameInfo
 import com.unciv.logic.chain.ChainWallet
+import com.unciv.logic.chain.SharedSaveIntent
 import com.unciv.logic.files.PlatformSaverLoader
 import com.unciv.logic.files.UncivFiles
 import com.unciv.models.translations.tr
 import com.unciv.ui.components.widgets.UncivTextField
+import com.unciv.ui.components.widgets.TranslatedSelectBox
+import com.unciv.ui.components.input.onChange
 import com.unciv.ui.components.UncivTooltip.Companion.addTooltip
 import com.unciv.ui.components.extensions.disable
 import com.unciv.ui.components.extensions.enable
@@ -30,6 +33,7 @@ import com.unciv.utils.launchOnGLThread
 
 class SaveGameScreen(private val gameInfo: GameInfo) : LoadOrSaveScreen("Current saves") {
     private val gameNameTextField = UncivTextField(nameFieldLabelText)
+    private var selectedIntent = gameInfo.sharedSaveIntent.takeIf { it in SharedSaveIntent.labels }.orEmpty()
 
     companion object : Helpers {
         const val nameFieldLabelText = "Saved game name"
@@ -81,11 +85,27 @@ class SaveGameScreen(private val gameInfo: GameInfo) : LoadOrSaveScreen("Current
         // Where the choice is made: the same setting as the Wallet popup's, shown here only when
         // saves are being recorded (user, 09-26 - they looked for it on this screen)
         val settings = game.settings
-        if (settings.recordSavesOnChain && ChainWallet.service.isAvailable)
+        if (settings.recordSavesOnChain && ChainWallet.service.isAvailable) {
+            val intentTable = Table()
+            fun updateIntent() {
+                intentTable.clear()
+                if (!settings.shareCloudSaves) return
+                intentTable.add("Goal for the next player".toLabel()).padTop(8f).row()
+                val picker = TranslatedSelectBox(SharedSaveIntent.labels.values,
+                    SharedSaveIntent.labels.getValue(selectedIntent))
+                picker.onChange {
+                    selectedIntent = SharedSaveIntent.labels.entries.first { it.value == picker.selected.value }.key
+                }
+                intentTable.add(picker).width(300f).padTop(4f)
+            }
             add("Share this save (anyone can load it)".toCheckBox(settings.shareCloudSaves) {
                 settings.shareCloudSaves = it
                 settings.save()
+                updateIntent()
             }).padTop(10f).row()
+            add(intentTable).row()
+            updateIntent()
+        }
     }
 
     private fun enableSaveButton(text: String) {
@@ -135,6 +155,8 @@ class SaveGameScreen(private val gameInfo: GameInfo) : LoadOrSaveScreen("Current
     }
 
     private fun saveGame(saveGameFile: FileHandle) {
+        gameInfo.sharedSaveIntent = if (game.settings.recordSavesOnChain && game.settings.shareCloudSaves)
+            selectedIntent else ""
         rightSideButton.setText(savingText.tr())
         // Disable while saving, mirroring addSaveToCustomLocation() below - a security audit
         // found this button had no such guard, so a double-tap (or holding Enter, since this

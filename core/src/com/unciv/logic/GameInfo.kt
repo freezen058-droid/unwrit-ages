@@ -159,6 +159,9 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
      *  can show a save's line of players (ROADMAP gallery: relay lineage, 10-01). */
     var continuedFromSave = ""
 
+    /** Optional invitation by this save's author; stored in the hash-checked save, not a memo. */
+    var sharedSaveIntent = ""
+
     /** The minted certificate's address, once there is one - so the offer shows it instead of
      *  a second mint button that would charge again for the same victory. */
     var certificateAddress: String? = null
@@ -265,6 +268,7 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
         toReturn.startAnchorSignature = startAnchorSignature
         toReturn.continuedFromTurn = continuedFromTurn
         toReturn.continuedFromSave = continuedFromSave
+        toReturn.sharedSaveIntent = sharedSaveIntent
         toReturn.certificateAddress = certificateAddress
         toReturn.historyStartTurn = historyStartTurn
         toReturn.lastUnitId = lastUnitId

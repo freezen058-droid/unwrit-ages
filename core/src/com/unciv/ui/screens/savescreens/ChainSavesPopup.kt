@@ -118,6 +118,8 @@ internal fun decodeCloudSave(record: CloudSave.Record, bytes: ByteArray, key: By
  *  is someone else's ([takenOver]). Off the GL thread; the callbacks run on it. */
 internal suspend fun CoroutineScope.playRestored(game: GameInfo, record: CloudSave.Record, takenOver: Boolean, onLoading: () -> Unit, onError: (Exception) -> Unit) {
     if (takenOver) {
+        // A new branch author must choose their own invitation, not inherit an attribution.
+        game.sharedSaveIntent = ""
         game.continuedFromTurn = game.turns
         game.continuedFromSave = record.signature
     }
