@@ -172,17 +172,43 @@ class GameOptionsTable(
      *  parameter - it decides how this game starts, not how it plays. */
     private fun Table.addAnchorStartCheckbox() {
         val settings = UncivGame.Current.settings
-        addCheckbox("Anchor the start on-chain (free)", settings.anchorNewGames) {
+        val checkbox = "Anchor the start on-chain".toCheckBox(settings.anchorNewGames) {
             settings.anchorNewGames = it
             settings.save()
         }
-        // What it is for first, then how (user, 09-26: the old text said only what the wallet does)
-        add(("Proves you played this game from its first turn. Win it, and its victory certificate "
-            + "is carved on the gilded stele and marked 'Anchored start', which anyone can check. "
-            + "Your wallet signs one free record as the game begins, and the map is made from that "
-            + "signature, so no one can pass off someone else's game as theirs. You still choose the "
-            + "map's type and size; only its random layout comes from the signature.").toLabel(fontSize = 14)
-            .apply { wrap = true }).colspan(2).fillX().padLeft(20f).row()
+        checkbox.isDisabled = locked
+        checkbox.align(Align.left)
+        val anchorWidth = ((previousScreen as? NewGameScreen)?.getColumnWidth() ?: 240f) - 20f
+        checkbox.label.wrap = true
+        checkbox.labelCell.width(anchorWidth - 90f).left()
+        val anchorRow = Table().apply {
+            add(checkbox).growX().left()
+            add("?".toTextButton().apply {
+                name = "AnchorStartHelp"
+                onClick { showAnchorStartHelp() }
+            }).size(36f).padLeft(8f)
+        }
+        add(anchorRow).width(anchorWidth).colspan(2).left().row()
+        add("Begin your story. Mint a gilded victory certificate.".toLabel(fontSize = 16)
+            .apply { wrap = true }).width(anchorWidth - 20f).colspan(2).left().padLeft(20f).row()
+    }
+
+    private fun showAnchorStartHelp() {
+        val width = minOf(stage.width * 0.78f, 620f)
+        Popup(stage).apply {
+            addGoodSizedLabel("Your civilization's first mark", 26, color = Color.valueOf("d3ac6c"))
+                .width(width).padBottom(12f).row()
+            for (point in listOf(
+                "Records your wallet's link to the starting map, not every turn or who played.",
+                "Win and mint with the same wallet for a gilded certificate. Continuing another player's save uses the standard certificate.",
+                "Anchor: SOL network fees only. Certificate: US$0.90 in SOL or SKR + network fees."
+            )) {
+                add(point.toLabel(fontSize = 20).apply { wrap = true })
+                    .width(width).padBottom(10f).row()
+            }
+            addCloseButton()
+            open()
+        }
     }
 
     private fun Table.addNoCityRazingCheckbox() =

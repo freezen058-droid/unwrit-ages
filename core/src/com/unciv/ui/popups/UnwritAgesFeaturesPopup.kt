@@ -26,7 +26,7 @@ class UnwritAgesFeaturesPopup(stage: Stage, onDismiss: () -> Unit = {}) : Popup(
     private val skipButton = "Skip".toTextButton().apply {
         onClick {
             close()
-            ToastPopup("Replay anytime: Guide > Sharing & keepsakes.".tr(), stage, 4000)
+            ToastPopup("Explore anytime: Guide > Sharing & keepsakes.".tr(), stage, 4000)
         }
         keyShortcuts.add(KeyCharAndCode.BACK)
     }
@@ -48,7 +48,7 @@ class UnwritAgesFeaturesPopup(stage: Stage, onDismiss: () -> Unit = {}) : Popup(
         content.clearChildren()
         content.defaults().pad(4f).fillX()
         val header = Table(BaseScreen.skin)
-        header.add(("Unwrit Ages features".tr() + "  ${index + 1}/${pages.size}")
+        header.add(("Shape your civilization".tr() + "  ${index + 1}/${pages.size}")
             .toLabel(accent, 18)).growX().left()
         header.add(skipButton).width(72f).height(32f).padLeft(20f).right()
         content.add(header).width(textWidth).row()
@@ -85,7 +85,7 @@ class UnwritAgesFeaturesPopup(stage: Stage, onDismiss: () -> Unit = {}) : Popup(
         body.add(comparison).width(textWidth * 0.36f).top()
         val explanation = Table(BaseScreen.skin)
         val width = textWidth * 0.64f - 20f
-        for (point in listOf("Record only your starting point on-chain.",
+        for (point in listOf("Mark the beginning of your civilization on-chain.",
             "Only SOL network fees.", "Win and mint with the same wallet.")) {
             explanation.add("•".toLabel(accent, 20)).top().padRight(8f).padBottom(5f)
             explanation.add(point.toLabel(fontSize = 20).apply { wrap = true }).width(width - 20f).padBottom(5f).row()
@@ -106,18 +106,18 @@ class UnwritAgesFeaturesPopup(stage: Stage, onDismiss: () -> Unit = {}) : Popup(
         private val introductions = listOf(
             Intro(listOf("Shield" to "Fortify all", "Resume" to "Repeat", "Cities" to "Auto production"), listOf(
                 "Build your civilization offline.",
-                "Spend fewer taps on routine work.",
-                "Guide: learn in a practice game.")),
+                "Command more. Repeat less.",
+                "Guide: begin with a practice game.")),
             Intro(listOf("Load" to "Save", "Link" to "Same wallet", "Load" to "Restore"), listOf(
                 "Private saves: encrypted for your wallet.",
                 "1 SKR per save + SOL network fee.",
                 "Route: Load game > Restore from the chain.")),
             Intro(listOf("Load" to "Load", "Resume" to "Play", "Link" to "Share"), listOf(
-                "Continue another player's civilization.",
+                "Take another player's civilization further.",
                 "Share publicly: 1 SKR + SOL network fee.",
                 "Route: Shared saves > View continuations.")),
             Intro(listOf("New" to "New game", "Link" to "Approve", "Checkmark" to "Start record"), listOf(
-                "Record only your starting point on-chain.",
+                "Mark the beginning of your civilization on-chain.",
                 "Only the SOL network fee.",
                 "Route: New game > Anchor the start on-chain.")),
             Intro(listOf("Capital" to "Win", "Banner" to "Certificate", "Link" to "Your wallet"), listOf(
@@ -126,19 +126,19 @@ class UnwritAgesFeaturesPopup(stage: Stage, onDismiss: () -> Unit = {}) : Popup(
                 "Mint your certificate after winning."))
         )
         private val pages = listOf(
-            Feature("Your empire, your choice",
+            Feature("Lead your civilization",
                 "Play the full game offline without a wallet. Use Fortify all, Repeat and automatic city production to spend fewer taps on routine work.",
                 "The Guide teaches the basics; the following pages introduce optional sharing and keepsakes."),
-            Feature("Carry your game to another phone",
+            Feature("Carry your civilization with you",
                 "Record a cloud save for 1 SKR plus the SOL network fee. Private saves are encrypted for your wallet; the same wallet can restore them on another phone.",
                 "In Wallet, connect and enable on-chain saves. Use Load game > Restore from the chain to recover them."),
-            Feature("Share and continue saves",
+            Feature("Continue a civilization's story",
                 "Browse and load Shared saves for free, without a wallet. Continue another player's empire. Connect a wallet only if you want to share your own save or tip its author in SKR.",
                 "Open Shared saves from the main menu. View continuations shows saves continued from the one you selected. Sharing costs 1 SKR plus the SOL network fee; shared saves are public."),
-            Feature("Record your starting point",
-                "An optional on-chain start record links your wallet to the map's starting seed. It records the beginning; it does not verify every turn or prevent cheating.",
+            Feature("Mark your civilization's beginning",
+                "Mark your civilization's beginning with your wallet. Win and mint with the same wallet for a gilded certificate. The start record links your wallet to the starting map; it does not verify every turn or prevent cheating.",
                 "When starting a new game, choose Anchor the start on-chain. You approve a wallet transaction and pay the SOL network fee."),
-            Feature("Keep a victory",
+            Feature("Make your victory a keepsake",
                 "After winning, you can mint a painted victory certificate to your wallet. It is an optional keepsake, priced at US$0.90 in SOL or SKR, plus the SOL network fee.",
                 "Choose whether to mint on the victory screen. You can also finish the game without minting anything.")
         )
@@ -149,7 +149,7 @@ class UnwritAgesFeaturesPopup(stage: Stage, onDismiss: () -> Unit = {}) : Popup(
             table.pad(10f)
             table.defaults().pad(8f).fillX()
             val textWidth = width - 60f
-            table.add("Replay feature introduction".toTextButton().apply {
+            table.add("Discover what awaits".toTextButton().apply {
                 onClick { stage?.let { UnwritAgesFeaturesPopup(it).open(true) } }
             }).width(textWidth).padBottom(12f).row()
             for ((index, feature) in pages.drop(1).withIndex()) {
