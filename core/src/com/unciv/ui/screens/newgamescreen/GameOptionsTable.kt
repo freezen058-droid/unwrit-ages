@@ -49,6 +49,7 @@ class GameOptionsTable(
 ) : Table(BaseScreen.skin) {
     private var gameParameters = previousScreen.gameSetupInfo.gameParameters
     private var ruleset = previousScreen.ruleset
+    private val optionWidth get() = ((previousScreen as? NewGameScreen)?.getColumnWidth() ?: 240f) - 20f
     internal var locked = false
 
     private var baseRulesetHash = gameParameters.baseRuleset.hashCode()
@@ -70,8 +71,8 @@ class GameOptionsTable(
 
     init {
         background = BaseScreen.skinStrings.getUiBackground("NewGameScreen/GameOptionsTable", tintColor = BaseScreen.skinStrings.skinConfig.clearColor)
-        top()
-        defaults().pad(5f)
+        top().left()
+        defaults().pad(5f).left()
         update()
     }
 
@@ -87,16 +88,17 @@ class GameOptionsTable(
         }
 
         add(Table().apply {
-            defaults().pad(5f)
+            defaults().pad(5f).left()
             // No base ruleset choice: every game is Expanded (G&K); see NewGameScreen init
             addDifficultySelectBox()
             addGameSpeedSelectBox()
             addEraSelectBox()
             // align left and right edges with other SelectBoxes but allow independent dropdown width
             add(Table().apply {
+                defaults().pad(5f).left()
                 val turnSlider = addMaxTurnsSlider()
                 if (turnSlider != null)
-                    add(turnSlider).padTop(10f).row()
+                    add(turnSlider).width((optionWidth - 20f) * 0.54f).padTop(10f).row()
                 if (gameParameters.randomNumberOfPlayers) {
                     addMinMaxPlayersSliders()
                 }
@@ -105,8 +107,8 @@ class GameOptionsTable(
                 } else {
                     addCityStatesSlider()
                 }
-            }).colspan(2).fillX().row()
-        }).row()
+            }).colspan(2).width(optionWidth).pad(0f).fillX().row()
+        }).width(optionWidth).left().row()
         // Above the victory choices (user, 09-26): it decides how the game starts, before what it is played for
         if (ChainWallet.service.isAvailable) addAnchorStartCheckbox()
         addVictoryTypeCheckboxes()
@@ -164,7 +166,10 @@ class GameOptionsTable(
         val checkbox = text.toCheckBox(initialState) { onChange(it) }
         checkbox.isDisabled = lockable && locked
         checkbox.align(Align.left)
-        add(checkbox).colspan(2).row()
+        // Leave room for the indicator and the indented statistics sub-options.
+        checkbox.label.wrap = true
+        checkbox.labelCell.width(optionWidth - 80f).left()
+        add(checkbox).colspan(2).left().row()
         return checkbox
     }
 
@@ -178,34 +183,38 @@ class GameOptionsTable(
         }
         checkbox.isDisabled = locked
         checkbox.align(Align.left)
-        val anchorWidth = ((previousScreen as? NewGameScreen)?.getColumnWidth() ?: 240f) - 20f
+        val anchorWidth = optionWidth
         checkbox.label.wrap = true
-        checkbox.labelCell.width(anchorWidth - 90f).left()
+        checkbox.labelCell.width(anchorWidth - 98f).left()
         val anchorRow = Table().apply {
             add(checkbox).growX().left()
             add("?".toTextButton().apply {
                 name = "AnchorStartHelp"
                 onClick { showAnchorStartHelp() }
-            }).size(36f).padLeft(8f)
+            }).size(44f).padLeft(8f)
         }
         add(anchorRow).width(anchorWidth).colspan(2).left().row()
-        add("Begin your story. Mint a gilded victory certificate.".toLabel(fontSize = 16)
+        add("To mint a gilded victory certificate.".toLabel(fontSize = 16)
             .apply { wrap = true }).width(anchorWidth - 20f).colspan(2).left().padLeft(20f).row()
     }
 
     private fun showAnchorStartHelp() {
-        val width = minOf(stage.width * 0.78f, 620f)
+        val width = minOf(stage.width * 0.70f, 540f)
         Popup(stage).apply {
+            defaults().pad(1f)
             addGoodSizedLabel("Your civilization's first mark", 26, color = Color.valueOf("d3ac6c"))
-                .width(width).padBottom(12f).row()
+                .width(width).padBottom(6f).row()
             for (point in listOf(
-                "Records your wallet's link to the starting map, not every turn or who played.",
-                "Win and mint with the same wallet for a gilded certificate. Continuing another player's save uses the standard certificate.",
-                "Anchor: SOL network fees only. Certificate: US$0.90 in SOL or SKR + network fees."
+                "Links your wallet to the starting map, not every turn or who played.",
+                "Win and mint with the same wallet for a gilded certificate."
             )) {
                 add(point.toLabel(fontSize = 20).apply { wrap = true })
-                    .width(width).padBottom(10f).row()
+                    .width(width).padBottom(6f).row()
             }
+            add("Anchor: SOL network fees only.".toLabel(fontSize = 20).apply { wrap = true })
+                .width(width).padBottom(2f).row()
+            add("Certificate: US$0.90 in SOL or SKR + network fees.".toLabel(fontSize = 20).apply { wrap = true })
+                .width(width).padBottom(4f).row()
             addCloseButton()
             open()
         }
@@ -415,19 +424,19 @@ class GameOptionsTable(
         val cityStatesAvailable = numberOfCityStates()
         if (cityStatesAvailable == 0) return
 
-        add("{City-States}:".toLabel()).left().expandX()
+        add("{City-States}:".toLabel()).width((optionWidth - 20f) * 0.46f).left()
         val slider = UncivSlider(0f, cityStatesAvailable.toFloat(), 1f, initial = gameParameters.numberOfCityStates.toFloat()) {
             gameParameters.numberOfCityStates = it.toInt()
         }
         slider.isDisabled = locked
-        add(slider).padTop(10f).row()
+        add(slider).width((optionWidth - 20f) * 0.54f).padTop(10f).row()
     }
 
     private fun Table.addMaxTurnsSlider(): UncivSlider? {
         if (gameParameters.victoryTypes.none { ruleset.victories[it]?.enablesMaxTurns() == true })
             return null
 
-        add("{Max Turns}:".toLabel()).left().expandX()
+        add("{Max Turns}:".toLabel()).width((optionWidth - 20f) * 0.46f).left()
         val slider = UncivSlider(100f, 1500f, 5f, initial = gameParameters.maxTurns.toFloat()) {
             gameParameters.maxTurns = it.toInt()
         }
@@ -438,7 +447,8 @@ class GameOptionsTable(
     }
 
     private fun Table.addSelectBox(text: String, values: Collection<String>, initialState: String, onChange: (newValue: String) -> String?): TranslatedSelectBox {
-        add(text.toLabel(hideIcons = true)).left()
+        add(text.toLabel(hideIcons = true).apply { wrap = true })
+            .width((optionWidth - 20f) * 0.46f).left()
         val selectBox = TranslatedSelectBox(values, initialState)
         selectBox.isDisabled = locked
         selectBox.onChange {
@@ -446,7 +456,7 @@ class GameOptionsTable(
             if (changedValue != null) selectBox.setSelected(changedValue)
         }
         onChange(selectBox.selected.value)
-        add(selectBox).fillX().row()
+        add(selectBox).width((optionWidth - 20f) * 0.54f).left().row()
         return selectBox
     }
 
@@ -561,11 +571,12 @@ class GameOptionsTable(
         }
     }
     private fun addVictoryTypeCheckboxes() {
-        add("{Victory Conditions}:".toLabel()).colspan(2).row()
+        add("{Victory Conditions}:".toLabel()).colspan(2).left().row()
 
         // Create a checkbox for each VictoryType existing
-        val victoryConditionsTable = Table().apply { defaults().pad(5f) }
-        for ((i, victoryType) in ruleset.victories.values.withIndex()) {
+        val victoryConditionsTable = Table().apply { defaults().pad(5f).left() }
+        val victoryColumnWidth = (optionWidth - 20f) / 2f
+        for ((index, victoryType) in ruleset.victories.values.withIndex()) {
             val victoryCheckbox = victoryType.name.toCheckBox(gameParameters.victoryTypes.contains(victoryType.name)) {
                 // If the checkbox is checked, adds the victoryTypes else remove it
                 if (it) {
@@ -579,17 +590,20 @@ class GameOptionsTable(
             }
             victoryCheckbox.name = victoryType.name
             victoryCheckbox.isDisabled = locked
-            victoryConditionsTable.add(victoryCheckbox).left()
-            if ((i + 1) % 2 == 0) victoryConditionsTable.row()
+            victoryCheckbox.align(Align.left)
+            victoryCheckbox.label.wrap = true
+            victoryCheckbox.labelCell.width(victoryColumnWidth - 36f).left()
+            victoryConditionsTable.add(victoryCheckbox).width(victoryColumnWidth).left()
+            if ((index + 1) % 2 == 0) victoryConditionsTable.row()
         }
-        add(victoryConditionsTable).colspan(2).row()
+        add(victoryConditionsTable).colspan(2).left().row()
         // Without Time there is no turn limit, and an AI that only defends never ends the game:
         // say so before the game starts, since a started game can't change it (user, 09-24).
         if (gameParameters.victoryTypes.none { ruleset.victories[it]?.enablesMaxTurns() == true })
             add("No turn limit: the game ends only when someone achieves a victory chosen above.".toLabel(fontSize = 16).apply {
                 wrap = true
-                setAlignment(Align.center)
-            }).colspan(2).width(victoryConditionsTable.prefWidth).row()
+                setAlignment(Align.left)
+            }).colspan(2).width(optionWidth).left().row()
     }
 
     fun updateRuleset(ruleset: Ruleset) {
