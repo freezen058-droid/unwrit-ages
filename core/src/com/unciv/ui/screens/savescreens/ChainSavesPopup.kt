@@ -120,6 +120,7 @@ internal suspend fun CoroutineScope.playRestored(game: GameInfo, record: CloudSa
     if (takenOver) {
         // A new branch author must choose their own invitation, not inherit an attribution.
         game.sharedSaveIntent = ""
+        game.sharedSaveDifficulty = 0
         game.continuedFromTurn = game.turns
         game.continuedFromSave = record.signature
     }

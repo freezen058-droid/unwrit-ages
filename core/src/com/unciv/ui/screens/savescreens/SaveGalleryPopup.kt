@@ -264,6 +264,9 @@ private class SaveGalleryDetailPopup(
             invitation.add("Author's goal: [${it.tr()}]".tr().toLabel(Color.GOLD).apply { wrap = true })
                 .width(screen.stage.width * 0.7f).row()
         }
+        com.unciv.logic.chain.SharedSaveDifficulty.stars(game.sharedSaveDifficulty)?.let {
+            invitation.add("Author's takeover difficulty: [$it]".tr().toLabel(Color.GOLD)).row()
+        }
         if (game.victoryData != null)
             invitation.add("This game's victory has already been decided.".toLabel(Color.GOLD)).row()
         texture = mapPreview(game, 480, 300)

@@ -161,6 +161,7 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
 
     /** Optional invitation by this save's author; stored in the hash-checked save, not a memo. */
     var sharedSaveIntent = ""
+    var sharedSaveDifficulty = 0
 
     /** The minted certificate's address, once there is one - so the offer shows it instead of
      *  a second mint button that would charge again for the same victory. */
@@ -269,6 +270,7 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
         toReturn.continuedFromTurn = continuedFromTurn
         toReturn.continuedFromSave = continuedFromSave
         toReturn.sharedSaveIntent = sharedSaveIntent
+        toReturn.sharedSaveDifficulty = sharedSaveDifficulty
         toReturn.certificateAddress = certificateAddress
         toReturn.historyStartTurn = historyStartTurn
         toReturn.lastUnitId = lastUnitId

@@ -7,6 +7,7 @@ import com.unciv.UncivGame
 import com.unciv.logic.GameInfo
 import com.unciv.logic.chain.ChainWallet
 import com.unciv.logic.chain.SharedSaveIntent
+import com.unciv.logic.chain.SharedSaveDifficulty
 import com.unciv.logic.files.PlatformSaverLoader
 import com.unciv.logic.files.UncivFiles
 import com.unciv.models.translations.tr
@@ -34,6 +35,7 @@ import com.unciv.utils.launchOnGLThread
 class SaveGameScreen(private val gameInfo: GameInfo) : LoadOrSaveScreen("Current saves") {
     private val gameNameTextField = UncivTextField(nameFieldLabelText)
     private var selectedIntent = gameInfo.sharedSaveIntent.takeIf { it in SharedSaveIntent.labels }.orEmpty()
+    private var selectedDifficulty = gameInfo.sharedSaveDifficulty.takeIf { it in 1..5 } ?: 0
 
     companion object : Helpers {
         const val nameFieldLabelText = "Saved game name"
@@ -62,6 +64,7 @@ class SaveGameScreen(private val gameInfo: GameInfo) : LoadOrSaveScreen("Current
     }
 
     private fun Table.initRightSideTable() {
+        defaults().pad(0f, 10f, 0f, 10f)
         addGameNameField()
 
         // No "Copy to clipboard" or "Save to custom location": this fork can't load a game from
@@ -90,19 +93,31 @@ class SaveGameScreen(private val gameInfo: GameInfo) : LoadOrSaveScreen("Current
             fun updateIntent() {
                 intentTable.clear()
                 if (!settings.shareCloudSaves) return
-                intentTable.add("Goal for the next player".toLabel()).padTop(8f).row()
+                intentTable.add("Goal for the next player".toLabel()).padTop(4f).row()
                 val picker = TranslatedSelectBox(SharedSaveIntent.labels.values,
                     SharedSaveIntent.labels.getValue(selectedIntent))
+                picker.name = "SharedSaveGoal"
                 picker.onChange {
                     selectedIntent = SharedSaveIntent.labels.entries.first { it.value == picker.selected.value }.key
                 }
-                intentTable.add(picker).width(300f).padTop(4f)
+                intentTable.add(picker).width(300f).padTop(4f).row()
+                val difficultyRow = Table()
+                difficultyRow.add("Takeover difficulty (your estimate)".toLabel()).left().padRight(8f)
+                val difficulty = TranslatedSelectBox(SharedSaveDifficulty.labels.values,
+                    SharedSaveDifficulty.labels.getValue(selectedDifficulty))
+                difficulty.name = "SharedSaveDifficulty"
+                difficulty.onChange {
+                    selectedDifficulty = SharedSaveDifficulty.labels.entries.first { it.value == difficulty.selected.value }.key
+                }
+                difficultyRow.add(difficulty).width(130f)
+                intentTable.add(difficultyRow).padTop(8f).row()
+                intentTable.add("1 star: easy / 5 stars: hard".toLabel(fontSize = 14)).row()
             }
             add("Share this save (anyone can load it)".toCheckBox(settings.shareCloudSaves) {
                 settings.shareCloudSaves = it
                 settings.save()
                 updateIntent()
-            }).padTop(10f).row()
+            }).padTop(6f).row()
             add(intentTable).row()
             updateIntent()
         }
@@ -157,6 +172,8 @@ class SaveGameScreen(private val gameInfo: GameInfo) : LoadOrSaveScreen("Current
     private fun saveGame(saveGameFile: FileHandle) {
         gameInfo.sharedSaveIntent = if (game.settings.recordSavesOnChain && game.settings.shareCloudSaves)
             selectedIntent else ""
+        gameInfo.sharedSaveDifficulty = if (game.settings.recordSavesOnChain && game.settings.shareCloudSaves)
+            selectedDifficulty else 0
         rightSideButton.setText(savingText.tr())
         // Disable while saving, mirroring addSaveToCustomLocation() below - a security audit
         // found this button had no such guard, so a double-tap (or holding Enter, since this
