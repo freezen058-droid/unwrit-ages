@@ -109,7 +109,7 @@ class SaveGameScreen(private val gameInfo: GameInfo) : LoadOrSaveScreen("Current
                 difficulty.onChange {
                     selectedDifficulty = SharedSaveDifficulty.labels.entries.first { it.value == difficulty.selected.value }.key
                 }
-                difficultyRow.add(difficulty).width(130f)
+                difficultyRow.add(difficulty).width(180f)
                 intentTable.add(difficultyRow).padTop(8f).row()
                 intentTable.add("1 star: easy / 5 stars: hard".toLabel(fontSize = 14)).row()
             }

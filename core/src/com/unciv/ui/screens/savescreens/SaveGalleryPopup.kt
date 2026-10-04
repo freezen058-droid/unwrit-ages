@@ -317,6 +317,12 @@ private class SaveGalleryDetailPopup(
         )) if (line.isNotEmpty()) side.add(line.toLabel(fontSize = small, hideIcons = true).apply { wrap = true })
             .width(screen.stage.width * 0.34f).row()
 
+        com.unciv.logic.chain.SharedSaveProgress.from(game, record.meta?.parent, source?.meta?.turn)?.let {
+            side.add("This branch: turn [${it.start}] to [${it.end}] (+[${it.turns}])".tr()
+                .toLabel(fontSize = small, hideIcons = true).apply { wrap = true })
+                .width(screen.stage.width * 0.34f).row()
+        }
+
         val income = civ.stats.statsForNextTurn.gold.roundToInt()
         val rate = (if (income >= 0) "+" else "") + income
         val research = civ.tech.techsToResearch.firstOrNull()?.tr()
