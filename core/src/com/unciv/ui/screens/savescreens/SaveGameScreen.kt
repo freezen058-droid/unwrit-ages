@@ -94,7 +94,7 @@ class SaveGameScreen(private val gameInfo: GameInfo) : LoadOrSaveScreen("Current
             fun updateIntent() {
                 intentTable.clear()
                 if (!settings.shareCloudSaves) return
-                val goals = (selectedScenario?.let { "Goals [${it.completedCount}]/3 · [${it.duration}] turns".tr() }
+                val goals = (selectedScenario?.let { if (it.totalChapters > 1) "Chapter [${it.chapterNumber}] / [${it.totalChapters}]".tr() else "Goals [${it.completedCount}]/3 · [${it.duration}] turns".tr() }
                     ?: "Set goals for the next player".tr()).toTextButton()
                 goals.name = "SharedSaveGoals"
                 goals.onClick {
@@ -177,6 +177,8 @@ class SaveGameScreen(private val gameInfo: GameInfo) : LoadOrSaveScreen("Current
     private fun saveGame(saveGameFile: FileHandle) {
         if (gameInfo.sharedScenario?.supported != true)
             gameInfo.sharedScenario = selectedScenario?.copy()
+        if (gameInfo.sharedScenario?.title == "Shared save goals")
+            gameInfo.sharedScenario!!.title = gameNameTextField.text
         gameInfo.sharedSaveIntent = if (game.settings.recordSavesOnChain && game.settings.shareCloudSaves)
             selectedIntent else ""
         gameInfo.sharedSaveDifficulty = if (game.settings.recordSavesOnChain && game.settings.shareCloudSaves)
@@ -191,6 +193,15 @@ class SaveGameScreen(private val gameInfo: GameInfo) : LoadOrSaveScreen("Current
         rightSideButton.disable()
         errorLabel.isVisible = false
         Concurrency.runOnNonDaemonThreadPool("SaveGame") {
+            try {
+                com.unciv.logic.chain.ScenarioReplay.remember(gameInfo)
+            } catch (ex: Exception) {
+                launchOnGLThread {
+                    handleException(ex, "Could not save game!", saveGameFile)
+                    rightSideButton.setText(saveButtonText.tr()); rightSideButton.enable()
+                }
+                return@runOnNonDaemonThreadPool
+            }
             game.files.saveGame(gameInfo, saveGameFile, recordOnChain = true) { exception ->
                 launchOnGLThread {
                     if (exception != null) {

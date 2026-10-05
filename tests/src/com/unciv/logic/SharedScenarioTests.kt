@@ -163,6 +163,117 @@ class SharedScenarioTests {
         assertEquals("unfinished", s.outcome)
     }
 
+    @Test fun countdownTracksEachDeadlineAndStopsWhenChallengeEnds() {
+        val s = scenario()
+        assertEquals(6, s.remainingTurns(s.deadline - 6))
+        assertEquals(5, s.remainingTurns(s.deadline - 5))
+        assertEquals(1, s.remainingTurns(s.deadline - 1))
+        assertNull(s.remainingTurns(s.deadline))
+        s.outcome = "completed"
+        assertNull(s.remainingTurns(s.deadline - 1))
+        s.chapter = com.unciv.logic.chain.SharedScenarioChapter().apply { path = "renewal"; startTurn = 30 }
+        assertEquals(5, s.remainingTurns(40))
+        s.chapter!!.outcome = "completed"
+        assertNull(s.remainingTurns(44))
+        s.chapter!!.outcome = ""
+        s.freePlay = true
+        assertNull(s.remainingTurns(44))
+    }
+
+    @Test fun navalCheckpointsRequireBothTheFleetAndTerritoryAtTheDeadline() {
+        val c = com.unciv.logic.chain.NavalChapter().apply { number = 2; startTurn = 120 }
+        c.evaluate(125, true, true, true, false, 40, 3)
+        assertEquals(1, c.completedCount)
+        c.evaluate(145, true, false, true, false, 50, 3)
+        assertEquals("unfinished", c.outcome)
+        c.evaluate(146, true, true, true, false, 100, 8)
+        assertEquals(50, c.finalGold); assertEquals(-1, c.objectiveTurn)
+        val third = com.unciv.logic.chain.NavalChapter().apply { number = 3; startTurn = 140 }
+        third.evaluate(150, true, true, true, false, 30, 4)
+        assertEquals(1, third.completedCount)
+        third.evaluate(175, true, true, true, false, 35, 4)
+        assertEquals("completed", third.outcome); assertEquals(3, third.completedCount)
+        assertEquals(175, third.objectiveTurn)
+    }
+
+    @Test fun navalHistoryAndBriefingSurviveCloneAndSaveWithoutChangingChapterOne() {
+        val s = scenario().apply {
+            description = "A shared coastal challenge"
+            outcome = "completed"; finalGold = 70
+            navalCampaign = com.unciv.logic.chain.NavalCampaign().apply {
+                enemyPortId = "port"; enemyPortName = "Athens"
+                control = com.unciv.logic.chain.NavalChapter().apply { startTurn = 120; outcome = "completed"; finalGold = 45 }
+                assault = com.unciv.logic.chain.NavalChapter().apply { number = 3; startTurn = 140 }
+            }
+        }
+        val game = GameInfo().apply { sharedScenario = s }
+        val loaded = json().fromJson(GameInfo::class.java, json().toJson(game))
+        assertEquals(s.definitionHash(), loaded.sharedScenario!!.definitionHash())
+        assertEquals("A shared coastal challenge", loaded.sharedScenario!!.description)
+        assertEquals(45, game.clone().sharedScenario!!.navalCampaign!!.control!!.finalGold)
+        assertEquals(5, s.remainingTurns(170))
+        s.navalCampaign!!.active!!.evaluate(175, true, true, true, false, 80, 4)
+        assertEquals(70, s.finalGold); assertEquals("completed", s.outcome)
+        assertEquals(45, s.navalCampaign!!.control!!.finalGold)
+        assertFalse(s.hasNextChapter)
+    }
+
+    @Test fun authoredThreeChaptersStartOnAcceptanceAndPreserveHistory() {
+        val game = chapterGame("completed")
+        val s = game.sharedScenario!!.apply {
+            id = "authored-linear"
+            nextChapterPlans = arrayListOf(
+                com.unciv.logic.chain.ScenarioChapterPlan().apply {
+                    technology = "Currency"; building = "Library"; cityId = "original-capital"; duration = 10
+                },
+                com.unciv.logic.chain.ScenarioChapterPlan().apply {
+                    technology = "Currency"; building = "University"; cityId = "original-capital"; duration = 15
+                })
+        }
+        val definition = s.definitionHash()
+        assertEquals(3, s.totalChapters)
+        assertTrue(s.beginNextChapter(game))
+        assertEquals(65, s.authoredChapter!!.startTurn)
+        assertEquals(2, s.chapterNumber)
+        assertFalse(s.beginNextChapter(game))
+        s.constructed(68, "Rome", "original-capital", "Library")
+        s.authoredChapter!!.evaluate(75, true, true, false, 120, 2, false)
+        assertTrue(s.hasNextChapter)
+        game.turns = 80
+        assertTrue(s.beginNextChapter(game))
+        assertEquals(80, s.authoredChapter!!.startTurn)
+        assertEquals(3, s.chapterNumber)
+        assertEquals("authored-linear-chapter-3", s.authoredChapter!!.id)
+        assertEquals(120, s.authoredChapterHistory.first().finalGold)
+        s.authoredChapter!!.evaluate(95, true, true, false, 200, 2, false)
+        assertEquals("unfinished", s.currentOutcome)
+        assertFalse(s.hasNextChapter)
+        assertEquals("completed", s.outcome)
+        assertEquals(70, s.finalGold)
+        assertEquals(definition, s.definitionHash())
+        val loaded = json().fromJson(GameInfo::class.java, json().toJson(game)).sharedScenario!!
+        assertEquals(3, loaded.chapterNumber)
+        assertEquals("unfinished", loaded.currentOutcome)
+        assertEquals(120, loaded.authoredChapterHistory.first().finalGold)
+        val copy = s.copy()
+        copy.authoredChapterHistory.first().finalGold = 999
+        assertEquals(120, s.authoredChapterHistory.first().finalGold)
+        assertNull(s.remainingTurns(94))
+    }
+
+    @Test fun authoredFailureBlocksLaterChaptersAndPlansAffectDefinition() {
+        val s = scenario().apply {
+            id = "authored-linear"; outcome = "unfinished"
+            nextChapterPlans.add(com.unciv.logic.chain.ScenarioChapterPlan().apply {
+                technology = "Education"; building = "University"; cityId = "original-capital"
+            })
+        }
+        assertFalse(s.hasNextChapter)
+        val definition = s.definitionHash()
+        s.nextChapterPlans.first().duration = 30
+        assertNotEquals(definition, s.definitionHash())
+    }
+
     @Test fun freePlayPreservesResultsAndSurvivesSaveAndClone() {
         val s = scenario().apply { outcome = "unfinished"; finalGold = 70; freePlay = true }
         val game = GameInfo().apply { sharedScenario = s }

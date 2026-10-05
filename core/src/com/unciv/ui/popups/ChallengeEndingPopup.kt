@@ -15,7 +15,9 @@ import com.unciv.ui.screens.worldscreen.WorldScreen
 class ChallengeEndingPopup(screen: BaseScreen, game: GameInfo) : Popup(screen) {
     init {
         val scenario = requireNotNull(game.sharedScenario)
-        val chapter = requireNotNull(scenario.chapter)
+        val chapter = scenario.chapter
+        val naval = scenario.navalCampaign?.active
+        val authored = scenario.authoredChapter
         val width = (screen.stage.width * 0.55f).coerceAtMost(620f)
         background = BaseScreen.skinStrings.getUiBackground("General/Popup/Background",
             tintColor = Color(0.24f, 0.015f, 0.025f, 0.72f))
@@ -24,18 +26,36 @@ class ChallengeEndingPopup(screen: BaseScreen, game: GameInfo) : Popup(screen) {
         add("Challenge failed".toLabel(fontColor = Color(1f, 0.22f, 0.16f, 1f), fontSize = 44,
             alignment = Align.center)).width(width).padTop(18f).padBottom(20f).row()
         val missing = buildList {
-            if (chapter.path == "renewal") {
+            if (authored != null) {
+                if (authored.researchTurn < 0) add("Complete research".tr())
+                if (authored.constructionTurn < 0) add("Building goal".tr())
+                if (authored.holdTurn < 0) add("Hold [${authored.cityName}]".tr())
+            } else if (naval != null) {
+                if (naval.fleetTurn < 0) add((if (naval.number == 2) "Assemble your fleet" else "Field two frigates").tr())
+                if (naval.objectiveTurn < 0) add((if (naval.number == 2) "Secure the strait" else "Capture the enemy port").tr())
+                if (naval.holdTurn < 0) add("Hold your capital".tr())
+            } else if (chapter == null) {
+                if (scenario.researchTurn < 0) add("Complete research".tr())
+                if (scenario.constructionTurn < 0) add("Complete defenses".tr())
+                if (scenario.holdTurn < 0) add("Hold your capital".tr())
+            } else if (chapter.path == "renewal") {
                 if (chapter.treasuryTurn < 0) add("Grow your treasury".tr())
                 if (chapter.peaceTurn < 0) add("Secure peace".tr())
             } else {
                 if (chapter.researchTurn < 0) add("Complete research".tr())
                 if (chapter.constructionTurn < 0) add("Rebuild the market".tr())
             }
-            if (chapter.holdTurn < 0) add("Hold your capital".tr())
+            if (chapter != null && chapter.holdTurn < 0) add("Hold your capital".tr())
         }
         add("Unfinished: [${missing.joinToString(" · ")}]".toLabel(fontColor = Color.LIGHT_GRAY,
             alignment = Align.center, fontSize = 20).apply { wrap = true }).width(width).padBottom(10f).row()
-        val primary = addButton("Retry challenge") { close(); FeaturedScenarioPopup(screen, previousResult = game) }
+        val canRetry = scenario.id in listOf("strait-watch-v1", "civilization-on-the-brink-v1") ||
+            com.unciv.logic.chain.ScenarioReplay.available(game)
+        val primary = addButton(if (canRetry) "Retry challenge" else "View objectives") {
+            close()
+            if (canRetry) FeaturedScenarioPopup(screen, previousResult = game)
+            else SharedScenarioPopup(screen, game, showChallengeDetails = true)
+        }
         primary.size(300f, 64f).colspan(2).padTop(18f).padBottom(12f).row()
         primary.actor.label.setFontSize(26)
         val quiet = TextButton.TextButtonStyle(primary.actor.style).apply { fontColor = Color.LIGHT_GRAY }
@@ -57,7 +77,10 @@ class ChallengeEndingPopup(screen: BaseScreen, game: GameInfo) : Popup(screen) {
         }
         free.actor.label.setFontSize(16)
         free.width(free.actor.prefWidth + 16f).height(42f)
-        chapter.briefingShown = true; chapter.resultShown = true
+        if (authored != null) { authored.briefingShown = true; authored.resultShown = true }
+        else if (naval != null) { naval.briefingShown = true; naval.resultShown = true }
+        else if (chapter != null) { chapter.briefingShown = true; chapter.resultShown = true }
+        else { scenario.briefingShown = true; scenario.resultShown = true }
         open(force = true)
     }
 }

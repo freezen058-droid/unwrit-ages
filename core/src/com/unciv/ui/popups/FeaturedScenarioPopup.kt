@@ -14,13 +14,19 @@ import com.unciv.utils.launchOnGLThread
 class FeaturedScenarioPopup(screen: BaseScreen, previousResult: com.unciv.logic.GameInfo? = null) : Popup(screen) {
     private var loading = false
     init {
-        addGoodSizedLabel("A Civilization on the Brink", color = Color.GOLD).row()
+        val naval = previousResult?.sharedScenario?.id == "strait-watch-v1"
+        val authored = previousResult != null && previousResult.sharedScenario?.id !in
+            listOf("strait-watch-v1", "civilization-on-the-brink-v1")
+        addGoodSizedLabel(if (authored) previousResult!!.sharedScenario!!.title else if (naval) "The Strait Must Hold" else "A Civilization on the Brink", color = Color.GOLD).row()
         val width = screen.stage.width * 0.65f
-        for (text in listOf("Two cities. A costly war. Rebuild your economy without losing your capital.",
+        val descriptions = if (authored) listOf("Restart from the save you accepted.") else if (naval) listOf(
+            "A stronger enemy fleet is approaching. Fortify the coastal capital, research Navigation, and bring reinforcements through the strait. Hold for 30 turns."
+        ) else listOf("Two cities. A costly war. Rebuild your economy without losing your capital.",
             "Research Currency, build a Market, and hold your capital.",
-            "Defend, negotiate, or counterattack - choose your own strategy."))
+            "Defend, negotiate, or counterattack - choose your own strategy.")
+        for (text in descriptions)
             add(text.toLabel().apply { wrap = true }).width(width).left().padTop(10f).row()
-        if (previousResult != null)
+        if (previousResult != null && !authored)
             add("Restart from the original starting save. Your previous result will be saved on this device.".toLabel()
                 .apply { wrap = true }).width(width).left().padTop(10f).row()
         val status = "".toLabel().apply { wrap = true }
@@ -34,12 +40,16 @@ class FeaturedScenarioPopup(screen: BaseScreen, previousResult: com.unciv.logic.
                 val previous = app.gameInfo
                 try {
                     if (previousResult != null) {
-                        val baseName = "[${previousResult.sharedScenario!!.title}] - Chapter II - Turn [${previousResult.turns}]".tr(hideIcons = true)
+                        val baseName = (if (previousResult.sharedScenario!!.chapter != null)
+                            "[${previousResult.sharedScenario!!.title}] - Chapter II - Turn [${previousResult.turns}]"
+                            else "[${previousResult.sharedScenario!!.title}] - Turn [${previousResult.turns}]").tr(hideIcons = true)
                         var name = baseName; var index = 2
                         while (app.files.getSave(name).exists()) name = "$baseName (${index++})"
                         app.files.saveGame(previousResult, name, recordOnChain = false)
                     }
-                    val game = UncivFiles.gameInfoFromString(Gdx.files.internal("scenarios/civilization-on-the-brink.json").readString("UTF-8"))
+                    val path = if (naval) "scenarios/strait-watch.json" else "scenarios/civilization-on-the-brink.json"
+                    val game = if (authored) com.unciv.logic.chain.ScenarioReplay.load(previousResult!!)
+                        else UncivFiles.gameInfoFromString(Gdx.files.internal(path).readString("UTF-8"))
                     // Always start from the packaged snapshot, never from a previous playthrough.
                     game.sharedScenario?.briefingShown = false
                     app.loadGame(game, callFromLoadScreen = true)

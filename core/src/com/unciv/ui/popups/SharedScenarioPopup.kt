@@ -14,7 +14,14 @@ class SharedScenarioPopup(screen: BaseScreen, game: GameInfo, briefing: Boolean 
         val scenario = requireNotNull(game.sharedScenario)
         scenario.observe(game)
         if (!firstChapter && !showChallengeDetails && !scenario.freePlay &&
-            scenario.chapter?.outcome == "unfinished" && game === com.unciv.UncivGame.Current.gameInfo) {
+            scenario.currentOutcome == "completed" &&
+            game === com.unciv.UncivGame.Current.gameInfo) {
+            ChallengeVictoryPopup(screen, game)
+        } else if (!firstChapter && !showChallengeDetails && !scenario.freePlay &&
+            (scenario.chapter?.outcome == "unfinished" ||
+                scenario.nextChapterPlans.isNotEmpty() && scenario.currentOutcome in listOf("unfinished", "defeated") ||
+                scenario.id == "strait-watch-v1" && scenario.currentOutcome in listOf("unfinished", "defeated")) &&
+            game === com.unciv.UncivGame.Current.gameInfo) {
             ChallengeEndingPopup(screen, game)
         } else {
         addGoodSizedLabel(scenario.title, color = Color.GOLD).row()
@@ -23,19 +30,70 @@ class SharedScenarioPopup(screen: BaseScreen, game: GameInfo, briefing: Boolean 
             add(text.toLabel(if (gold) Color.GOLD else Color.WHITE).apply { wrap = true })
                 .width(width).left().padTop(8f).row()
         }
-        if (scenario.id == "civilization-on-the-brink-v1") {
+        if (scenario.id == "civilization-on-the-brink-v1" || scenario.description.isNotBlank()) {
             addButton("Scenario background") {
                 val background = Popup(screen)
                 background.addGoodSizedLabel("Scenario background", color = Color.GOLD).row()
-                background.add("Two cities. A costly war. Rebuild your economy without losing your capital.".tr()
+                background.add((scenario.description.ifBlank {
+                    "Two cities. A costly war. Rebuild your economy without losing your capital."
+                }).tr()
                     .toLabel().apply { wrap = true }).width(width).left().row()
-                background.add("Greek forces threaten your border. Egypt remains a possible diplomatic partner.".tr()
-                    .toLabel().apply { wrap = true }).width(width).left().padTop(10f).row()
+                if (scenario.id == "civilization-on-the-brink-v1")
+                    background.add("Greek forces threaten your border. Egypt remains a possible diplomatic partner.".tr()
+                        .toLabel().apply { wrap = true }).width(width).left().padTop(10f).row()
                 background.addCloseButton(); background.open(force = true)
             }.padRight(6f)
         }
         val chapter = scenario.chapter?.takeIf { it.supported && !firstChapter }
-        if (chapter != null) {
+        val naval = scenario.navalCampaign?.active?.takeIf { it.supported && !firstChapter }
+        val authored = scenario.authoredChapter?.takeIf { it.supported && !firstChapter }
+        if (authored != null) {
+            line("Chapter [${scenario.chapterNumber}] / [${scenario.totalChapters}]".tr(), true)
+            line("Chapter turn [${(game.turns - authored.startTurn).coerceIn(0, authored.duration)}] / [${authored.duration}]".tr())
+            for (goal in scenarioGoalLines(authored)) line(goal)
+            authored.briefingShown = true
+            if (authored.outcome.isNotEmpty()) {
+                line((if (authored.outcome == "completed") "All objectives achieved"
+                    else "Challenge ended. Not every objective was completed.").tr(), true)
+                authored.resultShown = true
+            }
+            addButton("Chapter I results") { close(); SharedScenarioPopup(screen, game, firstChapter = true) }
+            if (scenario.chapterNumber == 3) addButton("Chapter II results") {
+                val history = Popup(screen)
+                history.addGoodSizedLabel("Chapter [2] / [${scenario.totalChapters}]", color = Color.GOLD).row()
+                for (goal in scenarioGoalLines(scenario.authoredChapterHistory.first()))
+                    history.add(goal.toLabel().apply { wrap = true }).width(width).left().padTop(8f).row()
+                history.addCloseButton(); history.open(force = true)
+            }
+            if (showChallengeDetails && authored.outcome in listOf("unfinished", "defeated") && !scenario.freePlay &&
+                game === com.unciv.UncivGame.Current.gameInfo)
+                addCloseButton("Back", action = { ChallengeEndingPopup(screen, game) })
+            else addCloseButton(if (authored.outcome.isNotEmpty()) "Continue" else "Close")
+        } else if (naval != null) {
+            line((if (naval.number == 2) "Chapter II: Command the Strait" else "Chapter III: Break the Blockade").tr(), true)
+            line((if (naval.number == 2) "Rebuild your fleet and drive enemy ships away from the capital."
+                else "Bombard the port, then capture it with a melee ship.").tr())
+            line("Chapter turn [${(game.turns - naval.startTurn).coerceIn(0, naval.duration)}] / [${naval.duration}]".tr())
+            for (goal in navalGoalLines(scenario)) line(goal)
+            naval.briefingShown = true
+            if (naval.outcome.isNotEmpty()) {
+                line((if (naval.outcome == "completed") "All objectives achieved"
+                    else "Challenge ended. Not every objective was completed.").tr(), true)
+                naval.resultShown = true
+            }
+            addButton("Chapter I results") { close(); SharedScenarioPopup(screen, game, firstChapter = true) }
+            if (naval.number == 3) addButton("Chapter II results") {
+                val history = Popup(screen)
+                history.addGoodSizedLabel("Chapter II: Command the Strait", color = Color.GOLD).row()
+                val previous = scenario.navalCampaign!!.control!!
+                history.add("Goals [${previous.completedCount}]/3".toLabel()).row()
+                history.addCloseButton(); history.open(force = true)
+            }
+            if (showChallengeDetails && naval.outcome in listOf("unfinished", "defeated") && !scenario.freePlay &&
+                game === com.unciv.UncivGame.Current.gameInfo)
+                addCloseButton("Back", action = { ChallengeEndingPopup(screen, game) })
+            else addCloseButton(if (naval.outcome.isNotEmpty()) "Continue" else "Close")
+        } else if (chapter != null) {
             line((if (chapter.path == "renewal") "Chapter II: Renewal" else "Chapter II: Recovery").tr(), true)
             line((if (chapter.path == "renewal")
                 "Your capital endured. Turn survival into prosperity and peace."
@@ -68,13 +126,16 @@ class SharedScenarioPopup(screen: BaseScreen, game: GameInfo, briefing: Boolean 
                     addCloseButton("Back", action = { ChallengeEndingPopup(screen, game) })
                 else addCloseButton(if (chapter.outcome.isNotEmpty()) "Continue" else "Close")
         } else {
+            if (scenario.totalChapters > 1) line("Chapter [1] / [${scenario.totalChapters}]".tr(), true)
+            if (briefing && scenario.description.isNotBlank()) line(scenario.description.tr())
             if (briefing && scenario.id == "civilization-on-the-brink-v1")
                 line("Greek forces threaten your border. Egypt remains a possible diplomatic partner.".tr())
             line("Scenario turn [${(game.turns - scenario.startTurn).coerceIn(0, scenario.duration)}] / [${scenario.duration}]".tr())
             line("Suggested order - choose your own strategy.".tr())
             for (goal in scenarioGoalLines(scenario)) line(goal)
             line(when (scenario.outcome) {
-                "completed" -> "Civilization restored - all three goals completed.".tr()
+                "completed" -> (if (scenario.id == "civilization-on-the-brink-v1")
+                    "Civilization restored - all three goals completed." else "All objectives achieved").tr()
                 "unfinished" -> "The deadline has passed. Your civilization's story can continue.".tr()
                 "defeated" -> "This civilization has fallen. Try a different strategy from the same starting save.".tr()
                 else -> if (scenario.id == "civilization-on-the-brink-v1")
@@ -103,11 +164,30 @@ class SharedScenarioPopup(screen: BaseScreen, game: GameInfo, briefing: Boolean 
                 }
             }
             if (briefing) scenario.briefingShown = true
-            addCloseButton(if (briefing) "Begin" else if (scenario.outcome.isNotEmpty()) "Continue" else "Close")
+            if (firstChapter && (scenario.navalCampaign?.active != null || scenario.authoredChapter != null))
+                addButton("Current chapter") { close(); SharedScenarioPopup(screen, game) }
+            if (showChallengeDetails && (scenario.id == "strait-watch-v1" || scenario.nextChapterPlans.isNotEmpty()) &&
+                scenario.outcome in listOf("unfinished", "defeated") &&
+                !scenario.freePlay && game === com.unciv.UncivGame.Current.gameInfo)
+                addCloseButton("Back", action = { ChallengeEndingPopup(screen, game) })
+            else addCloseButton(if (briefing) "Begin" else if (scenario.outcome.isNotEmpty()) "Continue" else "Close")
         }
         open(force = true)
         }
     }
+}
+
+fun navalGoalLines(s: SharedScenario): List<String> {
+    val campaign = requireNotNull(s.navalCampaign)
+    val naval = requireNotNull(campaign.active)
+    fun mark(turn: Int) = if (turn >= 0) "✓ " else "□ "
+    return listOf(
+        mark(naval.fleetTurn) + (if (naval.number == 2) "1. Assemble at least 3 naval units" else "1. Field at least 2 Frigates").tr(),
+        mark(naval.objectiveTurn) + (if (naval.number == 2)
+            "2. At the deadline: a friendly ship within 4 tiles of the capital, no enemy ships in that zone".tr()
+            else "2. Capture and hold [${campaign.enemyPortName.tr()}] at the deadline".tr()),
+        mark(naval.holdTurn) + "3. Hold [${s.cityName.tr()}] at the deadline".tr()
+    )
 }
 
 fun scenarioGoalLines(s: SharedScenario): List<String> {

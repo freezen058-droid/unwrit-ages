@@ -318,7 +318,10 @@ private class SaveGalleryDetailPopup(
         status.setText("")
         val civ = game.getCurrentPlayerCivilization()
         game.sharedScenario?.takeIf { it.supported }?.let { scenario ->
-            invitation.add("[${scenario.title.tr()}] · Goals [${scenario.completedCount}]/3".tr()
+            if (scenario.totalChapters > 1) invitation.add(
+                "Chapter [${scenario.chapterNumber}] / [${scenario.totalChapters}]".toLabel(Color.GOLD))
+                .width(screen.stage.width * 0.7f).row()
+            invitation.add("[${scenario.title.tr()}] · Goals [${scenario.authoredChapter?.completedCount ?: scenario.navalCampaign?.active?.completedCount ?: scenario.chapter?.completedCount ?: scenario.completedCount}]/3".tr()
                 .toLabel(Color.GOLD).apply { wrap = true }).width(screen.stage.width * 0.7f).row()
         }
         SharedSaveIntent.label(game.sharedSaveIntent)?.let {
@@ -389,8 +392,9 @@ private class SaveGalleryDetailPopup(
             side.add("Scenario goals".toTextButton().apply {
                 onClick { com.unciv.ui.popups.SharedScenarioPopup(screen, game) }
             }).padTop(5f).row()
-            if (scenario.outcome.isNotEmpty()) side.add(
-                ("Scenario result: [${scenario.outcome.tr()}]".tr() + "\n" +
+            if (scenario.currentOutcome.isNotEmpty()) side.add(
+                ("Scenario result: [${scenario.currentOutcome.tr()}]".tr() + "\n" +
+                    (if (scenario.chapterNumber > 1) "Chapter I results".tr() + "\n" else "") +
                     "Treasury: [${scenario.finalGold}] · Cities: [${scenario.finalCities}]".tr() + " · " +
                     (if (scenario.finalAtWar) "At war" else "At peace").tr())
                     .toLabel(fontSize = small).apply { wrap = true })

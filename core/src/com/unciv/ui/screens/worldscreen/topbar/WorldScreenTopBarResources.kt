@@ -1,5 +1,8 @@
 package com.unciv.ui.screens.worldscreen.topbar
 
+import com.badlogic.gdx.Gdx
+import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.utils.Timer
 import com.badlogic.gdx.scenes.scene2d.Group
 import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.ui.Label
@@ -22,6 +25,8 @@ import com.unciv.ui.screens.victoryscreen.VictoryScreen
 
 internal class WorldScreenTopBarResources(topbar: WorldScreenTopBar) : ScalingTableWrapper() {
     private val turnsLabel = "Turns: 0/400".toLabel()
+    private var countdownTask: Timer.Task? = null
+    private var countdownBright = true
     private data class ResourceActors(val resource: TileResource, val label: Label, val icon: Group)
     private val resourceActors = ArrayList<ResourceActors>(12)
     private val resourcesWrapper = Table()
@@ -43,6 +48,7 @@ internal class WorldScreenTopBarResources(topbar: WorldScreenTopBar) : ScalingTa
     }
 
     init {
+        turnsLabel.name = "ScenarioTurnCountdown"
         defaults().space(extraPadBetweenLabelAndResources)
             .pad(defaultPad, outerHorizontalPad, bottomPad, outerHorizontalPad)
 
@@ -112,5 +118,34 @@ internal class WorldScreenTopBarResources(topbar: WorldScreenTopBar) : ScalingTa
         }
 
         scaleTo(worldScreen.stage.width)
+    }
+
+    private fun isCountdownActive() = worldScreen.topBar.isVisible &&
+        worldScreen.gameInfo.sharedScenario?.let {
+            it.civilization == worldScreen.selectedCiv.civID &&
+                it.remainingTurns(worldScreen.gameInfo.turns) in 1..5
+        } == true
+
+    override fun act(delta: Float) {
+        super.act(delta)
+        if (!isCountdownActive()) {
+            countdownTask?.cancel(); countdownTask = null
+            turnsLabel.color = Color.WHITE
+        } else if (countdownTask == null) {
+            countdownBright = true
+            turnsLabel.color = Color(1f, 0.35f, 0.30f, 1f)
+            countdownTask = Timer.schedule(object : Timer.Task() {
+                override fun run() {
+                    if (worldScreen.game.screen !== worldScreen || !isCountdownActive()) {
+                        cancel(); countdownTask = null; turnsLabel.color = Color.WHITE
+                        return
+                    }
+                    countdownBright = !countdownBright
+                    turnsLabel.color = if (countdownBright) Color(1f, 0.35f, 0.30f, 1f)
+                        else Color(1f, 0.65f, 0.55f, 1f)
+                    Gdx.graphics.requestRendering()
+                }
+            }, 0.65f, 0.65f)
+        }
     }
 }
