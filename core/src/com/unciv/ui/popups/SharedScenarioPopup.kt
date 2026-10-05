@@ -62,12 +62,11 @@ class SharedScenarioPopup(screen: BaseScreen, game: GameInfo, briefing: Boolean 
                 chapter.resultShown = true
             }
             chapter.briefingShown = true
-                if (scenario.freePlay) line("Free play - your challenge result is preserved.".tr())
                 addButton("Chapter I results") { close(); SharedScenarioPopup(screen, game, firstChapter = true) }
                 if (showChallengeDetails && chapter.outcome == "unfinished" && !scenario.freePlay &&
                     game === com.unciv.UncivGame.Current.gameInfo)
                     addCloseButton("Back", action = { ChallengeEndingPopup(screen, game) })
-                else addCloseButton(if (chapter.outcome.isNotEmpty()) "Continue playing" else "Close")
+                else addCloseButton(if (chapter.outcome.isNotEmpty()) "Continue" else "Close")
         } else {
             if (briefing && scenario.id == "civilization-on-the-brink-v1")
                 line("Greek forces threaten your border. Egypt remains a possible diplomatic partner.".tr())
@@ -104,7 +103,7 @@ class SharedScenarioPopup(screen: BaseScreen, game: GameInfo, briefing: Boolean 
                 }
             }
             if (briefing) scenario.briefingShown = true
-            addCloseButton(if (briefing) "Begin" else if (scenario.outcome.isNotEmpty()) "Continue playing" else "Close")
+            addCloseButton(if (briefing) "Begin" else if (scenario.outcome.isNotEmpty()) "Continue" else "Close")
         }
         open(force = true)
         }
