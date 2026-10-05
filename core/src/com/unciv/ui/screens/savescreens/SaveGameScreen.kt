@@ -175,7 +175,8 @@ class SaveGameScreen(private val gameInfo: GameInfo) : LoadOrSaveScreen("Current
     }
 
     private fun saveGame(saveGameFile: FileHandle) {
-        gameInfo.sharedScenario = selectedScenario?.copy()
+        if (gameInfo.sharedScenario?.supported != true)
+            gameInfo.sharedScenario = selectedScenario?.copy()
         gameInfo.sharedSaveIntent = if (game.settings.recordSavesOnChain && game.settings.shareCloudSaves)
             selectedIntent else ""
         gameInfo.sharedSaveDifficulty = if (game.settings.recordSavesOnChain && game.settings.shareCloudSaves)

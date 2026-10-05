@@ -498,7 +498,7 @@ class WorldScreen(
         if (!hasOpenPopups() && !autoPlay.isAutoPlaying() && isPlayersTurn) {
             when {
                 gameInfo.sharedScenario?.let { it.supported && it.civilization == viewingCiv.civID &&
-                    (!it.briefingShown || it.outcome.isNotEmpty() && !it.resultShown) } == true ->
+                    it.needsPopup } == true ->
                     com.unciv.ui.popups.SharedScenarioPopup(this, gameInfo,
                         briefing = gameInfo.sharedScenario?.briefingShown == false)
                 viewingCiv.shouldShowDiplomaticVotingResults() ->
