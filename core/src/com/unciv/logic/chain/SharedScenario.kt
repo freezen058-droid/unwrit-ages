@@ -111,7 +111,7 @@ class SharedScenario : IsPartOfGameInfoSerialization {
     fun definitionHash(): String = ChainWallet.sha256Hex(com.unciv.json.json().toJson(listOf(
         version.toString(), id, civilization, startTurn.toString(), duration.toString(),
         technology, cityId, building, opponent) +
-        (navalCampaign?.let { listOf("naval-campaign-v1", it.enemyPortId, "25", "35", "3", "4", "2") } ?: emptyList()) +
+        (navalCampaign?.let { listOf("naval-campaign-v2", it.enemyPortId, "25", "35", "3-warships-at-home-deadline", "4", "2", "war-locked") } ?: emptyList()) +
         nextChapterPlans.flatMap { listOf("author-chapter-v1", it.technology, it.building, it.cityId, it.duration.toString()) }))
 
     fun copy(): SharedScenario = SharedScenario().also {

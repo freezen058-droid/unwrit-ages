@@ -400,6 +400,7 @@ object DiplomacyAutomation {
                         || it.getDiplomacyManager(civInfo)!!.hasFlag(DiplomacyFlags.DeclaredWar)
                         || civInfo.getDiplomacyManager(it)!!.hasFlag(DiplomacyFlags.DeclaredWar)
             }.filter { !civInfo.getDiplomacyManager(it)!!.hasFlag(DiplomacyFlags.DeclinedPeace) }
+            .filterNot { com.unciv.logic.chain.NavalCampaign.blocksPeace(civInfo.gameInfo, civInfo.civID, it.civID) }
             // Don't allow AIs to offer peace to city states allied with their enemies
             .filterNot { it.isCityState && it.allyCiv != null && civInfo.isAtWarWith(it.allyCiv!!) }
             // ignore civs that we have already offered peace this turn as a counteroffer to another civ's peace offer

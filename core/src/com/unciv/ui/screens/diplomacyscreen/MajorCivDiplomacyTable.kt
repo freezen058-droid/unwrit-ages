@@ -14,6 +14,7 @@ import com.unciv.logic.trade.TradeOfferType
 import com.unciv.models.ruleset.unique.UniqueType
 import com.unciv.models.translations.fillPlaceholders
 import com.unciv.models.translations.tr
+import com.unciv.ui.components.UncivTooltip.Companion.addTooltip
 import com.unciv.ui.components.extensions.addSeparator
 import com.unciv.ui.components.extensions.disable
 import com.unciv.ui.components.extensions.toLabel
@@ -104,6 +105,12 @@ class MajorCivDiplomacyTable(private val diplomacyScreen: DiplomacyScreen) {
         otherCivDiplomacyManager: DiplomacyManager
     ): TextButton {
         val negotiatePeaceButton = "Negotiate Peace".toTextButton()
+        if (com.unciv.logic.chain.NavalCampaign.blocksPeace(viewingCiv.gameInfo, viewingCiv.civID, otherCiv.civID)) {
+            negotiatePeaceButton.setText("Peace locked".tr())
+            negotiatePeaceButton.addTooltip("Peace negotiations are unavailable until this challenge ends.")
+            negotiatePeaceButton.disable()
+            return negotiatePeaceButton
+        }
         negotiatePeaceButton.onClick {
             val tradeTable = diplomacyScreen.setTrade(otherCiv)
             val peaceTreaty = TradeOffer(Constants.peaceTreaty, TradeOfferType.Treaty, speed = viewingCiv.gameInfo.speed)

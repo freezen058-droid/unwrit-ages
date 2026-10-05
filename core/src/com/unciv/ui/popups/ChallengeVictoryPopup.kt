@@ -51,11 +51,7 @@ class ChallengeVictoryPopup(screen: BaseScreen, game: GameInfo) : Popup(screen) 
         }.height(42f)
         details.actor.label.setFontSize(16)
         details.width(details.actor.prefWidth + 16f)
-        if (nextChapter) {
-            val continueButton = addButton("Continue", KeyCharAndCode.BACK, style = quiet) { close() }
-            continueButton.actor.label.setFontSize(16)
-            continueButton.width(continueButton.actor.prefWidth + 16f).height(42f).padLeft(12f)
-        } else primary.actor.keyShortcuts.add(KeyCharAndCode.BACK)
+        if (!nextChapter) primary.actor.keyShortcuts.add(KeyCharAndCode.BACK)
         scenario.authoredChapter?.let { it.briefingShown = true; it.resultShown = true }
             ?: scenario.navalCampaign?.active?.let { it.briefingShown = true; it.resultShown = true }
             ?: scenario.chapter?.let { it.briefingShown = true; it.resultShown = true }

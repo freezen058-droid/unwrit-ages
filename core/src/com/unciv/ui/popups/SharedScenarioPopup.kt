@@ -68,10 +68,13 @@ class SharedScenarioPopup(screen: BaseScreen, game: GameInfo, briefing: Boolean 
             if (showChallengeDetails && authored.outcome in listOf("unfinished", "defeated") && !scenario.freePlay &&
                 game === com.unciv.UncivGame.Current.gameInfo)
                 addCloseButton("Back", action = { ChallengeEndingPopup(screen, game) })
+            else if (showChallengeDetails && scenario.hasNextChapter && !scenario.freePlay &&
+                game === com.unciv.UncivGame.Current.gameInfo)
+                addCloseButton("Back", action = { ChallengeVictoryPopup(screen, game) })
             else addCloseButton(if (authored.outcome.isNotEmpty()) "Continue" else "Close")
         } else if (naval != null) {
             line((if (naval.number == 2) "Chapter II: Command the Strait" else "Chapter III: Break the Blockade").tr(), true)
-            line((if (naval.number == 2) "Rebuild your fleet and drive enemy ships away from the capital."
+            line((if (naval.number == 2) "Build warships in Antium and bring them north to defend Rome."
                 else "Bombard the port, then capture it with a melee ship.").tr())
             line("Chapter turn [${(game.turns - naval.startTurn).coerceIn(0, naval.duration)}] / [${naval.duration}]".tr())
             for (goal in navalGoalLines(scenario)) line(goal)
@@ -92,6 +95,9 @@ class SharedScenarioPopup(screen: BaseScreen, game: GameInfo, briefing: Boolean 
             if (showChallengeDetails && naval.outcome in listOf("unfinished", "defeated") && !scenario.freePlay &&
                 game === com.unciv.UncivGame.Current.gameInfo)
                 addCloseButton("Back", action = { ChallengeEndingPopup(screen, game) })
+            else if (showChallengeDetails && scenario.hasNextChapter && !scenario.freePlay &&
+                game === com.unciv.UncivGame.Current.gameInfo)
+                addCloseButton("Back", action = { ChallengeVictoryPopup(screen, game) })
             else addCloseButton(if (naval.outcome.isNotEmpty()) "Continue" else "Close")
         } else if (chapter != null) {
             line((if (chapter.path == "renewal") "Chapter II: Renewal" else "Chapter II: Recovery").tr(), true)
@@ -170,6 +176,9 @@ class SharedScenarioPopup(screen: BaseScreen, game: GameInfo, briefing: Boolean 
                 scenario.outcome in listOf("unfinished", "defeated") &&
                 !scenario.freePlay && game === com.unciv.UncivGame.Current.gameInfo)
                 addCloseButton("Back", action = { ChallengeEndingPopup(screen, game) })
+            else if (showChallengeDetails && !firstChapter && scenario.hasNextChapter && !scenario.freePlay &&
+                game === com.unciv.UncivGame.Current.gameInfo)
+                addCloseButton("Back", action = { ChallengeVictoryPopup(screen, game) })
             else addCloseButton(if (briefing) "Begin" else if (scenario.outcome.isNotEmpty()) "Continue" else "Close")
         }
         open(force = true)
@@ -182,9 +191,9 @@ fun navalGoalLines(s: SharedScenario): List<String> {
     val naval = requireNotNull(campaign.active)
     fun mark(turn: Int) = if (turn >= 0) "✓ " else "□ "
     return listOf(
-        mark(naval.fleetTurn) + (if (naval.number == 2) "1. Assemble at least 3 naval units" else "1. Field at least 2 Frigates").tr(),
+        mark(naval.fleetTurn) + (if (naval.number == 2) "1. At the deadline: at least 3 warships within 4 tiles of [${s.cityName.tr()}]" else "1. Field at least 2 Frigates").tr(),
         mark(naval.objectiveTurn) + (if (naval.number == 2)
-            "2. At the deadline: a friendly ship within 4 tiles of the capital, no enemy ships in that zone".tr()
+            "2. At the deadline: no enemy ships within 4 tiles of [${s.cityName.tr()}]".tr()
             else "2. Capture and hold [${campaign.enemyPortName.tr()}] at the deadline".tr()),
         mark(naval.holdTurn) + "3. Hold [${s.cityName.tr()}] at the deadline".tr()
     )

@@ -81,7 +81,8 @@ class TradeEvaluation {
                 // Current automation should prevent these from being offered anyway, 
                 //   these are a safeguard against future automation changes 
                 when (tradeOffer.name) {
-                    Constants.peaceTreaty -> offerer.isAtWarWith(tradePartner)
+                    Constants.peaceTreaty -> offerer.isAtWarWith(tradePartner) &&
+                        !com.unciv.logic.chain.NavalCampaign.blocksPeace(offerer.gameInfo, offerer.civID, tradePartner.civID)
                     Constants.researchAgreement -> !offerer.getDiplomacyManager(tradePartner)!!.hasFlag(DiplomacyFlags.ResearchAgreement)
                     Constants.defensivePact -> !offerer.getDiplomacyManager(tradePartner)!!.hasFlag(DiplomacyFlags.DefensivePact)
                     else -> true // potentional future treaties
@@ -94,7 +95,8 @@ class TradeEvaluation {
             TradeOfferType.Technology -> true
             TradeOfferType.Introduction -> !tradePartner.knows(tradeOffer.name) // You can't introduce them to someone they already know!
             TradeOfferType.WarDeclaration -> offerer.getDiplomacyManager(tradeOffer.name)!!.canDeclareWar()
-            TradeOfferType.PeaceProposal -> offerer.isAtWarWith(offerer.gameInfo.getCivilization(tradeOffer.name))
+            TradeOfferType.PeaceProposal -> offerer.isAtWarWith(offerer.gameInfo.getCivilization(tradeOffer.name)) &&
+                !com.unciv.logic.chain.NavalCampaign.blocksPeace(offerer.gameInfo, offerer.civID, tradeOffer.name)
             TradeOfferType.City -> offerer.cities.any { it.id == tradeOffer.name }
         }
     }
@@ -288,6 +290,7 @@ class TradeEvaluation {
      */
     @Readonly @Suppress("purity") // Changing trade offer nested items
     fun isPeaceProposalEnabled(thirdCiv: Civilization, civInfo: Civilization): Boolean {
+        if (com.unciv.logic.chain.NavalCampaign.blocksPeace(civInfo.gameInfo, civInfo.civID, thirdCiv.civID)) return false
         val diploManager = civInfo.getDiplomacyManager(thirdCiv)!!
 
         // On standard speed 10 turns must pass before peace can be proposed

@@ -40,7 +40,8 @@ class TradeLogic(val ourCivilization: Civilization, val otherCivilization: Civil
         val offers = TradeOffersList()
         if (civInfo.isCityState || otherCiv.isCityState) return offers
         
-        if (civInfo.isAtWarWith(otherCiv))
+        if (civInfo.isAtWarWith(otherCiv) &&
+            !com.unciv.logic.chain.NavalCampaign.blocksPeace(civInfo.gameInfo, civInfo.civID, otherCiv.civID))
             offers.add(TradeOffer(Constants.peaceTreaty, TradeOfferType.Treaty, speed = civInfo.gameInfo.speed))
         
         if (civInfo.diplomacyFunctions.meetsEmbassyRequirementFor(otherCiv)
@@ -113,6 +114,16 @@ class TradeLogic(val ourCivilization: Civilization, val otherCivilization: Civil
     }
 
     fun acceptTrade(applyGifts: Boolean = true) {
+        // Reject previously queued peace offers before any resources change hands.
+        fun blockedPeace(offer: TradeOffer, from: Civilization, to: Civilization): Boolean = when {
+            offer.type == TradeOfferType.Treaty && offer.name == Constants.peaceTreaty ->
+                com.unciv.logic.chain.NavalCampaign.blocksPeace(from.gameInfo, from.civID, to.civID)
+            offer.type == TradeOfferType.PeaceProposal ->
+                com.unciv.logic.chain.NavalCampaign.blocksPeace(from.gameInfo, from.civID, offer.name)
+            else -> false
+        }
+        if (currentTrade.ourOffers.any { blockedPeace(it, ourCivilization, otherCivilization) } ||
+            currentTrade.theirOffers.any { blockedPeace(it, otherCivilization, ourCivilization) }) return
         val ourDiploManager = ourCivilization.getDiplomacyManager(otherCivilization)!!
         val theirDiploManager = otherCivilization.getDiplomacyManager(ourCivilization)!!
 

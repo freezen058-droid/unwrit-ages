@@ -628,6 +628,7 @@ class DiplomacyManager() : IsPartOfGameInfoSerialization {
 
 
     fun makePeace() {
+        if (com.unciv.logic.chain.NavalCampaign.blocksPeace(civInfo.gameInfo, civInfo.civID, otherCiv.civID)) return
         Chronicle.record(civInfo.gameInfo, ChronicleKind.PeaceMade, civInfo.civName, otherCiv.civName)
         makePeaceOneSide()
         otherCivDiplomacy().makePeaceOneSide()

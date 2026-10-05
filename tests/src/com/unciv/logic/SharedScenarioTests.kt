@@ -183,7 +183,7 @@ class SharedScenarioTests {
     @Test fun navalCheckpointsRequireBothTheFleetAndTerritoryAtTheDeadline() {
         val c = com.unciv.logic.chain.NavalChapter().apply { number = 2; startTurn = 120 }
         c.evaluate(125, true, true, true, false, 40, 3)
-        assertEquals(1, c.completedCount)
+        assertEquals(0, c.completedCount)
         c.evaluate(145, true, false, true, false, 50, 3)
         assertEquals("unfinished", c.outcome)
         c.evaluate(146, true, true, true, false, 100, 8)

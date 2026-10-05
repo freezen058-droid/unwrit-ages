@@ -5,6 +5,21 @@ import com.unciv.logic.IsPartOfGameInfoSerialization
 
 /** Fixed objectives on one shared world; completed chapters remain immutable. */
 class NavalCampaign : IsPartOfGameInfoSerialization {
+    companion object {
+        /** The campaign's two belligerents cannot negotiate away its military objectives. */
+        @yairm210.purity.annotations.Readonly
+        fun blocksPeace(game: GameInfo, first: String, second: String): Boolean {
+            val scenario = game.sharedScenario ?: return false
+            val campaign = scenario.navalCampaign ?: return false
+            if (!scenario.supported || scenario.freePlay || campaign.enemyPortId.isBlank() ||
+                scenario.opponent.isBlank() || game.turns < scenario.startTurn) return false
+            if (scenario.currentOutcome.isNotEmpty() &&
+                (scenario.currentOutcome != "completed" || !scenario.hasNextChapter)) return false
+            return (first == scenario.civilization && second == scenario.opponent) ||
+                (second == scenario.civilization && first == scenario.opponent)
+        }
+    }
+
     var enemyPortId = ""
     var enemyPortName = ""
     var control: NavalChapter? = null
@@ -48,14 +63,15 @@ class NavalChapter : IsPartOfGameInfoSerialization {
     fun observe(game: GameInfo, scenario: SharedScenario, campaign: NavalCampaign) {
         if (!supported || outcome.isNotEmpty() || game.turns < startTurn) return
         val civ = game.civilizations.firstOrNull { it.civID == scenario.civilization } ?: return
-        val ships = civ.units.getCivUnits().filter { it.baseUnit.isWaterUnit }.toList()
+        val ships = civ.units.getCivUnits().filter { it.baseUnit.isWaterUnit && it.baseUnit.isMilitary }.toList()
         val target = game.tileMap.values.firstOrNull { it.isCityCenter() && it.getCity()?.id == scenario.cityId }
+        val fleetAtHome = if (target == null) 0 else ships.count { it.currentTile.aerialDistanceTo(target) <= 4 }
         val controlsStrait = target != null && ships.any { it.currentTile.aerialDistanceTo(target) <= 4 } &&
             game.civilizations.filter { it != civ && civ.isAtWarWith(it) }.none { opponent ->
                 opponent.units.getCivUnits().any { it.baseUnit.isWaterUnit && it.currentTile.aerialDistanceTo(target) <= 4 }
             }
         val ownsPort = civ.cities.any { it.id == campaign.enemyPortId }
-        evaluate(game.turns, if (number == 2) ships.size >= 3 else ships.count { it.name == "Frigate" } >= 2,
+        evaluate(game.turns, if (number == 2) fleetAtHome >= 3 else ships.count { it.name == "Frigate" } >= 2,
             if (number == 2) controlsStrait else ownsPort,
             civ.cities.any { it.id == scenario.cityId }, civ.isDefeated(), civ.gold, ships.size)
     }
@@ -63,7 +79,7 @@ class NavalChapter : IsPartOfGameInfoSerialization {
     fun evaluate(turn: Int, fleetReady: Boolean, objectiveHeld: Boolean, ownsHome: Boolean,
                  defeated: Boolean, gold: Int, ships: Int) {
         if (!supported || outcome.isNotEmpty() || turn < startTurn) return
-        if (turn <= deadline && fleetReady && fleetTurn < 0) fleetTurn = turn
+        if (turn <= deadline && fleetReady && fleetTurn < 0 && (number != 2 || turn == deadline)) fleetTurn = turn
         if (defeated || turn >= deadline) {
             if (!defeated && turn == deadline) {
                 if (objectiveHeld) objectiveTurn = turn
