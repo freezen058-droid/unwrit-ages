@@ -165,8 +165,6 @@ class WorldScreenTopBar(internal val worldScreen: WorldScreen) : Table() {
     }
 
     private class OverviewAndSupplyTable(worldScreen: WorldScreen) : Table(BaseScreen.skin) {
-        private val scenarioButton = "Scenario goals".toTextButton()
-        private val scenarioCell: Cell<Actor?>
         val unitSupplyImage = ImageGetter.getImage("OtherIcons/ExclamationMark")
             .apply { color = Color.FIREBRICK }
         val unitSupplyCell: Cell<Actor?>
@@ -183,24 +181,10 @@ class WorldScreenTopBar(internal val worldScreen: WorldScreen) : Table() {
 
             unitSupplyCell = add()
             add(overviewButton).pad(10f)
-            row()
-            scenarioCell = add().colspan(2)
-            scenarioButton.onClick {
-                if (worldScreen.gameInfo.sharedScenario?.supported == true)
-                    com.unciv.ui.popups.SharedScenarioPopup(worldScreen, worldScreen.gameInfo)
-            }
             pack()
         }
 
         fun update(worldScreen: WorldScreen) {
-            val scenario = worldScreen.gameInfo.sharedScenario
-            val showScenario = scenario?.supported == true && scenario.civilization == worldScreen.gameInfo.currentPlayer
-            if (showScenario) {
-                scenarioCell.setActor(scenarioButton).size(scenarioButton.prefWidth, scenarioButton.prefHeight)
-                    .pad(0f, 10f, 6f, 10f)
-            } else scenarioCell.setActor(null).pad(0f).size(0f)
-            invalidate()
-            pack()
             val newVisible = worldScreen.selectedCiv.stats.getUnitSupplyDeficit() > 0
             if (newVisible == unitSupplyCell.hasActor()) return
             if (newVisible) unitSupplyCell.setActor(unitSupplyImage)

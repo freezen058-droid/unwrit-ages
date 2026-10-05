@@ -162,4 +162,15 @@ class SharedScenarioTests {
         assertEquals(-1, s.constructionTurn)
         assertEquals("unfinished", s.outcome)
     }
+
+    @Test fun freePlayPreservesResultsAndSurvivesSaveAndClone() {
+        val s = scenario().apply { outcome = "unfinished"; finalGold = 70; freePlay = true }
+        val game = GameInfo().apply { sharedScenario = s }
+        val loaded = json().fromJson(GameInfo::class.java, json().toJson(game))
+        assertTrue(loaded.sharedScenario!!.freePlay)
+        assertTrue(game.clone().sharedScenario!!.freePlay)
+        s.evaluate(80, true, true, false, 500, 3, false)
+        assertEquals(70, s.finalGold); assertEquals("unfinished", s.outcome)
+        assertFalse(s.beginNextChapter(game))
+    }
 }

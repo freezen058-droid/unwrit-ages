@@ -26,6 +26,7 @@ class SharedScenario : IsPartOfGameInfoSerialization {
     var briefingShown = false
     var resultShown = false
     var chapter: SharedScenarioChapter? = null
+    var freePlay = false
 
     val hasNextChapter get() = id == "civilization-on-the-brink-v1" &&
         outcome in listOf("completed", "unfinished") && chapter == null
@@ -35,7 +36,7 @@ class SharedScenario : IsPartOfGameInfoSerialization {
 
     /** Chapter one stays immutable. The next chapter starts when the player accepts it. */
     fun beginNextChapter(game: GameInfo): Boolean {
-        if (!supported || !hasNextChapter) return false
+        if (!supported || !hasNextChapter || freePlay) return false
         val civ = game.civilizations.firstOrNull { it.civID == civilization } ?: return false
         if (civ.isDefeated() || game.turns > Int.MAX_VALUE - 15) return false
         chapter = SharedScenarioChapter().apply {
@@ -69,6 +70,7 @@ class SharedScenario : IsPartOfGameInfoSerialization {
         it.outcome = outcome; it.finalGold = finalGold; it.finalCities = finalCities
         it.finalAtWar = finalAtWar; it.briefingShown = briefingShown; it.resultShown = resultShown
         it.chapter = chapter?.copy()
+        it.freePlay = freePlay
     }
 
     /** Called from the engine as well as the UI, including automated turns. Never changes rules. */

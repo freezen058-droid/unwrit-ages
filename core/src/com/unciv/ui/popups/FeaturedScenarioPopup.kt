@@ -11,7 +11,7 @@ import com.unciv.utils.Concurrency
 import com.unciv.utils.launchOnGLThread
 
 /** Bundled canonical snapshot; no invented on-chain author, parent, or receipt. */
-class FeaturedScenarioPopup(screen: BaseScreen) : Popup(screen) {
+class FeaturedScenarioPopup(screen: BaseScreen, previousResult: com.unciv.logic.GameInfo? = null) : Popup(screen) {
     private var loading = false
     init {
         addGoodSizedLabel("A Civilization on the Brink", color = Color.GOLD).row()
@@ -20,6 +20,9 @@ class FeaturedScenarioPopup(screen: BaseScreen) : Popup(screen) {
             "Research Currency, build a Market, and hold your capital.",
             "Defend, negotiate, or counterattack - choose your own strategy."))
             add(text.toLabel().apply { wrap = true }).width(width).left().padTop(10f).row()
+        if (previousResult != null)
+            add("Restart from the original starting save. Your previous result will be saved on this device.".toLabel()
+                .apply { wrap = true }).width(width).left().padTop(10f).row()
         val status = "".toLabel().apply { wrap = true }
         add(status).width(width).row()
         val play = addButton("Play from here") {
@@ -30,6 +33,12 @@ class FeaturedScenarioPopup(screen: BaseScreen) : Popup(screen) {
                 val app = UncivGame.Current
                 val previous = app.gameInfo
                 try {
+                    if (previousResult != null) {
+                        val baseName = "[${previousResult.sharedScenario!!.title}] - Chapter II - Turn [${previousResult.turns}]".tr(hideIcons = true)
+                        var name = baseName; var index = 2
+                        while (app.files.getSave(name).exists()) name = "$baseName (${index++})"
+                        app.files.saveGame(previousResult, name, recordOnChain = false)
+                    }
                     val game = UncivFiles.gameInfoFromString(Gdx.files.internal("scenarios/civilization-on-the-brink.json").readString("UTF-8"))
                     // Always start from the packaged snapshot, never from a previous playthrough.
                     game.sharedScenario?.briefingShown = false

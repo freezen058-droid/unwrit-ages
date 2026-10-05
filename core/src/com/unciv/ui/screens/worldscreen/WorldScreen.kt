@@ -33,6 +33,7 @@ import com.unciv.ui.components.input.KeyShortcutDispatcherVeto
 import com.unciv.ui.components.input.KeyboardBinding
 import com.unciv.ui.components.input.KeyboardPanningListener
 import com.unciv.ui.components.input.onClick
+import com.unciv.ui.components.extensions.toTextButton
 import com.unciv.ui.components.extensions.surroundWithCircle
 import com.unciv.ui.popups.TutorialTaskBoard
 import com.unciv.ui.components.widgets.AutoScrollPane
@@ -172,6 +173,11 @@ class WorldScreen(
         }
     }
     private var tutorialTaskTableHash = 0
+    private val scenarioGoalsButton = "Scenario goals".toTextButton().apply {
+        name = "WorldScenarioGoals"
+        onClick { if (gameInfo.sharedScenario?.supported == true)
+            com.unciv.ui.popups.SharedScenarioPopup(this@WorldScreen, gameInfo) }
+    }
     /** The wrap width [tutorialTaskTable]'s text was built with, to rebuild it when the room changes. */
     private var tutorialTaskTextWidth = 0f
     /** How much wider the hint is than its text: padding, background border, scroll bar. Starts as
@@ -225,6 +231,7 @@ class WorldScreen(
             popup.open(true)
         }
         stage.addActor(topBar)
+        stage.addActor(scenarioGoalsButton)
         stage.addActor(statusButtons)
         stage.addActor(techPolicyAndDiplomacy)
         stage.addActor(chatButton)
@@ -375,6 +382,7 @@ class WorldScreen(
     private fun toggleUI() {
         uiEnabled = !uiEnabled
         topBar.isVisible = uiEnabled
+        positionScenarioGoalsButton()
         statusButtons.isVisible = uiEnabled
         techPolicyAndDiplomacy.isVisible = uiEnabled
         tutorialTaskTable.isVisible = uiEnabled
@@ -861,6 +869,26 @@ class WorldScreen(
 
         // Update chat button position to always be below techPolicyAndDiplomacy
         chatButton.updatePosition()
+        positionScenarioGoalsButton()
+    }
+
+    private fun positionScenarioGoalsButton() {
+        scenarioGoalsButton.isVisible = uiEnabled && gameInfo.sharedScenario?.let {
+            it.supported && it.civilization == viewingCiv.civID
+        } == true
+        if (!scenarioGoalsButton.isVisible) return
+        scenarioGoalsButton.pack()
+        val left = techPolicyAndDiplomacy.x + techPolicyAndDiplomacy.width + 8f
+        val right = statusButtons.x - 8f
+        val room = right - left
+        val x = if (room >= scenarioGoalsButton.width)
+            (stage.width / 2 - scenarioGoalsButton.width / 2).coerceIn(left, right - scenarioGoalsButton.width)
+            else stage.width / 2 - scenarioGoalsButton.width / 2
+        var below = topBar.y
+        if (room < scenarioGoalsButton.width)
+            below = minOf(below, techPolicyAndDiplomacy.y, statusButtons.y)
+        if (tutorialProgressButton.isVisible) below = minOf(below, tutorialProgressButton.y)
+        scenarioGoalsButton.setPosition(x, below - scenarioGoalsButton.height - 6f)
     }
 
     private fun updateAutoPlayStatusButton() {
