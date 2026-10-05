@@ -638,6 +638,7 @@ class CityConstructions : IsPartOfGameInfoSerialization {
         }
         builtBuildingObjects = builtBuildingObjects.withItem(building)
         builtBuildings.add(buildingName)
+        civ.gameInfo.sharedScenario?.constructed(civ.gameInfo.turns, civ.civID, city.id, buildingName)
 
         updateUniques()
 

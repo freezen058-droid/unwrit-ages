@@ -123,6 +123,7 @@ internal suspend fun CoroutineScope.playRestored(game: GameInfo, record: CloudSa
         game.sharedSaveDifficulty = 0
         game.continuedFromTurn = game.turns
         game.continuedFromSave = record.signature
+        game.sharedScenario?.briefingShown = false
     }
     val files = UncivGame.Current.files
     var name = record.name.ifBlank { "Restored" }

@@ -113,6 +113,8 @@ class TurnManager(val civInfo: Civilization) {
             )
         }
 
+        if (civInfo.gameInfo.sharedScenario?.civilization == civInfo.civID)
+            civInfo.gameInfo.sharedScenario?.observe(civInfo.gameInfo)
         updateWinningCiv()
     }
 

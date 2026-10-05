@@ -163,6 +163,8 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
     var sharedSaveIntent = ""
     var sharedSaveDifficulty = 0
 
+    var sharedScenario: com.unciv.logic.chain.SharedScenario? = null
+
     /** The minted certificate's address, once there is one - so the offer shows it instead of
      *  a second mint button that would charge again for the same victory. */
     var certificateAddress: String? = null
@@ -271,6 +273,7 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
         toReturn.continuedFromSave = continuedFromSave
         toReturn.sharedSaveIntent = sharedSaveIntent
         toReturn.sharedSaveDifficulty = sharedSaveDifficulty
+        toReturn.sharedScenario = sharedScenario?.copy()
         toReturn.certificateAddress = certificateAddress
         toReturn.historyStartTurn = historyStartTurn
         toReturn.lastUnitId = lastUnitId
@@ -439,6 +442,7 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
      *  @param shouldGainTime on a multiplayer game, if true, makes the player whose turn is ended recover time to play before risking getting forced to resign, 'false' by default 
      */
     fun nextTurn(progressBar: NextTurnProgress? = null, shouldGainTime: Boolean = false): Unit = timeThis("GameInfo.nextTurn") {
+        sharedScenario?.observe(this)
         var player = currentPlayerCiv
         var playerIndex = civilizations.indexOf(player)
 
@@ -552,6 +556,7 @@ class GameInfo : IsPartOfGameInfoSerialization, HasGameInfoSerializationVersion 
 
         // This would belong at the end of TurnManager.startTurn, but needs to come after notifyOfCloseEnemyUnits
         player.notificationCountAtStartTurn = player.notifications.size
+        sharedScenario?.observe(this)
     }
     
     private fun updateMinutesBeforeForceResign(player: Civilization, shouldGainTime: Boolean) {

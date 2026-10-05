@@ -36,6 +36,7 @@ class SaveGameScreen(private val gameInfo: GameInfo) : LoadOrSaveScreen("Current
     private val gameNameTextField = UncivTextField(nameFieldLabelText)
     private var selectedIntent = gameInfo.sharedSaveIntent.takeIf { it in SharedSaveIntent.labels }.orEmpty()
     private var selectedDifficulty = gameInfo.sharedSaveDifficulty.takeIf { it in 1..5 } ?: 0
+    private var selectedScenario = gameInfo.sharedScenario?.copy()
 
     companion object : Helpers {
         const val nameFieldLabelText = "Saved game name"
@@ -93,14 +94,18 @@ class SaveGameScreen(private val gameInfo: GameInfo) : LoadOrSaveScreen("Current
             fun updateIntent() {
                 intentTable.clear()
                 if (!settings.shareCloudSaves) return
-                intentTable.add("Goal for the next player".toLabel()).padTop(4f).row()
-                val picker = TranslatedSelectBox(SharedSaveIntent.labels.values,
-                    SharedSaveIntent.labels.getValue(selectedIntent))
-                picker.name = "SharedSaveGoal"
-                picker.onChange {
-                    selectedIntent = SharedSaveIntent.labels.entries.first { it.value == picker.selected.value }.key
+                val goals = (selectedScenario?.let { "Goals [${it.completedCount}]/3 · [${it.duration}] turns".tr() }
+                    ?: "Set goals for the next player".tr()).toTextButton()
+                goals.name = "SharedSaveGoals"
+                goals.onClick {
+                    if (gameInfo.sharedScenario?.supported == true)
+                        com.unciv.ui.popups.SharedScenarioPopup(this@SaveGameScreen, gameInfo)
+                    else com.unciv.ui.popups.SharedScenarioEditor(this@SaveGameScreen, gameInfo, selectedScenario) {
+                        selectedScenario = it
+                        updateIntent()
+                    }
                 }
-                intentTable.add(picker).width(300f).padTop(4f).row()
+                intentTable.add(goals).width(300f).padTop(4f).row()
                 val difficultyRow = Table()
                 difficultyRow.add("Takeover difficulty (your estimate)".toLabel()).left().padRight(8f)
                 val difficulty = TranslatedSelectBox(SharedSaveDifficulty.labels.values,
@@ -170,6 +175,7 @@ class SaveGameScreen(private val gameInfo: GameInfo) : LoadOrSaveScreen("Current
     }
 
     private fun saveGame(saveGameFile: FileHandle) {
+        gameInfo.sharedScenario = selectedScenario?.copy()
         gameInfo.sharedSaveIntent = if (game.settings.recordSavesOnChain && game.settings.shareCloudSaves)
             selectedIntent else ""
         gameInfo.sharedSaveDifficulty = if (game.settings.recordSavesOnChain && game.settings.shareCloudSaves)

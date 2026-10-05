@@ -60,6 +60,11 @@ class WorldScreenMenuPopup(
             close()
             TutorialGuidePopup(worldScreen.stage, worldScreen.gameInfo.ruleset, gameInfo = worldScreen.gameInfo).open(true)
         }.nextColumn()
+        if (showSave && worldScreen.gameInfo.sharedScenario?.supported == true)
+            addButton("Scenario goals", KeyboardBinding.None) {
+                close()
+                com.unciv.ui.popups.SharedScenarioPopup(worldScreen, worldScreen.gameInfo)
+            }.nextColumn()
         if (showSave)
             addButton("Save game", KeyboardBinding.SaveGame) {
                 close()

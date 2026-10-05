@@ -62,6 +62,11 @@ class SaveGalleryPopup(private val screen: BaseScreen) : Popup(screen) {
     private var era = ALL_ERAS
     private var continuationOf: CloudSave.Record? = null
     private var closed = false
+    private val comparisonSummaries = mutableMapOf<String, String>()
+    private val comparisonRequested = mutableSetOf<String>()
+    private val comparisonDefinitions = mutableMapOf<String, String>()
+    private val comparisonQueue = java.util.ArrayDeque<CloudSave.Record>()
+    private var comparisonBusy = false
 
     init {
         addGoodSizedLabel("Shared saves").row()
@@ -125,6 +130,9 @@ class SaveGalleryPopup(private val screen: BaseScreen) : Popup(screen) {
             navigation.add("How to share a save".toTextButton().apply {
                 onClick { SharedWorldHelpPopup(screen) }
             })
+            navigation.add("Featured scenario".toTextButton().apply {
+                onClick { close(); com.unciv.ui.popups.FeaturedScenarioPopup(screen) }
+            }).padLeft(8f)
         }
         val shown = records
             .filter { parent == null || it.meta?.parent == parent.signature }
@@ -143,6 +151,11 @@ class SaveGalleryPopup(private val screen: BaseScreen) : Popup(screen) {
         })
         list.clear()
         for (record in shown) list.add(row(record)).growX().pad(4f).row()
+        if (parent != null) {
+            if (comparisonRequested.add(parent.signature)) comparisonQueue.addFirst(parent)
+            for (record in shown) if (comparisonRequested.add(record.signature)) comparisonQueue.add(record)
+            fetchNextComparison()
+        }
         pack()
         fitOrCenterContentIntoVisibleArea()
     }
@@ -159,6 +172,45 @@ class SaveGalleryPopup(private val screen: BaseScreen) : Popup(screen) {
         filters.add(box(ALL_CIVS, records.map { it.meta?.civ }, civ) { civ = it })
         filters.add(box(ALL_MAPS, records.map { it.meta?.mapType }, mapType) { mapType = it })
         filters.add(box(ALL_ERAS, records.map { it.meta?.era }, era) { era = it })
+    }
+
+    /** Load outcome snapshots only while viewing continuations, sequentially and hash-checked. */
+    private fun fetchNextComparison() {
+        if (closed || comparisonBusy || comparisonQueue.isEmpty()) return
+        comparisonBusy = true
+        val record = comparisonQueue.removeFirst()
+        fun finish(summary: String?, definition: String = "") {
+            com.badlogic.gdx.Gdx.app.postRunnable {
+                comparisonBusy = false
+                if (closed) return@postRunnable
+                comparisonDefinitions[record.signature] = definition
+                if (summary != null) comparisonSummaries[record.signature] = summary
+                show()
+                fetchNextComparison()
+            }
+        }
+        ChainWallet.service.downloadCloudSave(record.arweaveIds,
+            onError = { finish(null) }, onSuccess = { bytes ->
+                Concurrency.run("ScenarioComparison") {
+                    var definition = ""
+                    val summary = try {
+                        val game = decodeCloudSave(record, bytes, null)
+                        val s = game.sharedScenario?.takeIf { it.supported }
+                        definition = s?.definitionHash().orEmpty()
+                        val parent = record.meta?.parent
+                        if (s == null || parent.isNullOrEmpty() || game.continuedFromSave != parent ||
+                            comparisonDefinitions[parent] != definition) null else {
+                            val civ = game.civilizations.firstOrNull { it.civID == s.civilization }
+                            val settled = s.outcome.isNotEmpty()
+                            "Goals [${s.completedCount}]/3 · Scenario turn [${(game.turns - s.startTurn).coerceIn(0, s.duration)}]/[${s.duration}]".tr() +
+                                "\n" + "Research [${if (s.researchTurn < 0) "-" else (s.researchTurn - s.startTurn).toString()}] · Market [${if (s.constructionTurn < 0) "-" else (s.constructionTurn - s.startTurn).toString()}]".tr() +
+                                "\n" + "Treasury: [${if (settled) s.finalGold else civ?.gold ?: 0}] · Cities: [${if (settled) s.finalCities else civ?.cities?.size ?: 0}]".tr() + " · " +
+                                (if (if (settled) s.finalAtWar else civ?.diplomacy?.get(s.opponent)?.diplomaticStatus == DiplomaticStatus.War) "At war" else "At peace").tr()
+                        }
+                    } catch (_: Exception) { null }
+                    finish(summary, definition)
+                }
+            })
     }
 
     private fun row(record: CloudSave.Record): Table {
@@ -178,6 +230,11 @@ class SaveGalleryPopup(private val screen: BaseScreen) : Popup(screen) {
         val seeker = record.meta?.author in seekers
         button.add(((if (seeker) "Seeker".tr() + "  ·  " else "") + describe(record))
             .toLabel(fontSize = Constants.defaultFontSize - 4, hideIcons = true)).left().colspan(2)
+        comparisonSummaries[record.signature]?.let {
+            button.row()
+            button.add(it.toLabel(fontSize = Constants.defaultFontSize - 4).apply { wrap = true })
+                .width(screen.stage.width * 0.6f).left().colspan(2).padTop(5f)
+        }
         button.touchable = com.badlogic.gdx.scenes.scene2d.Touchable.enabled
         button.onClick { openDetails(record) }
         return button
@@ -260,6 +317,10 @@ private class SaveGalleryDetailPopup(
         if (closed) return
         status.setText("")
         val civ = game.getCurrentPlayerCivilization()
+        game.sharedScenario?.takeIf { it.supported }?.let { scenario ->
+            invitation.add("[${scenario.title.tr()}] · Goals [${scenario.completedCount}]/3".tr()
+                .toLabel(Color.GOLD).apply { wrap = true }).width(screen.stage.width * 0.7f).row()
+        }
         SharedSaveIntent.label(game.sharedSaveIntent)?.let {
             invitation.add("Author's goal: [${it.tr()}]".tr().toLabel(Color.GOLD).apply { wrap = true })
                 .width(screen.stage.width * 0.7f).row()
@@ -324,6 +385,17 @@ private class SaveGalleryDetailPopup(
         }
 
         val income = civ.stats.statsForNextTurn.gold.roundToInt()
+        game.sharedScenario?.takeIf { it.supported }?.let { scenario ->
+            side.add("Scenario goals".toTextButton().apply {
+                onClick { com.unciv.ui.popups.SharedScenarioPopup(screen, game) }
+            }).padTop(5f).row()
+            if (scenario.outcome.isNotEmpty()) side.add(
+                ("Scenario result: [${scenario.outcome.tr()}]".tr() + "\n" +
+                    "Treasury: [${scenario.finalGold}] · Cities: [${scenario.finalCities}]".tr() + " · " +
+                    (if (scenario.finalAtWar) "At war" else "At peace").tr())
+                    .toLabel(fontSize = small).apply { wrap = true })
+                .width(screen.stage.width * 0.34f).padTop(4f).row()
+        }
         val rate = (if (income >= 0) "+" else "") + income
         val research = civ.tech.techsToResearch.firstOrNull()?.tr()
         // Only established diplomatic relationships; never inspect unseen units or rivals' stats.

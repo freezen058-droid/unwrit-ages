@@ -478,6 +478,7 @@ class WorldScreen(
         mapHolder.updateTiles(getGameViewConsideringForOfWar().civView)
 
         topBar.update(selectedCiv)
+        gameInfo.sharedScenario?.observe(gameInfo)
         placeTutorialTaskTable()
 
         if (techPolicyAndDiplomacy.update())
@@ -496,6 +497,10 @@ class WorldScreen(
 
         if (!hasOpenPopups() && !autoPlay.isAutoPlaying() && isPlayersTurn) {
             when {
+                gameInfo.sharedScenario?.let { it.supported && it.civilization == viewingCiv.civID &&
+                    (!it.briefingShown || it.outcome.isNotEmpty() && !it.resultShown) } == true ->
+                    com.unciv.ui.popups.SharedScenarioPopup(this, gameInfo,
+                        briefing = gameInfo.sharedScenario?.briefingShown == false)
                 viewingCiv.shouldShowDiplomaticVotingResults() ->
                     UncivGame.Current.pushScreen(DiplomaticVoteResultScreen(gameInfo.diplomaticVictoryVotesCast, viewingCiv))
                 !gameInfo.oneMoreTurnMode && (viewingCiv.isDefeated() || gameInfo.checkForVictory()) ->
