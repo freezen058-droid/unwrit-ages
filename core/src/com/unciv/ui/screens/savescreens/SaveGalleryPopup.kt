@@ -11,6 +11,7 @@ import com.unciv.logic.GameInfo
 import com.unciv.logic.chain.ChainWallet
 import com.unciv.logic.chain.CloudSave
 import com.unciv.logic.chain.SharedSaveIntent
+import com.unciv.logic.chain.SharedSaveCache
 import com.unciv.logic.civilization.diplomacy.DiplomaticStatus
 import com.unciv.logic.map.HexMath
 import com.unciv.models.translations.tr
@@ -130,12 +131,13 @@ class SaveGalleryPopup(private val screen: BaseScreen) : Popup(screen) {
             navigation.add("How to share a save".toTextButton().apply {
                 onClick { SharedWorldHelpPopup(screen) }
             })
-            navigation.add("Featured scenario".toTextButton().apply {
-                onClick { close(); com.unciv.ui.popups.FeaturedScenarioPopup(screen) }
-            }).padLeft(8f)
         }
+        val availableSignatures = records.map { it.signature }.toSet()
         val shown = records
-            .filter { parent == null || it.meta?.parent == parent.signature }
+            .filter {
+                if (parent != null) it.meta?.parent == parent.signature
+                else it.meta?.parent.isNullOrEmpty() || it.meta?.parent !in availableSignatures
+            }
             .filter { parent != null || civ == ALL_CIVS || it.meta?.civ == civ }
             .filter { parent != null || mapType == ALL_MAPS || it.meta?.mapType == mapType }
             .filter { parent != null || era == ALL_ERAS || it.meta?.era == era }
@@ -189,7 +191,7 @@ class SaveGalleryPopup(private val screen: BaseScreen) : Popup(screen) {
                 fetchNextComparison()
             }
         }
-        ChainWallet.service.downloadCloudSave(record.arweaveIds,
+        downloadSharedSave(record,
             onError = { finish(null) }, onSuccess = { bytes ->
                 Concurrency.run("ScenarioComparison") {
                     var definition = ""
@@ -267,7 +269,7 @@ class SaveGalleryPopup(private val screen: BaseScreen) : Popup(screen) {
         val meta = record.meta ?: return date
         val relayed = relays(record)
         return (listOf(meta.civ.tr(), meta.mapType.tr() + " " + meta.mapSize.tr(), meta.era.tr(),
-            "Turn [${meta.turn}]".tr(), date) + (if (relayed > 0) listOf("Relayed [$relayed] times".tr()) else emptyList()))
+            "Turn [${meta.turn}]".tr(), date) + (if (relayed > 0) listOf(continuationCountText(relayed)) else emptyList()))
             .joinToString("  ·  ")
     }
 }
@@ -299,12 +301,20 @@ private class SaveGalleryDetailPopup(
         add(invitation).row()
         add(body).row()
         add(status).width(screen.stage.width * 0.6f).row()
-        addButton("View continuations") { close(); onContinuations() }
+        addButton("View continuations") {
+            if (relayCount > 0) {
+                close()
+                onContinuations()
+            }
+        }.actor.apply {
+            isDisabled = relayCount == 0
+            if (isDisabled) color.a = 0.45f
+        }
         if (source != null) addButton("View source save") { close(); onSource() }
         addCloseButton()
         closeListeners.add { closed = true; texture?.dispose(); texture = null }
         open(force = true)
-        ChainWallet.service.downloadCloudSave(record.arweaveIds, onError = ::failed, onSuccess = { bytes ->
+        downloadSharedSave(record, onError = ::failed, onSuccess = { bytes ->
             Concurrency.run("GalleryPreview") {
                 val game = try { decodeCloudSave(record, bytes, null) } catch (ex: Exception) {
                     launchOnGLThread { failed(ex) }
@@ -384,7 +394,7 @@ private class SaveGalleryDetailPopup(
                 (if (seekerAuthor) "  ·  " + "Seeker owner".tr() else "") } ?: "",
             source?.let { "Continued from [${it.name}]".tr() }
                 ?: record.meta?.parent?.takeIf { it.isNotEmpty() }?.let { "The source save is not in the current listing.".tr() } ?: "",
-            if (relayCount > 0) "Relayed [$relayCount] times".tr() else ""
+            if (relayCount > 0) continuationCountText(relayCount) else ""
         )) if (line.isNotEmpty()) side.add(line.toLabel(fontSize = small, hideIcons = true).apply { wrap = true })
             .width(screen.stage.width * 0.34f).row()
 
@@ -457,9 +467,6 @@ private class SaveGalleryDetailPopup(
             side.add(("Bounty: [${bounty.skr}] SKR to the first victory won from here within [${bounty.turns}] turns, without AutoPlay. " +
                 "The author pays it by hand, on seeing the certificate.").tr().toLabel(Color.GOLD, fontSize = small - 2).apply { wrap = true })
                 .width(screen.stage.width * 0.3f).padTop(8f).row()
-        // The author offers a bounty on their own save (manual, option A)
-        if (mine && ChainWallet.isConnected)
-            side.add("Offer a bounty".toTextButton().apply { onClick { BountyPopup(screen, record) { status.setText(it) } } }).padTop(8f).row()
         body.add(side).top().growX()
         pack()
         fitOrCenterContentIntoVisibleArea()
@@ -478,17 +485,50 @@ private class SaveGalleryDetailPopup(
     }
 }
 
+/** Cache only verified public uploads. Every open still decodes a fresh, independent game. */
+private fun downloadSharedSave(record: CloudSave.Record, onSuccess: (ByteArray) -> Unit,
+                               onError: (Exception) -> Unit) {
+    val cache = SharedSaveCache(com.unciv.UncivGame.Current.files.getLocalFile("Cache/SharedSaves").file())
+    Concurrency.run("SharedSaveCache") {
+        val cached = cache.read(record.hashHex)
+        if (cached != null) {
+            launchOnGLThread { onSuccess(cached) }
+        } else launchOnGLThread {
+            ChainWallet.service.downloadCloudSave(record.arweaveIds, onError = onError, onSuccess = { bytes ->
+                Concurrency.run("VerifySharedSaveCache") {
+                    try {
+                        decodeCloudSave(record, bytes, null)
+                        cache.put(record.hashHex, bytes)
+                        launchOnGLThread { onSuccess(bytes) }
+                    } catch (ex: Exception) { launchOnGLThread { onError(ex) } }
+                }
+            })
+        }
+    }
+}
+
 /** Reading this guide never connects a wallet or requests a transaction. */
 private class SharedWorldHelpPopup(screen: BaseScreen) : Popup(screen) {
     init {
         addGoodSizedLabel("Share and continue saves").row()
         val textWidth = screen.stage.width * 0.65f
-        for (line in listOf(
-            "Choose a shared save and tap Play from here. Downloading needs internet; playing and local saves do not need a wallet.",
-            "To share a save, connect your wallet and enable on-chain saves in Wallet. In your game, open Save game, choose a name and enable Share this save.",
-            "Sharing costs 1 SKR plus the SOL network fee. Shared saves are public. Sharing a continued save preserves its link to the source save.",
-            "Use View continuations to see progress shared from this save. Return to All shared saves to browse other saves."
-        )) add(line.toLabel().apply { wrap = true }).width(textWidth).pad(8f).row()
+        val steps = listOf(
+            "Connect your wallet" to "Wallet > Connect Wallet. Enable on-chain saves.",
+            "Prepare your save" to "Save game: choose a name. Add goals to create a challenge.",
+            "Share your story" to "Select Share this save, then save and approve in your wallet."
+        )
+        for ((index, step) in steps.withIndex()) {
+            val row = Table()
+            row.add("${index + 1}".toLabel(Color.GOLD, fontSize = Constants.headingFontSize)).top().padRight(18f)
+            val text = Table()
+            text.add(step.first.toLabel(Color.GOLD)).left().row()
+            text.add(step.second.toLabel().apply { wrap = true }).width(textWidth - 60f).left()
+            row.add(text).left()
+            add(row).width(textWidth).left().pad(8f).row()
+        }
+        add("1 SKR + SOL network fee. Shared saves are public; continuations keep their source link."
+            .toLabel(fontSize = Constants.defaultFontSize - 2).apply { wrap = true })
+            .width(textWidth).padTop(12f).row()
         addCloseButton()
         open(force = true)
     }
@@ -563,41 +603,6 @@ private class TipAmountPopup(screen: BaseScreen, private val onChosen: (Long) ->
     }
 }
 
-/** The author's bounty on their shared save: how much, within how many turns - then posted with the
- *  1 SKR record fee. The words say plainly it is a promise the author keeps by hand. */
-private class BountyPopup(screen: BaseScreen, private val record: CloudSave.Record, private val onResult: (String) -> Unit) : Popup(screen) {
-    private var skr = 20L
-    private var turns = 50
-    private val skrLabel = "".toLabel(fontSize = Constants.headingFontSize)
-    private val turnsLabel = "".toLabel(fontSize = Constants.headingFontSize)
 
-    init {
-        addGoodSizedLabel("Offer a bounty").row()
-        addGoodSizedLabel("You pay it yourself, by hand, to the first player whose certificate shows a victory won from this save within the turns you set, without AutoPlay.",
-            size = Constants.defaultFontSize - 4).row()
-        fun stepper(label: com.badlogic.gdx.scenes.scene2d.ui.Label, steps: List<Int>, change: (Int) -> Unit) = Table().apply {
-            defaults().pad(3f).minWidth(64f)
-            for (step in steps.filter { it < 0 }) add((step.toString()).toTextButton().apply { onClick { change(step) } })
-            add(label).minWidth(160f)
-            for (step in steps.filter { it > 0 }) add(("+$step").toTextButton().apply { onClick { change(step) } })
-        }
-        add(stepper(skrLabel, listOf(-10, -1, 1, 10)) { skr = (skr + it).coerceIn(1L, CloudSave.MAX_TIP_SKR); refresh() }).row()
-        add(stepper(turnsLabel, listOf(-10, 10)) { turns = (turns + it).coerceIn(10, 300); refresh() }).row()
-        refresh()
-        addCloseButton()
-        addOKButton("Post the bounty (1 SKR)") {
-            val poster = ChainWallet.service.connectedAddress ?: return@addOKButton
-            onResult("Waiting for your wallet...".tr())
-            ChainWallet.service.postBounty(CloudSave.Bounty(record.signature, skr, turns, poster),
-                onError = { onResult(it.message ?: it.javaClass.simpleName) },
-                onSuccess = { onResult("Bounty posted - it shows in the gallery once the network has it.".tr()) })
-        }
-        equalizeLastTwoButtonWidths()
-        open(force = true)
-    }
-
-    private fun refresh() {
-        skrLabel.setText("[$skr] SKR".tr())
-        turnsLabel.setText("Within [$turns] turns".tr())
-    }
-}
+private fun continuationCountText(count: Int) =
+    if (count == 1) "1 continuation".tr() else "[$count] continuations".tr()

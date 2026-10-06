@@ -1350,20 +1350,16 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
     override fun downloadCloudSave(arweaveIds: List<String>, onSuccess: (ByteArray) -> Unit, onError: (Exception) -> Unit) {
         Concurrency.run("WalletCloudDownload") {
             try {
-                val out = java.io.ByteArrayOutputStream()
-                for (id in arweaveIds) {
-                    // Turbo's gateway serves an upload at once; arweave.net once it has settled
-                    var bytes: ByteArray? = null
-                    for (url in listOf(ARWEAVE_GATEWAY + id, "https://arweave.net/$id")) {
-                        try {
+                val bytes = com.unciv.logic.chain.CloudSaveDownload.fetch(arweaveIds) { id, gateway ->
+                    val url = if (gateway == 0) ARWEAVE_GATEWAY + id else "https://arweave.net/$id"
+                    try {
+                        kotlinx.coroutines.withTimeout(15_000) {
                             val response = httpClient.get(url)
-                            if (response.status.value == 200) { bytes = response.body<ByteArray>(); break }
-                        } catch (_: Exception) { }
-                    }
-                    out.write(bytes ?: throw IllegalStateException("Could not download part $id of the save. " +
-                        "A save recorded in the last few minutes may not have reached the network yet - try again shortly."))
+                            if (response.status.value == 200) response.body<ByteArray>() else null
+                        }
+                    } catch (_: kotlinx.coroutines.TimeoutCancellationException) { null }
                 }
-                launchOnGLThread { onSuccess(out.toByteArray()) }
+                launchOnGLThread { onSuccess(bytes) }
             } catch (ex: Exception) {
                 Log.error("Failed to download the cloud save", ex)
                 launchOnGLThread { onError(ex) }
