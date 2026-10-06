@@ -98,8 +98,12 @@ class SaveGameScreen(private val gameInfo: GameInfo) : LoadOrSaveScreen("Current
                     ?: "Set goals for the next player".tr()).toTextButton()
                 goals.name = "SharedSaveGoals"
                 goals.onClick {
-                    if (gameInfo.sharedScenario?.supported == true)
-                        com.unciv.ui.popups.SharedScenarioPopup(this@SaveGameScreen, gameInfo)
+                    if (gameInfo.sharedScenario?.supported == true) {
+                        val scenario = gameInfo.sharedScenario!!
+                        if (scenario.navalCampaign != null || scenario.nextChapterPlans.isNotEmpty())
+                            com.unciv.ui.popups.SharedScenarioPlanPopup(this@SaveGameScreen, scenario)
+                        else com.unciv.ui.popups.SharedScenarioPopup(this@SaveGameScreen, gameInfo)
+                    }
                     else com.unciv.ui.popups.SharedScenarioEditor(this@SaveGameScreen, gameInfo, selectedScenario) {
                         selectedScenario = it
                         updateIntent()

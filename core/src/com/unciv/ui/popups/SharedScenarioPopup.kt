@@ -139,7 +139,7 @@ class SharedScenarioPopup(screen: BaseScreen, game: GameInfo, briefing: Boolean 
             line("Scenario turn [${(game.turns - scenario.startTurn).coerceIn(0, scenario.duration)}] / [${scenario.duration}]".tr())
             line("Suggested order - choose your own strategy.".tr())
             for (goal in scenarioGoalLines(scenario)) line(goal)
-            line(when (scenario.outcome) {
+            if (!briefing || scenario.outcome.isNotEmpty()) line(when (scenario.outcome) {
                 "completed" -> (if (scenario.id == "civilization-on-the-brink-v1")
                     "Civilization restored - all three goals completed." else "All objectives achieved").tr()
                 "unfinished" -> "The deadline has passed. Your civilization's story can continue.".tr()
