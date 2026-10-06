@@ -103,4 +103,19 @@ class ScenarioAuthoringTests {
         assertNotEquals(expected, legacy.copy().apply { optionalGoals = true }.definitionHash())
         assertNotEquals(scenario(4).definitionHash(), scenario(4).apply { holdCityId = "another-city" }.definitionHash())
     }
+
+    @Test fun multipleChaptersCannotOmitAnEmptyChapterOrBecomeANormalSave() {
+        val g = game()
+        val active = ScenarioChapterPlan().apply { optionalGoals = true; technology = "Currency" }
+        val empty = ScenarioChapterPlan().apply { optionalGoals = true }
+        for (plans in listOf(listOf(empty, active), listOf(active, empty), listOf(empty, empty),
+            listOf(active, empty, active), listOf(empty, empty, empty))) {
+            assertTrue(runCatching { ScenarioAuthoring.draft(g, null, plans) }.exceptionOrNull() is IllegalArgumentException)
+        }
+        val ordinaryPayload = json().toJson(g)
+        g.sharedScenario = ScenarioAuthoring.draft(g, null, listOf(empty))
+        assertNull(g.sharedScenario)
+        assertEquals(ordinaryPayload, json().toJson(g))
+        assertEquals(2, ScenarioAuthoring.draft(g, null, listOf(active, active.copy().apply { technology = "Navigation" }))!!.totalChapters)
+    }
 }

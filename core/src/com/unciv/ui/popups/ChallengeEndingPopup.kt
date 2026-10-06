@@ -31,6 +31,8 @@ class ChallengeEndingPopup(screen: BaseScreen, game: GameInfo) : Popup(screen) {
                 if (authored.constructionTurn < 0 && (!authored.optionalGoals || authored.building.isNotBlank())) add("Building goal".tr())
                 if (authored.holdTurn < 0 && (!authored.optionalGoals || authored.holdCityId.isNotBlank()))
                     add("Hold [${if (authored.optionalGoals) authored.holdCityName else authored.cityName}]".tr())
+                if (authored.militaryGoals?.captureCityId?.isNotBlank() == true && authored.captureTurn < 0) add("Capture city".tr())
+                if (authored.militaryGoals?.musterCityId?.isNotBlank() == true && authored.musterTurn < 0) add("Assemble troops".tr())
             } else if (naval != null) {
                 if (naval.fleetTurn < 0) add((if (naval.number == 2) "Assemble your fleet" else "Field two frigates").tr())
                 if (naval.objectiveTurn < 0) add((if (naval.number == 2) "Secure the strait" else "Capture the enemy port").tr())
@@ -40,6 +42,8 @@ class ChallengeEndingPopup(screen: BaseScreen, game: GameInfo) : Popup(screen) {
                 if (scenario.constructionTurn < 0 && (!scenario.optionalGoals || scenario.building.isNotBlank())) add("Building goal".tr())
                 if (scenario.holdTurn < 0 && (!scenario.optionalGoals || scenario.holdCityId.isNotBlank()))
                     add(if (scenario.optionalGoals) "Hold [${scenario.holdCityName}]".tr() else "Hold your capital".tr())
+                if (scenario.militaryGoals?.captureCityId?.isNotBlank() == true && scenario.captureTurn < 0) add("Capture city".tr())
+                if (scenario.militaryGoals?.musterCityId?.isNotBlank() == true && scenario.musterTurn < 0) add("Assemble troops".tr())
             } else if (chapter.path == "renewal") {
                 if (chapter.treasuryTurn < 0) add("Grow your treasury".tr())
                 if (chapter.peaceTurn < 0) add("Secure peace".tr())

@@ -206,6 +206,10 @@ class SaveGalleryPopup(private val screen: BaseScreen) : Popup(screen) {
                                 "\n" + buildList {
                                     if (!s.optionalGoals || s.technology.isNotBlank()) add("[${s.technology.tr()}]: turn [${if (s.researchTurn < 0) "-" else (s.researchTurn - s.startTurn).toString()}]".tr())
                                     if (!s.optionalGoals || s.building.isNotBlank()) add("[${s.building.tr()}]: turn [${if (s.constructionTurn < 0) "-" else (s.constructionTurn - s.startTurn).toString()}]".tr())
+                                    s.militaryGoals?.let {
+                                        if (it.captureCityId.isNotBlank()) add("[${it.captureCityName}]: turn [${if (s.captureTurn < 0) "-" else (s.captureTurn - s.startTurn).toString()}]".tr())
+                                        if (it.musterCityId.isNotBlank()) add("[${"Assemble troops".tr()}]: turn [${if (s.musterTurn < 0) "-" else (s.musterTurn - s.startTurn).toString()}]".tr())
+                                    }
                                 }.joinToString(" · ") +
                                 "\n" + "Treasury: [${if (settled) s.finalGold else civ?.gold ?: 0}] · Cities: [${if (settled) s.finalCities else civ?.cities?.size ?: 0}]".tr() + " · " +
                                 (if (if (settled) s.finalAtWar else civ?.diplomacy?.get(s.opponent)?.diplomaticStatus == DiplomaticStatus.War) "At war" else "At peace").tr()

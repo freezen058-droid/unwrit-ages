@@ -19,6 +19,10 @@ class SharedScenario : IsPartOfGameInfoSerialization {
     var optionalGoals = false
     var holdCityId = ""
     var holdCityName = ""
+    var militaryGoals: ScenarioMilitaryGoals? = null
+    var goalOrder = ArrayList<String>()
+    var captureTurn = -1
+    var musterTurn = -1
     /** A locally authored definition can be revised into a new challenge. */
     var authorDraft = false
     var opponent = ""
@@ -67,6 +71,7 @@ class SharedScenario : IsPartOfGameInfoSerialization {
                 civilization = this@SharedScenario.civilization; startTurn = game.turns; duration = plan.duration
                 technology = plan.technology; building = plan.building; cityId = plan.cityId; cityName = plan.cityName
                 optionalGoals = plan.optionalGoals; holdCityId = plan.holdCityId; holdCityName = plan.holdCityName
+                militaryGoals = plan.militaryGoals?.copy(); goalOrder = ArrayList(plan.goalOrder)
                 opponent = this@SharedScenario.opponent
                 if (civ.cities.any { it.id == cityId && it.cityConstructions.isBuilt(building) }) constructionTurn = game.turns
             }
@@ -107,15 +112,17 @@ class SharedScenario : IsPartOfGameInfoSerialization {
         return (deadline - turn).takeIf { it > 0 }
     }
     val goalCount get() = if (!optionalGoals) 3 else
-        listOf(technology.isNotBlank(), building.isNotBlank(), holdCityId.isNotBlank()).count { it }
+        listOf(technology.isNotBlank(), building.isNotBlank(), holdCityId.isNotBlank()).count { it } + (militaryGoals?.goalCount ?: 0)
     val currentGoalCount get() = authoredChapter?.goalCount ?: (if (navalCampaign?.active != null || chapter != null) 3 else goalCount)
     val completedCount get() = listOf(
         researchTurn.takeIf { !optionalGoals || technology.isNotBlank() } ?: -1,
         constructionTurn.takeIf { !optionalGoals || building.isNotBlank() } ?: -1,
-        holdTurn.takeIf { !optionalGoals || holdCityId.isNotBlank() } ?: -1
+        holdTurn.takeIf { !optionalGoals || holdCityId.isNotBlank() } ?: -1,
+        captureTurn.takeIf { optionalGoals && militaryGoals?.captureCityId?.isNotBlank() == true } ?: -1,
+        musterTurn.takeIf { optionalGoals && militaryGoals?.musterCityId?.isNotBlank() == true } ?: -1
     ).count { it >= 0 }
     val supported get() = version == 1 && id.isNotBlank() && civilization.isNotBlank() &&
-        (if (optionalGoals) goalCount > 0 && (building.isBlank() || cityId.isNotBlank())
+        (if (optionalGoals) goalCount in 1..3 && (building.isBlank() || cityId.isNotBlank()) && militaryGoals?.supported != false
             else cityId.isNotBlank() && technology.isNotBlank() && building.isNotBlank()) &&
         duration in 1..100 && startTurn in 0..(Int.MAX_VALUE - duration) &&
         nextChapterPlans.size <= 2 && nextChapterPlans.all { it.supported } &&
@@ -126,15 +133,21 @@ class SharedScenario : IsPartOfGameInfoSerialization {
         version.toString(), id, civilization, startTurn.toString(), duration.toString(),
         technology, cityId, building, opponent) +
         (if (optionalGoals) listOf("optional-goals-v1", holdCityId) else emptyList()) +
+        (militaryGoals?.definitionParts() ?: emptyList()) +
+        (if (goalOrder.isNotEmpty()) listOf("goal-order-v1") + goalOrder else emptyList()) +
         (navalCampaign?.let { listOf("naval-campaign-v2", it.enemyPortId, "25", "35", "3-warships-at-home-deadline", "4", "2", "war-locked") } ?: emptyList()) +
         nextChapterPlans.flatMap { listOf("author-chapter-v1", it.technology, it.building, it.cityId, it.duration.toString()) +
-            (if (it.optionalGoals) listOf("optional-goals-v1", it.holdCityId) else emptyList()) }))
+            (if (it.optionalGoals) listOf("optional-goals-v1", it.holdCityId) else emptyList()) +
+            (it.militaryGoals?.definitionParts() ?: emptyList()) +
+            (if (it.goalOrder.isNotEmpty()) listOf("goal-order-v1") + it.goalOrder else emptyList()) }))
 
     fun copy(): SharedScenario = SharedScenario().also {
         it.version = version; it.id = id; it.title = title; it.description = description; it.civilization = civilization
         it.startTurn = startTurn; it.duration = duration; it.technology = technology
         it.cityId = cityId; it.cityName = cityName; it.building = building; it.opponent = opponent
         it.optionalGoals = optionalGoals; it.holdCityId = holdCityId; it.holdCityName = holdCityName; it.authorDraft = authorDraft
+        it.militaryGoals = militaryGoals?.copy(); it.goalOrder = ArrayList(goalOrder)
+        it.captureTurn = captureTurn; it.musterTurn = musterTurn
         it.researchTurn = researchTurn; it.constructionTurn = constructionTurn; it.holdTurn = holdTurn
         it.outcome = outcome; it.finalGold = finalGold; it.finalCities = finalCities
         it.finalAtWar = finalAtWar; it.briefingShown = briefingShown; it.resultShown = resultShown
@@ -155,7 +168,9 @@ class SharedScenario : IsPartOfGameInfoSerialization {
         val civ = game.civilizations.firstOrNull { it.civID == civilization } ?: return
         evaluate(game.turns, technology in civ.tech.techsResearched,
             civ.cities.any { it.id == (if (optionalGoals) holdCityId else cityId) }, civ.isDefeated(), civ.gold, civ.cities.size,
-            civ.diplomacy[opponent]?.diplomaticStatus?.name == "War")
+            civ.diplomacy[opponent]?.diplomaticStatus?.name == "War",
+            militaryGoals?.captureHeld(game, civilization) == true,
+            militaryGoals?.musterReady(game, civilization) == true)
     }
 
     /** A construction counts only when it is added while the scenario player owns the city. */
@@ -172,12 +187,16 @@ class SharedScenario : IsPartOfGameInfoSerialization {
     }
 
     fun evaluate(turn: Int, researched: Boolean, ownsCity: Boolean, defeated: Boolean,
-                          gold: Int, cities: Int, atWar: Boolean) {
+                          gold: Int, cities: Int, atWar: Boolean, captureHeld: Boolean = false, musterReady: Boolean = false) {
         if (!supported || outcome.isNotEmpty() || turn < startTurn) return
         // Missed checkpoints must not turn achievements earned after the deadline into success.
         if (turn <= deadline && researched && researchTurn < 0 && (!optionalGoals || technology.isNotBlank())) researchTurn = turn
         if (defeated || turn >= deadline) {
             if (!defeated && turn == deadline && ownsCity && (!optionalGoals || holdCityId.isNotBlank())) holdTurn = turn
+            if (!defeated && turn == deadline && optionalGoals) {
+                if (captureHeld && militaryGoals?.captureCityId?.isNotBlank() == true) captureTurn = turn
+                if (musterReady && militaryGoals?.musterCityId?.isNotBlank() == true) musterTurn = turn
+            }
             outcome = if (defeated) "defeated" else if (completedCount == goalCount) "completed" else "unfinished"
             finalGold = gold; finalCities = cities; finalAtWar = atWar
         }

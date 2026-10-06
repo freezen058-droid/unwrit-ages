@@ -61,18 +61,7 @@ class SharedScenarioEditor(screen: BaseScreen, game: GameInfo, current: SharedSc
                     select.onChange { change(select.selected.value); if (rebuild) refresh() }
                     form.add(select).width(250f).row()
                 }
-                fun goalValue(value: String) = value.takeUnless { it == "None" }.orEmpty()
-                picker("Technology goal", "ChapterTechnology", listOf("None") + technologies,
-                    plan.technology.ifBlank { "None" }) { plan.technology = goalValue(it) }
-                picker("Building goal", "ChapterBuilding", listOf("None") + buildings,
-                    plan.building.ifBlank { "None" }, rebuild = true) { plan.building = goalValue(it) }
-                if (plan.building.isNotBlank()) picker("Build in city", "ChapterBuildCity", cities.map { it.name }, plan.cityName) { name ->
-                    val city = cities.first { it.name == name }; plan.cityId = city.id; plan.cityName = name
-                }
-                picker("Hold city", "ChapterCity", listOf("None") + cities.map { it.name },
-                    plan.holdCityName.ifBlank { "None" }) { name ->
-                    val city = cities.firstOrNull { it.name == name }; plan.holdCityId = city?.id.orEmpty(); plan.holdCityName = city?.name.orEmpty()
-                }
+                form.add(ScenarioGoalSlotsTable(game, plan)).colspan(2).row()
                 picker("Scenario length", "ChapterDuration", listOf("10", "15", "20", "25", "30"), plan.duration.toString()) {
                     plan.duration = it.toInt()
                 }
@@ -82,7 +71,7 @@ class SharedScenarioEditor(screen: BaseScreen, game: GameInfo, current: SharedSc
                         chapters.add(ScenarioChapterPlan().apply {
                             optionalGoals = true
                             technology = technologies.firstOrNull { name -> chapters.none { it.technology == name } }.orEmpty()
-                            cityId = plan.cityId; cityName = plan.cityName
+                            cityId = preferred.id; cityName = preferred.name
                             building = buildings.firstOrNull { name -> chapters.none { it.building == name && it.cityId == cityId } &&
                                 cities.first { it.id == cityId }.cityConstructions.isBuilt(name).not() }.orEmpty()
                             holdCityId = plan.holdCityId; holdCityName = plan.holdCityName
@@ -102,7 +91,11 @@ class SharedScenarioEditor(screen: BaseScreen, game: GameInfo, current: SharedSc
                     cities.firstOrNull { it.id == plan.cityId }?.cityConstructions?.isBuilt(plan.building) != false }
                 val tech = active.map { it.technology }.filter { it.isNotBlank() }
                 val built = active.filter { it.building.isNotBlank() }.map { it.cityId to it.building }
-                if (invalid >= 0) {
+                val emptyChapter = if (chapters.size > 1) chapters.indexOfFirst { it.goalCount == 0 } else -1
+                if (emptyChapter >= 0) {
+                    index = emptyChapter; refresh()
+                    error.setText("Chapter [${index + 1}] needs at least one goal.".tr())
+                } else if (invalid >= 0) {
                     index = invalid; refresh(); error.setText("Choose a building not yet present in this city.".tr())
                 } else if (tech.distinct().size != tech.size) {
                     error.setText("Choose a different technology for each chapter.".tr())
@@ -110,7 +103,10 @@ class SharedScenarioEditor(screen: BaseScreen, game: GameInfo, current: SharedSc
                     error.setText("Choose a different building or city for each chapter.".tr())
                 } else { onSelected(ScenarioAuthoring.draft(game, current, chapters)); close() }
             }
-            addButton("No goals") { onSelected(null); close() }
+            addButton("No goals") {
+                if (chapters.size > 1) error.setText("Keep one chapter to save without goals.".tr())
+                else { onSelected(null); close() }
+            }
             addCloseButton("Cancel")
             open(force = true)
         }

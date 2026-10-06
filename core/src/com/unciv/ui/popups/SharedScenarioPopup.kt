@@ -201,10 +201,16 @@ fun navalGoalLines(s: SharedScenario): List<String> {
 
 fun scenarioGoalLines(s: SharedScenario): List<String> {
     if (s.optionalGoals) {
-        val turns = listOfNotNull(s.researchTurn.takeIf { s.technology.isNotBlank() },
-            s.constructionTurn.takeIf { s.building.isNotBlank() }, s.holdTurn.takeIf { s.holdCityId.isNotBlank() })
-        return optionalScenarioGoalTexts(s.technology, s.building, s.cityName, s.holdCityName, s.duration)
-            .mapIndexed { index, text -> (if (turns[index] >= 0) "☑ " else "☐ ") + text.tr() }
+        val turns = linkedMapOf<String, Int>()
+        if (s.technology.isNotBlank()) turns["Research"] = s.researchTurn
+        if (s.building.isNotBlank()) turns["Build"] = s.constructionTurn
+        if (s.holdCityId.isNotBlank()) turns["Hold city"] = s.holdTurn
+        if (s.militaryGoals?.captureCityId?.isNotBlank() == true) turns["Capture city"] = s.captureTurn
+        if (s.militaryGoals?.musterCityId?.isNotBlank() == true) turns["Assemble troops"] = s.musterTurn
+        val orderedTurns = (s.goalOrder + turns.keys).distinct().mapNotNull { turns[it] }
+        return optionalScenarioGoalTexts(s.technology, s.building, s.cityName, s.holdCityName, s.duration,
+            s.militaryGoals, s.goalOrder)
+            .mapIndexed { index, text -> (if (orderedTurns[index] >= 0) "☑ " else "☐ ") + text.tr() }
     }
     fun mark(turn: Int) = if (turn >= 0) "✓  " else "□  "
     return listOf(
