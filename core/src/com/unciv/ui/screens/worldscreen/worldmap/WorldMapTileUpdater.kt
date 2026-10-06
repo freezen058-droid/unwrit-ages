@@ -184,6 +184,17 @@ object WorldMapTileUpdater {
             }
         }
 
+        // Placement hints use visible tiles only, so they reveal no hidden resources.
+        val placementUnit = unitView.getUnit()
+        if (com.unciv.ui.screens.worldscreen.unit.actions.InstantImprovementPlacement.names(placementUnit).isNotEmpty()) {
+            for (group in tileGroups.values) {
+                val tile = group.tile
+                if (tile !in placementUnit.civ.viewableTiles) continue
+                if (com.unciv.ui.screens.worldscreen.unit.actions.InstantImprovementPlacement.canPlace(placementUnit, tile))
+                    group.layerOverlay.showHighlight(Color.GREEN, 0.3f)
+            }
+        }
+
         // Z-Layer: 5
         // Highlight movement destination tile
         if (unitView.isMoving()) {

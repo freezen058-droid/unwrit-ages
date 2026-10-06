@@ -210,6 +210,7 @@ class UnitActionsTable(val worldScreen: WorldScreen) : Table() {
     }
 
     private fun activateAction(unitAction: UnitAction, unit: MapUnit) {
+        unit.orderInterruptionReason = null
         unitAction.action!!.invoke()
         worldScreen.shouldUpdate = true
         // We keep the unit action/selection overlay from the previous unit open even when already selecting another unit

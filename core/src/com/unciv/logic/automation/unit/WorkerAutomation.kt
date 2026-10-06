@@ -76,6 +76,8 @@ class WorkerAutomation(
      * Automate one Worker - decide what to do and where, move, start or continue work.
      */
     fun automateWorkerAction(unit: MapUnit, dangerousTiles: HashSet<Tile>): Unit = timeThis("automateWorkerAction") {
+        val alreadyWaiting = unit.orderInterruptionReason == "No available work"
+        unit.orderInterruptionReason = null
         val currentTile = unit.getTile()
         val currentTileIsCreatesOneImprovementMarker = currentTile.isMarkedForCreatesOneImprovement()
         // Must be called before any getPriority checks to guarantee the local road cache is processed
@@ -108,7 +110,10 @@ class WorkerAutomation(
 
 
         debug("WorkerAutomation: %s -> nothing to do", unit.toString())
-        unit.civ.addNotification("${unit.shortDisplayName()} has no work to do.", MapUnitAction(unit), NotificationCategory.Units, unit.name, "OtherIcons/Sleep")
+        if (unit.civ.isHuman()) {
+            unit.orderInterruptionReason = "No available work"
+            if (!alreadyWaiting) com.unciv.logic.civilization.AutomationFeedback.unit(unit, "No available work")
+        }
 
         // Idle CS units should wander so they don't obstruct players so much
         if (unit.civ.isCityState)
@@ -411,7 +416,7 @@ class WorkerAutomation(
             .maxByOrNull { it.second }?.first
 
         if (currentImprovement != null && civInfo.isHuman() && !UncivGame.Current.settings.automatedWorkersReplaceImprovements
-            && UncivGame.Current.worldScreen?.autoPlay?.isAutoPlayingAndFullAutoPlayAI() == false) {
+            && UncivGame.Current.worldScreen?.autoPlay?.isAutoPlayingAndFullAutoPlayAI() != true) {
             // Note that we might still want to build roads or remove fallout, so we can't exit the function immedietly
             bestBuildableImprovement = null
         }

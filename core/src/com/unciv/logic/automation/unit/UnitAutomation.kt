@@ -677,8 +677,7 @@ object UnitAutomation {
         if (tryGoToRuin(unit) && (!unit.hasMovement() || unit.isDestroyed)) return
         if (unit.health < 80 && tryHealUnit(unit)) return
         if (tryExplore(unit)) return
-        unit.civ.addNotification("${unit.shortDisplayName()} finished exploring.", MapUnitAction(unit), NotificationCategory.Units, unit.name, "OtherIcons/Sleep")
-        unit.action = null
+        unit.interruptOrder("No reachable unexplored tiles")
     }
 
 

@@ -43,6 +43,7 @@ class RoadToAutomation(val civInfo: Civilization) {
 
         if (unit.automatedRoadConnectionDestination == null){
             stopAndCleanAutomation(unit)
+            unit.interruptOrder("Road destination unavailable")
             return
         }
 
@@ -59,7 +60,7 @@ class RoadToAutomation(val civInfo: Civilization) {
             if (foundPath == null) {
                 Log.debug("WorkerAutomation: $unit -> connect road failed")
                 stopAndCleanAutomation(unit)
-                unit.civ.addNotification("Connect road failed!", MapUnitAction(unit), NotificationCategory.Units, NotificationIcon.Construction)
+                unit.interruptOrder("No road route available")
                 return
             }
 
@@ -76,7 +77,7 @@ class RoadToAutomation(val civInfo: Civilization) {
         if (currTileIndex == -1) {
             Log.debug("$unit -> was moved off its connect road path. Operation cancelled.")
             stopAndCleanAutomation(unit)
-            unit.civ.addNotification("Connect road cancelled!", MapUnitAction(unit), NotificationCategory.Units, unit.name)
+            unit.interruptOrder("Left the planned road route")
             return
         }
 

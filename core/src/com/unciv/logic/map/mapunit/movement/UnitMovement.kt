@@ -456,7 +456,7 @@ class UnitMovement(val unit: MapUnit) {
             unit.putInTile(allowedTile)
             // Cancel sleep or fortification if forcibly displaced - for now, leave movement / auto / explore orders
             if (unit.isSleeping() || unit.isFortified() || unit.isGuarding())
-                unit.action = null
+                unit.interruptOrder("Forced to relocate")
             unit.mostRecentMoveType = UnitMovementMemoryType.UnitTeleported
 
             teleportTransportedUnitsTo(origin, allowedTile)

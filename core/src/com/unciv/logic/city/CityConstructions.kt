@@ -409,6 +409,7 @@ class CityConstructions : IsPartOfGameInfoSerialization {
     private fun validateConstructionQueue() {
         val queueSnapshot = constructionQueue.toMutableList()
         constructionQueue.clear()
+        val interruptions = linkedMapOf<String, String>()
 
         for (constructionName in queueSnapshot) {
             val construction = getConstruction(constructionName)
@@ -422,15 +423,23 @@ class CityConstructions : IsPartOfGameInfoSerialization {
                                     || amount > civResources[resourceName]!! }) {
                     if (construction is Building)
                         removeImprovementForBuilding(construction)
+                    interruptions[constructionName] = "Missing resources"
                     continue // Removes this construction from the queue
                 }
             }
             if (construction.isBuildable(this))
                 constructionQueue.add(constructionName)
-            else if (construction is Building)
-                removeImprovementForBuilding(construction)
+            else {
+                if (construction is Building) removeImprovementForBuilding(construction)
+                val rejection = (construction as? INonPerpetualConstruction)?.getRejectionReasons(this)?.firstOrNull()
+                if (rejection?.type != RejectionReasonType.AlreadyBuilt)
+                    interruptions[constructionName] = rejection?.errorMessage ?: "Build requirements not met in this city"
+            }
         }
+        for (name in interruptions.keys) repeatedConstructions.remove(name)
         chooseNextConstruction()
+        for ((name, reason) in interruptions)
+            com.unciv.logic.civilization.AutomationFeedback.production(city, name, reason, currentConstructionName())
         validateCreatesOneImprovementMarkers()
     }
 
@@ -570,14 +579,28 @@ class CityConstructions : IsPartOfGameInfoSerialization {
 
         if (construction.name in inProgressConstructions)
             inProgressConstructions.remove(construction.name)
+        var repeatFailureReason: String? = null
         if (construction.name == currentConstructionName()) {
             // Queue the repeat before removing the finished one, so the queue never runs empty in between
-            if (construction is BaseUnit && construction.name in repeatedConstructions)
-                addToQueue(construction)
+            if (construction is BaseUnit && construction.name in repeatedConstructions) {
+                if (construction.isBuildable(this)) {
+                    // The completed entry is removed immediately below. A full queue must not
+                    // silently stop repeat when that removal is about to free its slot.
+                    val index = if (isLastConstructionPerpetual()) constructionQueue.lastIndex else constructionQueue.size
+                    constructionQueue.add(index, construction.name)
+                }
+                else {
+                    repeatedConstructions.remove(construction.name)
+                    repeatFailureReason = construction.getRejectionReasons(this).firstOrNull()?.errorMessage ?: "Production queue is full"
+                }
+            }
             removeCurrentConstruction()
         }
 
         validateConstructionQueue() // if we've built e.g. the Great Lighthouse, then Lighthouse is no longer relevant in the queue
+        repeatFailureReason?.let {
+            com.unciv.logic.civilization.AutomationFeedback.production(city, construction.name, it, currentConstructionName())
+        }
 
         construction as IRulesetObject // Always OK for INonPerpetualConstruction, but compiler doesn't know
 

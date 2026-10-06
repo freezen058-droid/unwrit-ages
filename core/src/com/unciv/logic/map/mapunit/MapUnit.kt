@@ -67,6 +67,10 @@ class MapUnit : IsPartOfGameInfoSerialization {
     // Connect roads implies automated is true. It is specified by the action type.
     var action: String? = null
     var automated: Boolean = false
+    /** Threats acknowledged when sleeping. Persist across saves and cloned turns. */
+    var sleepKnownEnemies = ArrayList<Int>()
+    var sleepThreatsInitialized = false
+    var orderInterruptionReason: String? = null
 
     // We can infer who we are escorting based on our tile
     @Cache private var escorting: Boolean = false
@@ -223,6 +227,9 @@ class MapUnit : IsPartOfGameInfoSerialization {
         toReturn.health = health
         toReturn.action = action
         toReturn.automated = automated
+        toReturn.sleepKnownEnemies = ArrayList(sleepKnownEnemies)
+        toReturn.sleepThreatsInitialized = sleepThreatsInitialized
+        toReturn.orderInterruptionReason = orderInterruptionReason
         toReturn.escorting = escorting
         toReturn.automatedRoadConnectionDestination = automatedRoadConnectionDestination
         toReturn.automatedRoadConnectionPath = automatedRoadConnectionPath
@@ -275,6 +282,26 @@ class MapUnit : IsPartOfGameInfoSerialization {
 
     @Readonly fun isSleeping() = action?.startsWith(UnitActionType.Sleep.value) == true
     @Readonly fun isSleepingUntilHealed() = isSleeping() && isActionUntilHealed()
+
+    @Readonly fun nearbyVisibleEnemies(): List<MapUnit> = currentTile.getTilesInDistance(3)
+        .filter { it in civ.viewableTiles }
+        .mapNotNull { it.militaryUnit }
+        .filter { it.civ.isAtWarWith(civ) && !it.isInvisible(civ) }
+        .toList()
+
+    fun sleep(untilHealed: Boolean = false) {
+        action = if (untilHealed) UnitActionType.SleepUntilHealed.value else UnitActionType.Sleep.value
+        orderInterruptionReason = null
+        sleepKnownEnemies = ArrayList(nearbyVisibleEnemies().map { it.id })
+        sleepThreatsInitialized = true
+    }
+
+    fun interruptOrder(reason: String) {
+        action = null
+        due = true
+        orderInterruptionReason = reason
+        com.unciv.logic.civilization.AutomationFeedback.unit(this, reason)
+    }
 
     @Readonly fun isMoving() = action?.startsWith("moveTo") == true
     @Readonly
@@ -861,7 +888,7 @@ class MapUnit : IsPartOfGameInfoSerialization {
                 .filter { it.militaryUnit != null && civ.isAtWarWith(it.militaryUnit!!.civ) }
         if (enemyUnitsInWalkingDistance.isNotEmpty()) {
             if (isMoving()) // stop on enemy in sight
-                action = null
+                interruptOrder("Enemy blocks the route")
             if (!(isExploring() || isAutomated()))  // have fleeing code
                 return  // Don't you dare move.
         }
@@ -872,14 +899,14 @@ class MapUnit : IsPartOfGameInfoSerialization {
             val destinationTile = getMovementDestination()
             if (!movement.canReach(destinationTile)) { // That tile that we were moving towards is now unreachable -
                 // for instance we headed towards an unknown tile and it's apparently unreachable
-                action = null
+                interruptOrder("Destination is unreachable")
                 return
             }
             val gotTo = movement.headTowards(destinationTile)
             if (gotTo == currentTile) { // We didn't move at all
                 // pathway blocked? Are we still at the same spot as start of turn?
                 if (movementMemories.last().position == currentTile.position)
-                    action = null
+                    interruptOrder("Movement route is blocked")
                 return
             }
             if (gotTo.position == destinationTile.position) action = null
@@ -901,11 +928,15 @@ class MapUnit : IsPartOfGameInfoSerialization {
     }
 
     fun takeDamage(amount: Int) {
+        val wasSleeping = isSleeping()
         health -= amount
         if (health > 100) health = 100 // For cheating modders, e.g. negative tile damage
         if (health < 0) health = 0
         if (health == 0) destroy()
-        else cache.updateUniques()
+        else {
+            cache.updateUniques()
+            if (wasSleeping && amount > 0) interruptOrder("Attacked while sleeping")
+        }
     }
 
     fun destroy(destroyTransportedUnit: Boolean = true) {

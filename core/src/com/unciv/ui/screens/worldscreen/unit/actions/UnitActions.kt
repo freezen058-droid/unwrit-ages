@@ -304,23 +304,26 @@ object UnitActions {
             title = "Fortify all idle units ([${idle.size}])") {
             for (idleUnit in idle)
                 if (idleUnit.canFortify()) idleUnit.fortify()
-                else idleUnit.action = UnitActionType.Sleep.value
+                else idleUnit.sleep()
         })
     }
 
     private suspend fun SequenceScope<UnitAction>.addSleepActions(unit: MapUnit, tile: Tile) {
-        if (unit.isFortified() || unit.canFortify() || unit.isGuarding() || !unit.hasMovement()) return
+        if (unit.isFortified() || unit.canFortify() || unit.isGuarding()) return
         if (tile.hasImprovementInProgress() && unit.canBuildImprovement(tile.getTileImprovementInProgress()!!)) return
 
         yield(UnitAction(UnitActionType.Sleep,
             useFrequency = if (!unit.isSleeping()) 29f else 21f,
-            action = { unit.action = UnitActionType.Sleep.value }.takeIf { !unit.isSleeping() || unit.isSleepingUntilHealed() }
+            isCurrentAction = unit.isSleeping() && !unit.isSleepingUntilHealed(),
+            action = { unit.sleep() }.takeIf { !unit.isSleeping() || unit.isSleepingUntilHealed() }
         ))
 
         if (unit.health == 100) return
         yield(UnitAction(UnitActionType.SleepUntilHealed,
             useFrequency = if (!unit.isSleepingUntilHealed()) 44f else 20f,
-            action = { unit.action = UnitActionType.SleepUntilHealed.value }
+            isCurrentAction = unit.isSleepingUntilHealed(),
+            disabledReason = if (!unit.canHealInCurrentTile()) "Cannot heal on this tile" else null,
+            action = { unit.sleep(untilHealed = true) }
                 .takeIf { !unit.isSleepingUntilHealed() && unit.canHealInCurrentTile() }
         ))
     }

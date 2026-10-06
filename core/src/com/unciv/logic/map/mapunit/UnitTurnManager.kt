@@ -144,18 +144,19 @@ class UnitTurnManager(val unit: MapUnit) {
         for (unique in unit.getTriggeredUniques(UniqueType.TriggerUponTurnStart))
             UniqueTriggerActivation.triggerUnique(unique, unit)
 
-        // Wake sleeping units if there's an enemy in vision range:
-        // Military units always but civilians only if not protected.
-        if (unit.isSleeping() && (unit.isMilitary() || (unit.currentTile.militaryUnit == null && !unit.currentTile.isCityCenter())) &&
-                unit.currentTile.getTilesInDistance(3).any {
-                    it.militaryUnit != null && it in unit.civ.viewableTiles && it.militaryUnit!!.civ.isAtWarWith(unit.civ)
-                }
-        )  unit.action = null
+        // Respect threats the player acknowledged when ordering sleep.
+        if (unit.isSleeping()) {
+            val enemies = unit.nearbyVisibleEnemies().map { it.id }
+            val exposed = unit.isMilitary() ||
+                (unit.currentTile.militaryUnit == null && !unit.currentTile.isCityCenter())
+            if (unit.sleepThreatsInitialized && exposed && enemies.any { it !in unit.sleepKnownEnemies })
+                unit.interruptOrder("New enemy nearby")
+            unit.sleepKnownEnemies = ArrayList(enemies)
+            unit.sleepThreatsInitialized = true
+        }
 
         if (unit.action != null && unit.health > 99 && unit.isActionUntilHealed()) {
-            unit.action = null // wake up when healed
-            unit.civ.addNotification("[${unit.shortDisplayName()}] has fully healed",
-                MapUnitAction(unit), NotificationCategory.Units, unit.name)
+            unit.interruptOrder("Fully healed")
         }
 
         val tileOwner = unit.getTile().getOwner()

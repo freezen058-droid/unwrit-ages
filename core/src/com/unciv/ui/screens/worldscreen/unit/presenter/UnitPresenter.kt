@@ -114,6 +114,25 @@ class UnitPresenter(private val unitTable: UnitTable, private val worldScreen: W
                 descriptionTable.add((baseUnit.religiousStrength - unit.religiousStrengthLost).tr())
             }
 
+            val rawUnit = unit.getUnit()
+            val status = rawUnit.orderInterruptionReason?.let {
+                if (it in listOf("New enemy nearby", "Attacked while sleeping", "Fully healed")) "Awakened: [$it]"
+                else "Automation: [$it]"
+            }
+                ?: if (rawUnit.isSleepingUntilHealed()) {
+                    if (rawUnit.canHealInCurrentTile()) "Sleeping until healed" else "Cannot heal on this tile"
+                } else if (rawUnit.isSleeping()) "Sleeping" else null
+            val builds = com.unciv.ui.screens.worldscreen.unit.actions.InstantImprovementPlacement.names(rawUnit)
+            if (status != null || builds.isNotEmpty()) {
+                val hint = status ?: "Green tiles: suitable for [${builds.joinToString(", ") { it.tr() }}]"
+                // Table.columns is stale until layout runs. Count the cells already added
+                // this frame, otherwise the hint gets squeezed into a single stat column.
+                val columns = descriptionTable.cells.sumOf { it.colspan ?: 1 }
+                descriptionTable.row()
+                descriptionTable.add(hint.toLabel(fontSize = 14).apply { wrap = true })
+                    .colspan(columns).width(260f).left()
+            }
+
             if (unit.getPromotions().promotions.size != promotionsTable.children.size) // The unit has been promoted! Reload promotions!
                 shouldUpdate = true
         } else with(unitTable) { // multiple selected units

@@ -142,6 +142,8 @@ class MapUnitAction(
     private val id: Int = Constants.NO_ID
 ) : NotificationAction {
     constructor(unit: MapUnit) : this(unit.currentTile.position.toHexCoord(), unit.id)
+    fun references(unit: MapUnit): Boolean = if (id != Constants.NO_ID) id == unit.id
+        else location == unit.currentTile.position
     override fun execute(worldScreen: WorldScreen) {
         val unit = if (id != Constants.NO_ID)
             worldScreen.selectedCiv.units.getUnitById(id)

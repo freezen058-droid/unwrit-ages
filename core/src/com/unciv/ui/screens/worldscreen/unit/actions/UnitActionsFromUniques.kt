@@ -351,7 +351,7 @@ object UnitActionsFromUniques {
 
                 val canAct = resourcesAvailable
                     && unit.hasMovement()
-                    && tile.improvementFunctions.canBuildImprovement(improvement, unit.cache.state)
+                    && tile.improvementFunctions.canBuildImprovement(improvement, gameContext)
                     // Next test is to prevent interfering with UniqueType.CreatesOneImprovement -
                     // not pretty, but users *can* remove the building from the city queue an thus clear this:
                     && !tile.isMarkedForCreatesOneImprovement()
@@ -402,7 +402,9 @@ object UnitActionsFromUniques {
             ImprovementBuildingProblem.MissingTech in problems && improvement.techRequired != null ->
                 "Research [${improvement.techRequired}] first"
             ImprovementBuildingProblem.OutsideBorders in problems ->
-                "Have this tile inside your empire"
+                if (improvement.hasUnique(UniqueType.CanBuildJustOutsideBorders, gameContext))
+                    "Have this tile close to your borders"
+                else "Have this tile inside your empire"
             ImprovementBuildingProblem.NotJustOutsideBorders in problems ->
                 "Have this tile close to your borders"
             !resourcesAvailable -> {
@@ -413,7 +415,12 @@ object UnitActionsFromUniques {
             }
             tile.isMarkedForCreatesOneImprovement() ->
                 "This tile is being kept for a building already in a city's queue."
-            else -> "[${improvement.name}] cannot be built on this tile."
+            tile.isCityCenter() -> "Cannot build an improvement on a city center"
+            tile.isWater && improvement.terrainsCanBeBuiltOn.none { it == tile.baseTerrain || it == "Water" } ->
+                "Build on suitable land"
+            tile.improvement == improvement.name -> "This tile already has [${improvement.name}]"
+            tile.isImpassible() -> "This terrain is impassable"
+            else -> "[${improvement.name}] is not suitable for this terrain"
         }
     }
 

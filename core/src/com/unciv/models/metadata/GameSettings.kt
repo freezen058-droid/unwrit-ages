@@ -133,16 +133,16 @@ class GameSettings {
     //region 3: Automation
 
     //// Automation
-    var autoAssignCityProduction = false
+    var autoAssignCityProduction = true
     /** The "let cities choose their own production?" question is asked once, at the second city (1.0.3) */
     var autoProductionOffered = false
     var autoBuildingRoads = true
-    var automatedWorkersReplaceImprovements = true
+    var automatedWorkersReplaceImprovements = false
     var stopAutomatedWorkersRemoveVegetation = false
     var automatedUnitsMoveOnTurnStart = false
     var automatedUnitsCanUpgrade = false
     var automatedUnitsChoosePromotions = false
-    var citiesAutoBombardAtEndOfTurn = false
+    var citiesAutoBombardAtEndOfTurn = true
 
     //// Autoplay
     var autoPlay = GameSettingsAutoPlay()
