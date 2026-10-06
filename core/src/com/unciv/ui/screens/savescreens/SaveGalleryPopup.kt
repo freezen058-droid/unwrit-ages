@@ -140,7 +140,7 @@ class SaveGalleryPopup(private val screen: BaseScreen) : Popup(screen) {
             .filter { parent != null || mapType == ALL_MAPS || it.meta?.mapType == mapType }
             .filter { parent != null || era == ALL_ERAS || it.meta?.era == era }
             .sortedWith(
-                if (sort == MOST_TIPPED) compareByDescending<CloudSave.Record> { tips[it.signature] ?: 0 }.thenByDescending { it.blockTime }
+                if (sort == MOST_TIPPED) compareByDescending<CloudSave.Record> { tips[it.signature] ?: 0L }.thenByDescending { it.blockTime }
                 else compareByDescending { it.blockTime }
             ).sortedByDescending { parent == null && it.signature == genesis }
         status.setText(when {
