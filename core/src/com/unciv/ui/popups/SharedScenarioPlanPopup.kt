@@ -18,9 +18,13 @@ fun scenarioPlanPages(scenario: SharedScenario): List<ScenarioPlanPage> {
         "3. Hold [$city] at scenario turn [$duration]"
     )
     val first = ScenarioPlanPage(scenario.title, scenario.duration,
-        standard(scenario.technology, scenario.building, scenario.cityName, scenario.duration))
+        if (scenario.optionalGoals) optionalScenarioGoalTexts(scenario.technology, scenario.building,
+            scenario.cityName, scenario.holdCityName, scenario.duration)
+        else standard(scenario.technology, scenario.building, scenario.cityName, scenario.duration))
     if (scenario.nextChapterPlans.isNotEmpty()) return listOf(first) + scenario.nextChapterPlans.map { plan ->
-        ScenarioPlanPage(scenario.title, plan.duration, standard(plan.technology, plan.building, plan.cityName, plan.duration))
+        ScenarioPlanPage(scenario.title, plan.duration, if (plan.optionalGoals) optionalScenarioGoalTexts(
+            plan.technology, plan.building, plan.cityName, plan.holdCityName, plan.duration)
+            else standard(plan.technology, plan.building, plan.cityName, plan.duration))
     }
     val naval = scenario.navalCampaign ?: return listOf(first)
     return listOf(first,

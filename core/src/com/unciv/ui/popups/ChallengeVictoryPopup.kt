@@ -26,7 +26,7 @@ class ChallengeVictoryPopup(screen: BaseScreen, game: GameInfo) : Popup(screen) 
         add((if (nextChapter) "Chapter complete" else "Challenge completed")
             .toLabel(fontColor = Color.GOLD, fontSize = if (nextChapter) 38 else 42, alignment = Align.center)
             .apply { wrap = true }).width(width).padBottom(16f).row()
-        add("All objectives achieved".toLabel(fontColor = Color.WHITE, fontSize = 22, alignment = Align.center))
+        add("All goals achieved".toLabel(fontColor = Color.WHITE, fontSize = 22, alignment = Align.center))
             .width(width).padBottom(14f).row()
         add(ImageGetter.getWhiteDot().apply { color = Color(0.7f, 0.48f, 0.1f, 1f) }).size(width * 0.5f, 2f).row()
         val nextLabel = if (!nextChapter) "Continue" else if (scenario.nextChapterPlans.isNotEmpty())
@@ -46,7 +46,7 @@ class ChallengeVictoryPopup(screen: BaseScreen, game: GameInfo) : Popup(screen) 
             down = BaseScreen.skinStrings.getUiBackground("SharedScenario/VictoryContinuePressed",
                 BaseScreen.skinStrings.roundedEdgeRectangleShape, Color(0.32f, 0.22f, 0.04f, 1f))
         }
-        val details = addButton("View objectives", style = quiet) {
+        val details = addButton("View goals", style = quiet) {
             close(); SharedScenarioPopup(screen, game, showChallengeDetails = true)
         }.height(42f)
         details.actor.label.setFontSize(16)

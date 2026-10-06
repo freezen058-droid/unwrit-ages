@@ -202,8 +202,11 @@ class SaveGalleryPopup(private val screen: BaseScreen) : Popup(screen) {
                             comparisonDefinitions[parent] != definition) null else {
                             val civ = game.civilizations.firstOrNull { it.civID == s.civilization }
                             val settled = s.outcome.isNotEmpty()
-                            "Goals [${s.completedCount}]/3 · Scenario turn [${(game.turns - s.startTurn).coerceIn(0, s.duration)}]/[${s.duration}]".tr() +
-                                "\n" + "Research [${if (s.researchTurn < 0) "-" else (s.researchTurn - s.startTurn).toString()}] · Market [${if (s.constructionTurn < 0) "-" else (s.constructionTurn - s.startTurn).toString()}]".tr() +
+                            "Goals [${s.completedCount}]/[${s.goalCount}] · Scenario turn [${(game.turns - s.startTurn).coerceIn(0, s.duration)}]/[${s.duration}]".tr() +
+                                "\n" + buildList {
+                                    if (!s.optionalGoals || s.technology.isNotBlank()) add("[${s.technology.tr()}]: turn [${if (s.researchTurn < 0) "-" else (s.researchTurn - s.startTurn).toString()}]".tr())
+                                    if (!s.optionalGoals || s.building.isNotBlank()) add("[${s.building.tr()}]: turn [${if (s.constructionTurn < 0) "-" else (s.constructionTurn - s.startTurn).toString()}]".tr())
+                                }.joinToString(" · ") +
                                 "\n" + "Treasury: [${if (settled) s.finalGold else civ?.gold ?: 0}] · Cities: [${if (settled) s.finalCities else civ?.cities?.size ?: 0}]".tr() + " · " +
                                 (if (if (settled) s.finalAtWar else civ?.diplomacy?.get(s.opponent)?.diplomaticStatus == DiplomaticStatus.War) "At war" else "At peace").tr()
                         }
@@ -321,7 +324,7 @@ private class SaveGalleryDetailPopup(
             if (scenario.totalChapters > 1) invitation.add(
                 "Chapter [${scenario.chapterNumber}] / [${scenario.totalChapters}]".toLabel(Color.GOLD))
                 .width(screen.stage.width * 0.7f).row()
-            invitation.add("[${scenario.title.tr()}] · Goals [${scenario.authoredChapter?.completedCount ?: scenario.navalCampaign?.active?.completedCount ?: scenario.chapter?.completedCount ?: scenario.completedCount}]/3".tr()
+            invitation.add("[${scenario.title.tr()}] · Goals [${scenario.authoredChapter?.completedCount ?: scenario.navalCampaign?.active?.completedCount ?: scenario.chapter?.completedCount ?: scenario.completedCount}]/[${scenario.currentGoalCount}]".tr()
                 .toLabel(Color.GOLD).apply { wrap = true }).width(screen.stage.width * 0.7f).row()
         }
         SharedSaveIntent.label(game.sharedSaveIntent)?.let {

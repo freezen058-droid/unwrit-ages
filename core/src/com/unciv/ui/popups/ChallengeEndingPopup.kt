@@ -27,17 +27,19 @@ class ChallengeEndingPopup(screen: BaseScreen, game: GameInfo) : Popup(screen) {
             alignment = Align.center)).width(width).padTop(18f).padBottom(20f).row()
         val missing = buildList {
             if (authored != null) {
-                if (authored.researchTurn < 0) add("Complete research".tr())
-                if (authored.constructionTurn < 0) add("Building goal".tr())
-                if (authored.holdTurn < 0) add("Hold [${authored.cityName}]".tr())
+                if (authored.researchTurn < 0 && (!authored.optionalGoals || authored.technology.isNotBlank())) add("Complete research".tr())
+                if (authored.constructionTurn < 0 && (!authored.optionalGoals || authored.building.isNotBlank())) add("Building goal".tr())
+                if (authored.holdTurn < 0 && (!authored.optionalGoals || authored.holdCityId.isNotBlank()))
+                    add("Hold [${if (authored.optionalGoals) authored.holdCityName else authored.cityName}]".tr())
             } else if (naval != null) {
                 if (naval.fleetTurn < 0) add((if (naval.number == 2) "Assemble your fleet" else "Field two frigates").tr())
                 if (naval.objectiveTurn < 0) add((if (naval.number == 2) "Secure the strait" else "Capture the enemy port").tr())
                 if (naval.holdTurn < 0) add("Hold your capital".tr())
             } else if (chapter == null) {
-                if (scenario.researchTurn < 0) add("Complete research".tr())
-                if (scenario.constructionTurn < 0) add("Complete defenses".tr())
-                if (scenario.holdTurn < 0) add("Hold your capital".tr())
+                if (scenario.researchTurn < 0 && (!scenario.optionalGoals || scenario.technology.isNotBlank())) add("Complete research".tr())
+                if (scenario.constructionTurn < 0 && (!scenario.optionalGoals || scenario.building.isNotBlank())) add("Building goal".tr())
+                if (scenario.holdTurn < 0 && (!scenario.optionalGoals || scenario.holdCityId.isNotBlank()))
+                    add(if (scenario.optionalGoals) "Hold [${scenario.holdCityName}]".tr() else "Hold your capital".tr())
             } else if (chapter.path == "renewal") {
                 if (chapter.treasuryTurn < 0) add("Grow your treasury".tr())
                 if (chapter.peaceTurn < 0) add("Secure peace".tr())
@@ -51,7 +53,7 @@ class ChallengeEndingPopup(screen: BaseScreen, game: GameInfo) : Popup(screen) {
             alignment = Align.center, fontSize = 20).apply { wrap = true }).width(width).padBottom(10f).row()
         val canRetry = scenario.id in listOf("strait-watch-v1", "civilization-on-the-brink-v1") ||
             com.unciv.logic.chain.ScenarioReplay.available(game)
-        val primary = addButton(if (canRetry) "Retry challenge" else "View objectives") {
+        val primary = addButton(if (canRetry) "Retry challenge" else "View goals") {
             close()
             if (canRetry) FeaturedScenarioPopup(screen, previousResult = game)
             else SharedScenarioPopup(screen, game, showChallengeDetails = true)
@@ -65,7 +67,7 @@ class ChallengeEndingPopup(screen: BaseScreen, game: GameInfo) : Popup(screen) {
             down = BaseScreen.skinStrings.getUiBackground("SharedScenario/RetryPressed",
                 BaseScreen.skinStrings.roundedEdgeRectangleShape, Color(0.42f, 0.06f, 0.04f, 1f))
         }
-        val details = addButton("View objectives", style = quiet) {
+        val details = addButton("View goals", style = quiet) {
             close(); SharedScenarioPopup(screen, game, showChallengeDetails = true)
         }.height(42f).padRight(12f)
         details.actor.label.setFontSize(16)

@@ -5,6 +5,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.unciv.logic.GameInfo
 import com.unciv.logic.chain.SharedScenario
 import com.unciv.logic.chain.ScenarioChapterPlan
+import com.unciv.logic.chain.ScenarioAuthoring
 import com.unciv.models.translations.tr
 import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.extensions.toTextButton
@@ -12,7 +13,6 @@ import com.unciv.ui.components.widgets.TranslatedSelectBox
 import com.unciv.ui.components.input.onChange
 import com.unciv.ui.components.input.onClick
 import com.unciv.ui.screens.basescreen.BaseScreen
-import java.util.UUID
 
 /** Draft-only, up to three linear chapters. Cancel never changes the current game. */
 class SharedScenarioEditor(screen: BaseScreen, game: GameInfo, current: SharedScenario?,
@@ -25,21 +25,16 @@ class SharedScenarioEditor(screen: BaseScreen, game: GameInfo, current: SharedSc
         val buildings = game.ruleset.buildings.values.filter { !it.isWonder && !it.isNationalWonder &&
             civ.getEquivalentBuilding(it).name == it.name && (it.uniqueTo == null || civ.matchesFilter(it.uniqueTo!!)) }
             .map { it.name }.filter { name -> cities.any { !it.cityConstructions.isBuilt(name) } }
-        if (cities.isEmpty() || technologies.isEmpty() || buildings.isEmpty()) {
+        if (cities.isEmpty()) {
             add("No eligible goals for this save.".toLabel()).row()
             addCloseButton(); open(force = true)
         } else {
-            val draft = current?.copy() ?: SharedScenario().apply {
-                id = UUID.randomUUID().toString(); title = "Shared save goals"
-                civilization = civ.civID; startTurn = game.turns
-                cityId = civ.getCapital()!!.id; cityName = civ.getCapital()!!.name
-                opponent = civ.getCivsAtWarWith().firstOrNull()?.civID.orEmpty()
-            }
-            val chapters = arrayListOf(ScenarioChapterPlan().apply {
-                technology = draft.technology; building = draft.building; cityId = draft.cityId
-                cityName = draft.cityName; duration = draft.duration
-            })
-            chapters.addAll(draft.nextChapterPlans.map { it.copy() })
+            val preferred = civ.getCapital() ?: cities.first()
+            val chapters = ArrayList(current?.let { ScenarioAuthoring.plans(it) } ?: listOf(ScenarioChapterPlan().apply {
+                optionalGoals = true; technology = technologies.firstOrNull().orEmpty()
+                building = buildings.firstOrNull { !preferred.cityConstructions.isBuilt(it) }.orEmpty()
+                cityId = preferred.id; cityName = preferred.name; holdCityId = preferred.id; holdCityName = preferred.name
+            }))
             var index = 0
             val form = Table().apply { defaults().left().pad(2f) }
             add(form).row()
@@ -57,18 +52,26 @@ class SharedScenarioEditor(screen: BaseScreen, game: GameInfo, current: SharedSc
                     onClick { index++; refresh() }
                 }).width(135f).height(40f) else navigation.add().width(135f)
                 form.add(navigation).colspan(2).center().padBottom(6f).row()
-                fun picker(label: String, name: String, values: List<String>, chosen: String, change: (String) -> Unit) {
+                fun picker(label: String, name: String, values: List<String>, chosen: String,
+                           rebuild: Boolean = false, change: (String) -> Unit) {
                     form.add(label.toLabel()).left()
                     val select = TranslatedSelectBox(values, chosen.takeIf { it in values } ?: values.first())
                     select.name = name
                     change(select.selected.value)
-                    select.onChange { change(select.selected.value) }
+                    select.onChange { change(select.selected.value); if (rebuild) refresh() }
                     form.add(select).width(250f).row()
                 }
-                picker("Technology goal", "ChapterTechnology", technologies, plan.technology) { plan.technology = it }
-                picker("Building goal", "ChapterBuilding", buildings, plan.building) { plan.building = it }
-                picker("City to build in and hold", "ChapterCity", cities.map { it.name }, plan.cityName) { name ->
+                fun goalValue(value: String) = value.takeUnless { it == "None" }.orEmpty()
+                picker("Technology goal", "ChapterTechnology", listOf("None") + technologies,
+                    plan.technology.ifBlank { "None" }) { plan.technology = goalValue(it) }
+                picker("Building goal", "ChapterBuilding", listOf("None") + buildings,
+                    plan.building.ifBlank { "None" }, rebuild = true) { plan.building = goalValue(it) }
+                if (plan.building.isNotBlank()) picker("Build in city", "ChapterBuildCity", cities.map { it.name }, plan.cityName) { name ->
                     val city = cities.first { it.name == name }; plan.cityId = city.id; plan.cityName = name
+                }
+                picker("Hold city", "ChapterCity", listOf("None") + cities.map { it.name },
+                    plan.holdCityName.ifBlank { "None" }) { name ->
+                    val city = cities.firstOrNull { it.name == name }; plan.holdCityId = city?.id.orEmpty(); plan.holdCityName = city?.name.orEmpty()
                 }
                 picker("Scenario length", "ChapterDuration", listOf("10", "15", "20", "25", "30"), plan.duration.toString()) {
                     plan.duration = it.toInt()
@@ -76,15 +79,13 @@ class SharedScenarioEditor(screen: BaseScreen, game: GameInfo, current: SharedSc
                 val controls = Table()
                 if (chapters.size < 3) controls.add("Add chapter".toTextButton().apply {
                     onClick {
-                        if (technologies.size <= chapters.size) {
-                            error.setText("No eligible goals for this save.".tr()); return@onClick
-                        }
-                        val usedTech = chapters.map { it.technology }
                         chapters.add(ScenarioChapterPlan().apply {
-                            technology = technologies.first { it !in usedTech }
-                            building = buildings.firstOrNull { name -> chapters.none { it.building == name && it.cityId == plan.cityId } }
-                                ?: buildings.first()
+                            optionalGoals = true
+                            technology = technologies.firstOrNull { name -> chapters.none { it.technology == name } }.orEmpty()
                             cityId = plan.cityId; cityName = plan.cityName
+                            building = buildings.firstOrNull { name -> chapters.none { it.building == name && it.cityId == cityId } &&
+                                cities.first { it.id == cityId }.cityConstructions.isBuilt(name).not() }.orEmpty()
+                            holdCityId = plan.holdCityId; holdCityName = plan.holdCityName
                         })
                         index = chapters.lastIndex; error.setText(""); refresh()
                     }
@@ -96,20 +97,18 @@ class SharedScenarioEditor(screen: BaseScreen, game: GameInfo, current: SharedSc
             }
             refresh()
             addButton("Use these goals") {
-                val invalid = chapters.indexOfFirst { plan -> cities.first { it.id == plan.cityId }.cityConstructions.isBuilt(plan.building) }
+                val active = chapters.filter { it.goalCount > 0 }
+                val invalid = chapters.indexOfFirst { plan -> plan.building.isNotBlank() &&
+                    cities.firstOrNull { it.id == plan.cityId }?.cityConstructions?.isBuilt(plan.building) != false }
+                val tech = active.map { it.technology }.filter { it.isNotBlank() }
+                val built = active.filter { it.building.isNotBlank() }.map { it.cityId to it.building }
                 if (invalid >= 0) {
                     index = invalid; refresh(); error.setText("Choose a building not yet present in this city.".tr())
-                } else if (chapters.map { it.technology }.distinct().size != chapters.size) {
+                } else if (tech.distinct().size != tech.size) {
                     error.setText("Choose a different technology for each chapter.".tr())
-                } else if (chapters.map { it.cityId to it.building }.distinct().size != chapters.size) {
+                } else if (built.distinct().size != built.size) {
                     error.setText("Choose a different building or city for each chapter.".tr())
-                } else {
-                    val first = chapters.first()
-                    draft.technology = first.technology; draft.building = first.building
-                    draft.cityId = first.cityId; draft.cityName = first.cityName; draft.duration = first.duration
-                    draft.nextChapterPlans = ArrayList(chapters.drop(1).map { it.copy() })
-                    onSelected(draft); close()
-                }
+                } else { onSelected(ScenarioAuthoring.draft(game, current, chapters)); close() }
             }
             addButton("No goals") { onSelected(null); close() }
             addCloseButton("Cancel")

@@ -53,8 +53,8 @@ class SharedScenarioPopup(screen: BaseScreen, game: GameInfo, briefing: Boolean 
             for (goal in scenarioGoalLines(authored)) line(goal)
             authored.briefingShown = true
             if (authored.outcome.isNotEmpty()) {
-                line((if (authored.outcome == "completed") "All objectives achieved"
-                    else "Challenge ended. Not every objective was completed.").tr(), true)
+                line((if (authored.outcome == "completed") "All goals achieved"
+                    else "Challenge ended. Not every goal was completed.").tr(), true)
                 authored.resultShown = true
             }
             addButton("Chapter I results") { close(); SharedScenarioPopup(screen, game, firstChapter = true) }
@@ -80,8 +80,8 @@ class SharedScenarioPopup(screen: BaseScreen, game: GameInfo, briefing: Boolean 
             for (goal in navalGoalLines(scenario)) line(goal)
             naval.briefingShown = true
             if (naval.outcome.isNotEmpty()) {
-                line((if (naval.outcome == "completed") "All objectives achieved"
-                    else "Challenge ended. Not every objective was completed.").tr(), true)
+                line((if (naval.outcome == "completed") "All goals achieved"
+                    else "Challenge ended. Not every goal was completed.").tr(), true)
                 naval.resultShown = true
             }
             addButton("Chapter I results") { close(); SharedScenarioPopup(screen, game, firstChapter = true) }
@@ -119,7 +119,7 @@ class SharedScenarioPopup(screen: BaseScreen, game: GameInfo, briefing: Boolean 
                 line(when (chapter.outcome) {
                     "completed" -> "A new chapter is written. Your civilization has found its footing."
                     "defeated" -> "This civilization has fallen. Its story ends here, but another strategy awaits."
-                    else -> "Challenge ended. Not every objective was completed."
+                    else -> "Challenge ended. Not every goal was completed."
                 }.tr(), true)
                 line("Treasury: [${chapter.finalGold}] · Cities: [${chapter.finalCities}]".tr())
                 line("Continue your civilization, or share your save to invite another strategy.".tr())
@@ -141,7 +141,7 @@ class SharedScenarioPopup(screen: BaseScreen, game: GameInfo, briefing: Boolean 
             for (goal in scenarioGoalLines(scenario)) line(goal)
             if (!briefing || scenario.outcome.isNotEmpty()) line(when (scenario.outcome) {
                 "completed" -> (if (scenario.id == "civilization-on-the-brink-v1")
-                    "Civilization restored - all three goals completed." else "All objectives achieved").tr()
+                    "Civilization restored - all three goals completed." else "All goals achieved").tr()
                 "unfinished" -> "The deadline has passed. Your civilization's story can continue.".tr()
                 "defeated" -> "This civilization has fallen. Try a different strategy from the same starting save.".tr()
                 else -> if (scenario.id == "civilization-on-the-brink-v1")
@@ -200,6 +200,12 @@ fun navalGoalLines(s: SharedScenario): List<String> {
 }
 
 fun scenarioGoalLines(s: SharedScenario): List<String> {
+    if (s.optionalGoals) {
+        val turns = listOfNotNull(s.researchTurn.takeIf { s.technology.isNotBlank() },
+            s.constructionTurn.takeIf { s.building.isNotBlank() }, s.holdTurn.takeIf { s.holdCityId.isNotBlank() })
+        return optionalScenarioGoalTexts(s.technology, s.building, s.cityName, s.holdCityName, s.duration)
+            .mapIndexed { index, text -> (if (turns[index] >= 0) "☑ " else "☐ ") + text.tr() }
+    }
     fun mark(turn: Int) = if (turn >= 0) "✓  " else "□  "
     return listOf(
         mark(s.researchTurn) + "1. Research [${s.technology.tr()}]".tr(),

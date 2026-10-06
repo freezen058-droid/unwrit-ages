@@ -16,6 +16,11 @@ class SharedScenario : IsPartOfGameInfoSerialization {
     var cityId = ""
     var cityName = ""
     var building = "Market"
+    var optionalGoals = false
+    var holdCityId = ""
+    var holdCityName = ""
+    /** A locally authored definition can be revised into a new challenge. */
+    var authorDraft = false
     var opponent = ""
     var researchTurn = -1
     var constructionTurn = -1
@@ -61,6 +66,7 @@ class SharedScenario : IsPartOfGameInfoSerialization {
                 id = "${this@SharedScenario.id}-chapter-${this@SharedScenario.authoredChapterHistory.size + 2}"; title = this@SharedScenario.title
                 civilization = this@SharedScenario.civilization; startTurn = game.turns; duration = plan.duration
                 technology = plan.technology; building = plan.building; cityId = plan.cityId; cityName = plan.cityName
+                optionalGoals = plan.optionalGoals; holdCityId = plan.holdCityId; holdCityName = plan.holdCityName
                 opponent = this@SharedScenario.opponent
                 if (civ.cities.any { it.id == cityId && it.cityConstructions.isBuilt(building) }) constructionTurn = game.turns
             }
@@ -100,9 +106,17 @@ class SharedScenario : IsPartOfGameInfoSerialization {
         if (outcome.isNotEmpty()) return null
         return (deadline - turn).takeIf { it > 0 }
     }
-    val completedCount get() = listOf(researchTurn, constructionTurn, holdTurn).count { it >= 0 }
+    val goalCount get() = if (!optionalGoals) 3 else
+        listOf(technology.isNotBlank(), building.isNotBlank(), holdCityId.isNotBlank()).count { it }
+    val currentGoalCount get() = authoredChapter?.goalCount ?: (if (navalCampaign?.active != null || chapter != null) 3 else goalCount)
+    val completedCount get() = listOf(
+        researchTurn.takeIf { !optionalGoals || technology.isNotBlank() } ?: -1,
+        constructionTurn.takeIf { !optionalGoals || building.isNotBlank() } ?: -1,
+        holdTurn.takeIf { !optionalGoals || holdCityId.isNotBlank() } ?: -1
+    ).count { it >= 0 }
     val supported get() = version == 1 && id.isNotBlank() && civilization.isNotBlank() &&
-        cityId.isNotBlank() && technology.isNotBlank() && building.isNotBlank() &&
+        (if (optionalGoals) goalCount > 0 && (building.isBlank() || cityId.isNotBlank())
+            else cityId.isNotBlank() && technology.isNotBlank() && building.isNotBlank()) &&
         duration in 1..100 && startTurn in 0..(Int.MAX_VALUE - duration) &&
         nextChapterPlans.size <= 2 && nextChapterPlans.all { it.supported } &&
         authoredChapterHistory.size <= nextChapterPlans.size
@@ -111,13 +125,16 @@ class SharedScenario : IsPartOfGameInfoSerialization {
     fun definitionHash(): String = ChainWallet.sha256Hex(com.unciv.json.json().toJson(listOf(
         version.toString(), id, civilization, startTurn.toString(), duration.toString(),
         technology, cityId, building, opponent) +
+        (if (optionalGoals) listOf("optional-goals-v1", holdCityId) else emptyList()) +
         (navalCampaign?.let { listOf("naval-campaign-v2", it.enemyPortId, "25", "35", "3-warships-at-home-deadline", "4", "2", "war-locked") } ?: emptyList()) +
-        nextChapterPlans.flatMap { listOf("author-chapter-v1", it.technology, it.building, it.cityId, it.duration.toString()) }))
+        nextChapterPlans.flatMap { listOf("author-chapter-v1", it.technology, it.building, it.cityId, it.duration.toString()) +
+            (if (it.optionalGoals) listOf("optional-goals-v1", it.holdCityId) else emptyList()) }))
 
     fun copy(): SharedScenario = SharedScenario().also {
         it.version = version; it.id = id; it.title = title; it.description = description; it.civilization = civilization
         it.startTurn = startTurn; it.duration = duration; it.technology = technology
         it.cityId = cityId; it.cityName = cityName; it.building = building; it.opponent = opponent
+        it.optionalGoals = optionalGoals; it.holdCityId = holdCityId; it.holdCityName = holdCityName; it.authorDraft = authorDraft
         it.researchTurn = researchTurn; it.constructionTurn = constructionTurn; it.holdTurn = holdTurn
         it.outcome = outcome; it.finalGold = finalGold; it.finalCities = finalCities
         it.finalAtWar = finalAtWar; it.briefingShown = briefingShown; it.resultShown = resultShown
@@ -137,7 +154,7 @@ class SharedScenario : IsPartOfGameInfoSerialization {
         if (outcome.isNotEmpty()) return
         val civ = game.civilizations.firstOrNull { it.civID == civilization } ?: return
         evaluate(game.turns, technology in civ.tech.techsResearched,
-            civ.cities.any { it.id == cityId }, civ.isDefeated(), civ.gold, civ.cities.size,
+            civ.cities.any { it.id == (if (optionalGoals) holdCityId else cityId) }, civ.isDefeated(), civ.gold, civ.cities.size,
             civ.diplomacy[opponent]?.diplomaticStatus?.name == "War")
     }
 
@@ -150,7 +167,7 @@ class SharedScenario : IsPartOfGameInfoSerialization {
                 name == building && it.constructionTurn < 0) it.constructionTurn = turn
         }
         if (supported && outcome.isEmpty() && turn in startTurn..deadline &&
-            owner == civilization && city == cityId && name == building && constructionTurn < 0)
+            owner == civilization && city == cityId && building.isNotBlank() && name == building && constructionTurn < 0)
             constructionTurn = turn
     }
 
@@ -158,10 +175,10 @@ class SharedScenario : IsPartOfGameInfoSerialization {
                           gold: Int, cities: Int, atWar: Boolean) {
         if (!supported || outcome.isNotEmpty() || turn < startTurn) return
         // Missed checkpoints must not turn achievements earned after the deadline into success.
-        if (turn <= deadline && researched && researchTurn < 0) researchTurn = turn
+        if (turn <= deadline && researched && researchTurn < 0 && (!optionalGoals || technology.isNotBlank())) researchTurn = turn
         if (defeated || turn >= deadline) {
-            if (!defeated && turn == deadline && ownsCity) holdTurn = turn
-            outcome = if (defeated) "defeated" else if (completedCount == 3) "completed" else "unfinished"
+            if (!defeated && turn == deadline && ownsCity && (!optionalGoals || holdCityId.isNotBlank())) holdTurn = turn
+            outcome = if (defeated) "defeated" else if (completedCount == goalCount) "completed" else "unfinished"
             finalGold = gold; finalCities = cities; finalAtWar = atWar
         }
     }

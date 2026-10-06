@@ -86,30 +86,38 @@ class SaveGameScreen(private val gameInfo: GameInfo) : LoadOrSaveScreen("Current
         add(nameFieldLabelText.toLabel()).row()
         add(gameNameTextField).width(300f).row()
 
-        // Where the choice is made: the same setting as the Wallet popup's, shown here only when
-        // saves are being recorded (user, 09-26 - they looked for it on this screen)
         val settings = game.settings
+        val goalsTable = Table()
+        fun updateGoals() {
+            goalsTable.clear()
+            val goals = (selectedScenario?.let {
+                if (it.totalChapters > 1) "Chapter [${it.chapterNumber}] / [${it.totalChapters}]".tr()
+                else "Goals [${it.completedCount}]/[${it.goalCount}] - [${it.duration}] turns".tr()
+            } ?: "Set goals for the next player".tr()).toTextButton()
+            goals.name = "SharedSaveGoals"
+            goals.onClick {
+                if (com.unciv.logic.chain.ScenarioAuthoring.canEdit(gameInfo))
+                    com.unciv.ui.popups.SharedScenarioEditor(this@SaveGameScreen, gameInfo, selectedScenario) {
+                        selectedScenario = it; updateGoals()
+                    }
+                else {
+                    val scenario = requireNotNull(gameInfo.sharedScenario)
+                    if (scenario.navalCampaign != null || scenario.nextChapterPlans.isNotEmpty())
+                        com.unciv.ui.popups.SharedScenarioPlanPopup(this@SaveGameScreen, scenario)
+                    else com.unciv.ui.popups.SharedScenarioPopup(this@SaveGameScreen, gameInfo)
+                }
+            }
+            val width = (goals.prefWidth + 32f).coerceAtLeast(300f).coerceAtMost(stage.width / 2 - 40f)
+            goals.label.setWrap(true)
+            goalsTable.add(goals).width(width).minHeight(45f).padTop(6f).row()
+        }
+        add(goalsTable).row()
+        updateGoals()
         if (settings.recordSavesOnChain && ChainWallet.service.isAvailable) {
             val intentTable = Table()
             fun updateIntent() {
                 intentTable.clear()
                 if (!settings.shareCloudSaves) return
-                val goals = (selectedScenario?.let { if (it.totalChapters > 1) "Chapter [${it.chapterNumber}] / [${it.totalChapters}]".tr() else "Goals [${it.completedCount}]/3 · [${it.duration}] turns".tr() }
-                    ?: "Set goals for the next player".tr()).toTextButton()
-                goals.name = "SharedSaveGoals"
-                goals.onClick {
-                    if (gameInfo.sharedScenario?.supported == true) {
-                        val scenario = gameInfo.sharedScenario!!
-                        if (scenario.navalCampaign != null || scenario.nextChapterPlans.isNotEmpty())
-                            com.unciv.ui.popups.SharedScenarioPlanPopup(this@SaveGameScreen, scenario)
-                        else com.unciv.ui.popups.SharedScenarioPopup(this@SaveGameScreen, gameInfo)
-                    }
-                    else com.unciv.ui.popups.SharedScenarioEditor(this@SaveGameScreen, gameInfo, selectedScenario) {
-                        selectedScenario = it
-                        updateIntent()
-                    }
-                }
-                intentTable.add(goals).width(300f).padTop(4f).row()
                 val difficultyRow = Table()
                 difficultyRow.add("Takeover difficulty (your estimate)".toLabel()).left().padRight(8f)
                 val difficulty = TranslatedSelectBox(SharedSaveDifficulty.labels.values,
@@ -123,9 +131,7 @@ class SaveGameScreen(private val gameInfo: GameInfo) : LoadOrSaveScreen("Current
                 intentTable.add("1 star: easy / 5 stars: hard".toLabel(fontSize = 14)).row()
             }
             add("Share this save (anyone can load it)".toCheckBox(settings.shareCloudSaves) {
-                settings.shareCloudSaves = it
-                settings.save()
-                updateIntent()
+                settings.shareCloudSaves = it; settings.save(); updateIntent()
             }).padTop(6f).row()
             add(intentTable).row()
             updateIntent()
@@ -179,7 +185,7 @@ class SaveGameScreen(private val gameInfo: GameInfo) : LoadOrSaveScreen("Current
     }
 
     private fun saveGame(saveGameFile: FileHandle) {
-        if (gameInfo.sharedScenario?.supported != true)
+        if (com.unciv.logic.chain.ScenarioAuthoring.canEdit(gameInfo))
             gameInfo.sharedScenario = selectedScenario?.copy()
         if (gameInfo.sharedScenario?.title == "Shared save goals")
             gameInfo.sharedScenario!!.title = gameNameTextField.text
