@@ -17,6 +17,11 @@ class ChallengeVictoryPopup(screen: BaseScreen, game: GameInfo) : Popup(screen) 
     init {
         val scenario = requireNotNull(game.sharedScenario)
         val nextChapter = scenario.hasNextChapter
+        val firstResult = !(scenario.authoredChapter?.resultShown
+            ?: scenario.navalCampaign?.active?.resultShown
+            ?: scenario.chapter?.resultShown ?: scenario.resultShown)
+        if (firstResult) com.unciv.ui.audio.SoundPlayer.play(
+            if (nextChapter) com.unciv.models.UncivSound.Promote else com.unciv.models.UncivSound.Choir)
         val width = (screen.stage.width * 0.55f).coerceAtMost(620f)
         background = BaseScreen.skinStrings.getUiBackground("General/Popup/Background",
             tintColor = Color(0.10f, 0.075f, 0.015f, 0.68f))

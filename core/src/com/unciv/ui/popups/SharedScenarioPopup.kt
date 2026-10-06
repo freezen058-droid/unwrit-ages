@@ -13,6 +13,9 @@ class SharedScenarioPopup(screen: BaseScreen, game: GameInfo, briefing: Boolean 
     init {
         val scenario = requireNotNull(game.sharedScenario)
         scenario.observe(game)
+        val firstBriefing = !(scenario.authoredChapter?.briefingShown
+            ?: scenario.navalCampaign?.active?.briefingShown
+            ?: scenario.chapter?.briefingShown ?: scenario.briefingShown)
         if (!firstChapter && !showChallengeDetails && !scenario.freePlay &&
             scenario.currentOutcome == "completed" &&
             game === com.unciv.UncivGame.Current.gameInfo) {
@@ -24,6 +27,9 @@ class SharedScenarioPopup(screen: BaseScreen, game: GameInfo, briefing: Boolean 
             game === com.unciv.UncivGame.Current.gameInfo) {
             ChallengeEndingPopup(screen, game)
         } else {
+        if (firstBriefing && !firstChapter && !showChallengeDetails && !scenario.freePlay &&
+            game === com.unciv.UncivGame.Current.gameInfo)
+            com.unciv.ui.audio.SoundPlayer.play(com.unciv.models.UncivSound.Paper)
         addGoodSizedLabel(scenario.title, color = Color.GOLD).row()
         val width = screen.stage.width * 0.65f
         fun line(text: String, gold: Boolean = false) {

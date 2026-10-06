@@ -9,7 +9,9 @@ import com.unciv.ui.components.widgets.TranslatedSelectBox
 import com.unciv.ui.components.input.onChange
 
 /** Three distinct goal types, with parameters only for the selected types. */
-class ScenarioGoalSlotsTable(game: GameInfo, private val plan: ScenarioChapterPlan) : Table() {
+class ScenarioGoalSlotsTable(game: GameInfo, private val plan: ScenarioChapterPlan,
+                             private val singleGoalIndex: Int? = null,
+                             private val onGoalChanged: (() -> Unit)? = null) : Table() {
     private val civ = game.getCurrentPlayerCivilization()
     private val cities = civ.cities.toList()
     private val preferred = civ.getCapital() ?: cities.first()
@@ -20,6 +22,7 @@ class ScenarioGoalSlotsTable(game: GameInfo, private val plan: ScenarioChapterPl
         civ.getEquivalentBuilding(it).name == it.name && (it.uniqueTo == null || civ.matchesFilter(it.uniqueTo!!)) }
         .map { it.name }.filter { name -> cities.any { !it.cityConstructions.isBuilt(name) } }
     private val kinds = ArrayList<String>()
+    val hasSelectedGoal get() = singleGoalIndex?.let { kinds[it] != "None" } ?: (plan.goalCount > 0)
     init {
         val active = buildList {
             if (plan.technology.isNotBlank()) add("Research")
@@ -61,7 +64,7 @@ class ScenarioGoalSlotsTable(game: GameInfo, private val plan: ScenarioChapterPl
     }
     private fun refresh() {
         clear()
-        for (i in 0..2) {
+        for (i in singleGoalIndex?.let { it..it } ?: (0..2)) {
             val kind = kinds[i]
             val options = listOf("None", "Research", "Build", "Hold city", "Capture city", "Assemble troops")
                 .filter { it == "None" || it == kind || it !in kinds }
@@ -70,7 +73,9 @@ class ScenarioGoalSlotsTable(game: GameInfo, private val plan: ScenarioChapterPl
                     "Capture city" -> targets.isNotEmpty(); else -> true
                 } }
             picker("Goal [${i + 1}]", "GoalType$i", options, kind) { selected ->
-                if (selected != kinds[i]) { switch(kinds[i], selected); kinds[i] = selected; refresh() }
+                if (selected != kinds[i]) {
+                    switch(kinds[i], selected); kinds[i] = selected; refresh(); onGoalChanged?.invoke()
+                }
             }
             when (kind) {
                 "Research" -> picker("Technology", "GoalTechnology$i", (technologies + plan.technology).distinct(), plan.technology) { plan.technology = it }

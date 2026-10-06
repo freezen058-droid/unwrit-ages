@@ -18,6 +18,8 @@ class ChallengeEndingPopup(screen: BaseScreen, game: GameInfo) : Popup(screen) {
         val chapter = scenario.chapter
         val naval = scenario.navalCampaign?.active
         val authored = scenario.authoredChapter
+        val firstResult = !(authored?.resultShown ?: naval?.resultShown ?: chapter?.resultShown ?: scenario.resultShown)
+        if (firstResult) com.unciv.ui.audio.SoundPlayer.play(com.unciv.models.UncivSound("challengeFailed"))
         val width = (screen.stage.width * 0.55f).coerceAtMost(620f)
         background = BaseScreen.skinStrings.getUiBackground("General/Popup/Background",
             tintColor = Color(0.24f, 0.015f, 0.025f, 0.72f))
