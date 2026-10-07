@@ -35,7 +35,7 @@ import com.unciv.utils.Log
 import com.unciv.utils.launchOnGLThread
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
-import io.ktor.client.engine.cio.CIO
+import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
 import io.ktor.client.request.post
@@ -257,7 +257,8 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
     private data class BlockhashRpcResponse(val result: BlockhashResult? = null, val error: RpcError? = null)
 
     private val httpClient: HttpClient by lazy {
-        HttpClient(CIO) {
+        // Android-aware certificate validation is required with domain-specific network security.
+        HttpClient(OkHttp) {
             install(ContentNegotiation) {
                 json(Json {
                     // Solana RPC responses include fields (e.g. "context") our response classes
@@ -1112,44 +1113,57 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
         }
     }
 
-    /** (memo, signature, block time) of the successful transactions that touched [address], newest
-     *  first, those with a memo only - as getSignaturesForAddress reports them, up to 1000. */
-    private suspend fun memoHistory(address: String): List<Triple<String, String, Long>> {
-        val requestBody = kotlinx.serialization.json.buildJsonObject {
-            put("jsonrpc", kotlinx.serialization.json.JsonPrimitive("2.0"))
-            put("id", kotlinx.serialization.json.JsonPrimitive(1))
-            put("method", kotlinx.serialization.json.JsonPrimitive("getSignaturesForAddress"))
-            put("params", kotlinx.serialization.json.buildJsonArray {
-                add(kotlinx.serialization.json.JsonPrimitive(address))
-                add(kotlinx.serialization.json.buildJsonObject {
-                    put("limit", kotlinx.serialization.json.JsonPrimitive(1000))
+    /** Successful finalized memo records, newest first. Tip ranking scans all pages or reports an error. */
+    private suspend fun memoHistory(address: String, complete: Boolean = false): List<Triple<String, String, Long>> {
+        val records = ArrayList<Triple<String, String, Long>>()
+        var before: String? = null
+        val seen = HashSet<String>()
+        repeat(if (complete) 100 else 1) {
+            val requestBody = kotlinx.serialization.json.buildJsonObject {
+                put("jsonrpc", kotlinx.serialization.json.JsonPrimitive("2.0"))
+                put("id", kotlinx.serialization.json.JsonPrimitive(1))
+                put("method", kotlinx.serialization.json.JsonPrimitive("getSignaturesForAddress"))
+                put("params", kotlinx.serialization.json.buildJsonArray {
+                    add(kotlinx.serialization.json.JsonPrimitive(address))
+                    add(kotlinx.serialization.json.buildJsonObject {
+                        put("limit", kotlinx.serialization.json.JsonPrimitive(1000))
+                        put("commitment", kotlinx.serialization.json.JsonPrimitive("finalized"))
+                        if (before != null) put("before", kotlinx.serialization.json.JsonPrimitive(before))
+                    })
                 })
-            })
+            }
+            val response: kotlinx.serialization.json.JsonObject = httpClient.post(RPC_ENDPOINT) {
+                contentType(ContentType.Application.Json)
+                setBody(requestBody)
+            }.body()
+            (response["error"] as? kotlinx.serialization.json.JsonObject)?.let { err ->
+                throw IllegalStateException("The network refused the list: " +
+                    ((err["message"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: err.toString()))
+            }
+            val entries = response["result"] as? kotlinx.serialization.json.JsonArray
+                ?: throw IllegalStateException("The network returned no history")
+            records += entries.mapNotNull { e ->
+                val o = e as? kotlinx.serialization.json.JsonObject ?: return@mapNotNull null
+                val err = o["err"]
+                if (err != null && err !is kotlinx.serialization.json.JsonNull) return@mapNotNull null
+                val memo = (o["memo"] as? kotlinx.serialization.json.JsonPrimitive)?.takeIf { it.isString }?.content
+                    ?: return@mapNotNull null
+                Triple(
+                    memo,
+                    (o["signature"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: "",
+                    (o["blockTime"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.toLongOrNull() ?: 0L
+                )
+            }
+            if (!complete || entries.size < 1000) return records.distinctBy { it.second }
+            val next = (entries.last() as? JsonObject)?.get("signature")?.jsonPrimitive?.content
+                ?: throw IllegalStateException("The network returned an incomplete history")
+            check(seen.add(next)) { "The network repeated a history page" }
+            before = next
         }
-        val response: kotlinx.serialization.json.JsonObject = httpClient.post(RPC_ENDPOINT) {
-            contentType(ContentType.Application.Json)
-            setBody(requestBody)
-        }.body()
-        (response["error"] as? kotlinx.serialization.json.JsonObject)?.let { err ->
-            throw IllegalStateException("The network refused the list: " +
-                ((err["message"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: err.toString()))
-        }
-        val entries = response["result"] as? kotlinx.serialization.json.JsonArray ?: emptyList()
-        return entries.mapNotNull { e ->
-            val o = e as? kotlinx.serialization.json.JsonObject ?: return@mapNotNull null
-            val err = o["err"]
-            if (err != null && err !is kotlinx.serialization.json.JsonNull) return@mapNotNull null
-            val memo = (o["memo"] as? kotlinx.serialization.json.JsonPrimitive)?.takeIf { it.isString }?.content
-                ?: return@mapNotNull null
-            Triple(
-                memo,
-                (o["signature"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: "",
-                (o["blockTime"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.toLongOrNull() ?: 0L
-            )
-        }
+        throw IllegalStateException("Tip history is too large to verify completely. Rankings were not updated.")
     }
 
-    /** Tip transactions already checked: signature -> (save signature, whole SKR), or null when the
+    /** Tip transactions already checked: transaction/save/author key -> verified amount, or null when the
      *  transaction did not pay what its memo claims. A settled transaction never changes. */
     private val checkedTips = java.util.concurrent.ConcurrentHashMap<String, java.util.Optional<Pair<String, Long>>>()
 
@@ -1226,19 +1240,40 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
         return false
     }
 
+    private val verifiedSaveAuthors = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
+
+    private suspend fun verifiedSaveAuthor(signature: String, author: String): Boolean? {
+        val key = "$signature:$author"
+        verifiedSaveAuthors[key]?.let { return it }
+        val transaction = finalizedTransaction(signature) ?: return null
+        val valid = com.unciv.logic.chain.TipTransactionVerifier.verifyAuthor(transaction, signature, author, TREASURY_ADDRESS)
+        verifiedSaveAuthors[key] = valid
+        return valid
+    }
+
     override fun listSaveTips(authors: Map<String, String>, onSuccess: (Map<String, Long>) -> Unit, onError: (Exception) -> Unit) {
         Concurrency.run("WalletListTips") {
             try {
-                for ((memo, txSignature, _) in memoHistory(TIP_REFERENCE)) {
-                    if (checkedTips.containsKey(txSignature)) continue
+                for ((memo, txSignature, _) in memoHistory(TIP_REFERENCE, complete = true)) {
                     val (save, wholeSkr) = CloudSave.parseTip(memo) ?: continue
                     val author = authors[save] ?: continue
-                    val paid = skrReceived(txSignature, author) ?: continue     // not readable yet: next time
-                    checkedTips[txSignature] = java.util.Optional.ofNullable(
-                        if (paid >= wholeSkr * 1_000_000L) save to wholeSkr else null)
+                    val cacheKey = "$txSignature:$save:$author"
+                    if (checkedTips.containsKey(cacheKey)) continue
+                    val verifiedAuthor = verifiedSaveAuthor(save, author)
+                        ?: throw IllegalStateException("The save author could not be checked. Please try again.")
+                    val transaction = finalizedTransaction(txSignature)
+                        ?: throw IllegalStateException("A tip could not be checked. Please try again.")
+                    val valid = verifiedAuthor && com.unciv.logic.chain.TipTransactionVerifier.verifyTip(
+                        transaction, txSignature, save, author, wholeSkr)
+                    checkedTips[cacheKey] = java.util.Optional.ofNullable(if (valid) save to wholeSkr else null)
                 }
-                val tips = checkedTips.values.mapNotNull { it.orElse(null) }
-                    .groupBy({ it.first }, { it.second }).mapValues { it.value.sum() }
+                val tips = checkedTips.entries.filter { (key, _) ->
+                    val parts = key.split(":")
+                    parts.size == 3 && authors[parts[1]] == parts[2]
+                }.mapNotNull { it.value.orElse(null) }
+                    .groupBy({ it.first }, { it.second }).mapValues { (_, amounts) ->
+                        amounts.fold(0L) { sum, amount -> Math.addExact(sum, amount) }
+                    }
                 launchOnGLThread { onSuccess(tips) }
             } catch (ex: Exception) {
                 Log.error("Failed to list save tips", ex)
@@ -1247,9 +1282,8 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
         }
     }
 
-    /** SKR base units [owner] gained in transaction [signature] (its token balances after minus before);
-     *  0 when it failed or moved none to them, null when the transaction cannot be read yet. */
-    private suspend fun skrReceived(signature: String, owner: String): Long? {
+    /** Null is retryable: missing/unfinalized transactions and RPC errors are never negative-cached. */
+    private suspend fun finalizedTransaction(signature: String): String? {
         val requestBody = kotlinx.serialization.json.buildJsonObject {
             put("jsonrpc", kotlinx.serialization.json.JsonPrimitive("2.0"))
             put("id", kotlinx.serialization.json.JsonPrimitive(1))
@@ -1257,7 +1291,8 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
             put("params", kotlinx.serialization.json.buildJsonArray {
                 add(kotlinx.serialization.json.JsonPrimitive(signature))
                 add(kotlinx.serialization.json.buildJsonObject {
-                    put("encoding", kotlinx.serialization.json.JsonPrimitive("jsonParsed"))
+                    put("encoding", kotlinx.serialization.json.JsonPrimitive("json"))
+                    put("commitment", kotlinx.serialization.json.JsonPrimitive("finalized"))
                     put("maxSupportedTransactionVersion", kotlinx.serialization.json.JsonPrimitive(0))
                 })
             })
@@ -1266,15 +1301,8 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
             contentType(ContentType.Application.Json)
             setBody(requestBody)
         }.body()
-        val result = response["result"] as? JsonObject ?: return null
-        val meta = result["meta"] as? JsonObject ?: return null
-        val err = meta["err"]
-        if (err != null && err !is kotlinx.serialization.json.JsonNull) return 0L
-        fun total(field: String) = (meta[field] as? kotlinx.serialization.json.JsonArray).orEmpty()
-            .mapNotNull { it as? JsonObject }
-            .filter { it["mint"]?.jsonPrimitive?.content == SKR_MINT && it["owner"]?.jsonPrimitive?.content == owner }
-            .sumOf { it["uiTokenAmount"]?.jsonObject?.get("amount")?.jsonPrimitive?.content?.toLongOrNull() ?: 0L }
-        return total("postTokenBalances") - total("preTokenBalances")
+        if (response["error"] != null) return null
+        return (response["result"] as? JsonObject)?.toString()
     }
 
     override fun tipSaveAuthor(author: String, saveSignature: String, wholeSkr: Long, onSuccess: (txSignature: String) -> Unit, onError: (Exception) -> Unit) {
@@ -1287,6 +1315,7 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
             try {
                 check(wholeSkr in 1..CloudSave.MAX_TIP_SKR) { "A tip is 1 to ${CloudSave.MAX_TIP_SKR} SKR" }
                 check(author != tipper) { "This is your own save" }
+                check(verifiedSaveAuthor(saveSignature, author) == true) { "The save author could not be verified. Please try again later." }
                 val amount = wholeSkr * 1_000_000L
                 val tipperKey = SolanaPublicKey.from(tipper)
                 val authorKey = SolanaPublicKey.from(author)

@@ -10,13 +10,10 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.work.WorkManager
 import com.badlogic.gdx.backends.android.AndroidApplication
 import com.badlogic.gdx.backends.android.AndroidApplicationConfiguration
-import com.unciv.logic.IdChecker
 import com.unciv.logic.chain.ChainWallet
 import com.unciv.logic.files.SAVE_FILES_FOLDER
 import com.unciv.logic.files.UncivFiles
 import com.unciv.ui.components.fonts.Fonts
-import com.unciv.ui.screens.multiplayerscreens.AddFriendScreen
-import com.unciv.utils.Concurrency.runOnGLThread
 import com.unciv.utils.Dispatcher
 import com.unciv.utils.Display
 import com.unciv.utils.Log
@@ -75,14 +72,11 @@ open class AndroidLauncher : AndroidApplication() {
         // Force immediate insets dispatch — libGDX init triggers insets before listener is registered
         window.decorView.requestApplyInsets()
 
-        // can be triggered via `adb shell am start -a android.intent.action.VIEW -d https://unciv.app/g/G-ef0f5e5a-f1db-4a54-9d94-92ca986afe8a-9 com.unciv.app`
-        // or whatever your game id is
-        game!!.setDeepLinkedGame(intent)
+        // Multiplayer links are not supported by this release, including explicit intents.
         if (BuildConfig.DEMO_COMMANDS)
             androidx.core.content.ContextCompat.registerReceiver(this, DemoCommandReceiver(),
                 android.content.IntentFilter("com.unwritages.app.CMD"), androidx.core.content.ContextCompat.RECEIVER_EXPORTED)
         game!!.addScreenObscuredListener()
-        processPossibleFriendDeepLink(intent)
     }
 
     private fun insetsListener(view: View, insets: WindowInsetsCompat): WindowInsetsCompat {
@@ -190,22 +184,7 @@ open class AndroidLauncher : AndroidApplication() {
 
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
-        if (intent == null)
-            return
-        game?.setDeepLinkedGame(intent)
-        processPossibleFriendDeepLink(intent)
-    }
-   
-    private fun processPossibleFriendDeepLink(intent: Intent) {
-        // can be triggered via
-        // `adb shell am start -a android.intent.action.VIEW -d https://unciv.app/p/P-63971008-a533-47f6-ad6a-57b616626138-9?name=Yairm210 com.unciv.app`
-        // or whatever your friend id and name are
-        if (intent.data != null && IdChecker.isFriendDeepLink(intent.data.toString())) {
-            val newFriend = IdChecker.checkAndReturnPlayerUuid(intent.data.toString())
-            if (newFriend != null) runOnGLThread {
-                game!!.pushScreen(AddFriendScreen(newFriend.name, newFriend.playerID))
-            }
-        }
+        // The exported launcher opens the app only; it does not accept multiplayer commands.
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

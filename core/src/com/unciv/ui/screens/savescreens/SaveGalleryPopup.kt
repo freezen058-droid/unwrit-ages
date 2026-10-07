@@ -52,6 +52,8 @@ class SaveGalleryPopup(private val screen: BaseScreen) : Popup(screen) {
     private val list = Table()
     private var records: List<CloudSave.Record> = emptyList()
     private val tips = mutableMapOf<String, Long>()
+    private var tipsVerified = false
+    private var tipsUnavailable = false
     /** The largest bounty on each save, by its record's signature. */
     private val bounties = mutableMapOf<String, CloudSave.Bounty>()
     private var mine: Set<String> = emptySet()
@@ -98,7 +100,7 @@ class SaveGalleryPopup(private val screen: BaseScreen) : Popup(screen) {
             records = shared
             // A gallery without its tips still lists every save, by date
             val authors = shared.mapNotNull { r -> r.meta?.author?.let { r.signature to it } }.toMap()
-            wallet.listSaveTips(authors, onError = { show() }, onSuccess = { tips.putAll(it); show() })
+            fetchTips(authors)
             wallet.seekerOwners(authors.values.toSet(), onError = {}, onSuccess = { seekers = it; show() })
             wallet.listBounties(onError = {}, onSuccess = { list ->
                 for (b in list) if ((bounties[b.saveSignature]?.skr ?: 0) < b.skr) bounties[b.saveSignature] = b
@@ -106,6 +108,22 @@ class SaveGalleryPopup(private val screen: BaseScreen) : Popup(screen) {
             })
             if (ChainWallet.isConnected)
                 wallet.listSaveRecords(false, onError = {}, onSuccess = { own -> mine = own.map { it.signature }.toSet(); show() })
+        })
+    }
+
+    private fun fetchTips(authors: Map<String, String>) {
+        tips.clear()
+        tipsVerified = false
+        tipsUnavailable = false
+        ChainWallet.service.listSaveTips(authors, onError = {
+            tips.clear()
+            tipsUnavailable = true
+            show()
+        }, onSuccess = {
+            tips.clear()
+            tips.putAll(it)
+            tipsVerified = true
+            show()
         })
     }
 
@@ -142,13 +160,15 @@ class SaveGalleryPopup(private val screen: BaseScreen) : Popup(screen) {
             .filter { parent != null || mapType == ALL_MAPS || it.meta?.mapType == mapType }
             .filter { parent != null || era == ALL_ERAS || it.meta?.era == era }
             .sortedWith(
-                if (sort == MOST_TIPPED) compareByDescending<CloudSave.Record> { tips[it.signature] ?: 0L }.thenByDescending { it.blockTime }
+                if (sort == MOST_TIPPED && tipsVerified) compareByDescending<CloudSave.Record> { tips[it.signature] ?: 0L }.thenByDescending { it.blockTime }
                 else compareByDescending { it.blockTime }
             ).sortedByDescending { parent == null && it.signature == genesis }
         status.setText(when {
             parent != null && shown.isEmpty() -> "No continuations yet. Load this save and share your progress.".tr()
             records.isEmpty() -> "No one has shared a save yet.".tr()
             shown.isEmpty() -> "No shared save matches these filters.".tr()
+            tipsUnavailable -> "Tips unavailable. Newest first; reopen to retry.".tr()
+            !tipsVerified -> "Checking tips...".tr()
             else -> ""
         })
         list.clear()
@@ -228,17 +248,23 @@ class SaveGalleryPopup(private val screen: BaseScreen) : Popup(screen) {
         button.background = BaseScreen.skinStrings.getUiBackground("General/Border",
             tintColor = if (isGenesis) Color(0.55f, 0.42f, 0.12f, 1f) else Color(0.2f, 0.25f, 0.35f, 1f))
         button.pad(8f)
-        if (isGenesis) button.add("Genesis - the first save ever shared".toLabel(Color.GOLD)).left().colspan(2).row()
-        button.add(record.name.toLabel(hideIcons = true)).left().growX()
+        // Reserve space inside the scroll pane instead of letting long labels expand the row.
+        val contentWidth = screen.stage.width * 0.7f - 40f
+        if (isGenesis) button.add("Genesis - the first save ever shared".toLabel(Color.GOLD).apply { wrap = true })
+            .width(contentWidth).left().colspan(2).row()
+        button.add(record.name.toLabel(hideIcons = true).apply { wrap = true })
+            .width(contentWidth * 0.7f).left()
         val tipped = tips[record.signature] ?: 0
         val bounty = bounties[record.signature]
         button.add(listOfNotNull(
             bounty?.let { "Bounty [${it.skr}] SKR".tr() },
             if (tipped > 0) "[$tipped] SKR tipped".tr() else null
-        ).joinToString("  ·  ").toLabel(Color.GOLD)).right().row()
+        ).joinToString("  ·  ").toLabel(Color.GOLD).apply { wrap = true; setAlignment(Align.right) })
+            .width(contentWidth * 0.3f).right().row()
         val seeker = record.meta?.author in seekers
         button.add(((if (seeker) "Seeker".tr() + "  ·  " else "") + describe(record))
-            .toLabel(fontSize = Constants.defaultFontSize - 4, hideIcons = true)).left().colspan(2)
+            .toLabel(fontSize = Constants.defaultFontSize - 4, hideIcons = true).apply { wrap = true })
+            .width(contentWidth).left().colspan(2)
         comparisonSummaries[record.signature]?.let {
             button.row()
             button.add(it.toLabel(fontSize = Constants.defaultFontSize - 4).apply { wrap = true })
@@ -255,8 +281,8 @@ class SaveGalleryPopup(private val screen: BaseScreen) : Popup(screen) {
             bounties[record.signature], record.meta?.author in seekers,
             onSource = { source?.let { openDetails(it) } },
             onContinuations = { continuationOf = record; show() },
-            onTipped = { amount ->
-                tips[record.signature] = (tips[record.signature] ?: 0) + amount
+            onTipped = {
+                fetchTips(records.mapNotNull { r -> r.meta?.author?.let { r.signature to it } }.toMap())
                 show()
             })
     }
@@ -476,7 +502,7 @@ private class SaveGalleryDetailPopup(
         fun send() {
             status.setText("Waiting for your wallet...".tr())
             ChainWallet.service.tipSaveAuthor(author, record.signature, amount, onError = ::failed, onSuccess = {
-                status.setText("Thank you - [$amount] SKR went to the author.".tr())
+                status.setText("Tip submitted. Checking confirmation...".tr())
                 onTipped(amount)
             })
         }
