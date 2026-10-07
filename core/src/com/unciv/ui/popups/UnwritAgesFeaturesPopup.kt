@@ -152,11 +152,51 @@ class UnwritAgesFeaturesPopup(stage: Stage, onDismiss: () -> Unit = {}) : Popup(
             table.add("Discover what awaits".toTextButton().apply {
                 onClick { stage?.let { UnwritAgesFeaturesPopup(it).open(true) } }
             }).width(textWidth).padBottom(12f).row()
-            for ((index, feature) in pages.drop(1).withIndex()) {
+            for ((index, feature) in listOf(pages[2], pages[1], pages[3], pages[4]).withIndex()) {
                 if (index > 0) table.addSeparator(Color.GRAY).padTop(12f).padBottom(12f)
-                addPageContent(table, feature, textWidth)
+                if (index == 0) addSharedSaveGuide(table, textWidth)
+                else addPageContent(table, feature, textWidth)
             }
             return table
+        }
+
+        /** Three visual steps, kept in the existing sharing tab. */
+        private fun addSharedSaveGuide(table: Table, width: Float) {
+            table.add("Continue a civilization's story".toLabel(accent, 30).apply { wrap = true })
+                .width(width).row()
+            fun step(icon: String, title: String, points: List<String>) {
+                val card = Table(BaseScreen.skin)
+                card.defaults().padBottom(6f)
+                card.add(ImageGetter.getImage("OtherIcons/$icon").apply { color = accent })
+                    .size(34f).padRight(14f).top()
+                val words = Table(BaseScreen.skin)
+                val lineWidth = width - 58f
+                words.add(title.toLabel(accent, 25).apply { wrap = true }).width(lineWidth).left().row()
+                for (point in points) {
+                    val row = Table(BaseScreen.skin)
+                    row.add("•".toLabel(accent, 22)).top().padRight(10f)
+                    row.add(point.toLabel(fontSize = 22).apply { wrap = true }).width(lineWidth - 24f).left()
+                    words.add(row).width(lineWidth).padTop(5f).row()
+                }
+                card.add(words).width(lineWidth).left()
+                table.add(card).width(width).padTop(10f).row()
+            }
+            step("Load", "Take command", listOf(
+                "Shared saves: choose a world, check its briefing, then load it.",
+                "Open Scenario goals above the map to see your chapter and remaining turns."))
+            step("Checkmark", "Write the next chapter", listOf(
+                "Meet the goals before time runs out. Success opens the next chapter.",
+                "If the challenge ends, retry or Continue playing your civilization."))
+            step("Link", "Create a challenge for the next leader", listOf(
+                "Save game > Set goals for the next player.",
+                "Choose a goal, press OK, then + Goal or Add chapter.",
+                "Up to 3 chapters, with up to 3 goals each: research, build, defend, capture or muster.",
+                "Every chapter needs a goal. A single empty chapter becomes an ordinary save.",
+                "Select Share this save, then save and approve in your wallet."))
+            table.add("Sharing: 1 SKR + SOL network fee. Shared saves are public.".toLabel(Color.LIGHT_GRAY, 21)
+                .apply { wrap = true }).width(width).padTop(10f).row()
+            table.add("View continuations follows the next leaders in this world's story.".toLabel(Color.LIGHT_GRAY, 21)
+                .apply { wrap = true }).width(width).row()
         }
 
         private fun addPageContent(table: Table, feature: Feature, width: Float) {

@@ -178,6 +178,21 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
             if (ChainWallet.service.isAvailable)
                 add(getMenuButton("Shared saves", "OtherIcons/Load", KeyboardBinding.None) {
                     SaveGalleryPopup(this@MainMenuScreen)
+                }.also { button ->
+                    val ribbon = Table(skin).apply {
+                        isTransform = true
+                        touchable = Touchable.disabled
+                        setBackground(skinStrings.getUiBackground(
+                            "MainMenuScreen/MenuButton", skinStrings.roundedEdgeRectangleShape,
+                            Color.valueOf("d3ac6c")))
+                        add("Try it!".toLabel(Color.valueOf("40271f"), 12)).pad(2f, 6f, 2f, 6f)
+                        pack()
+                        rotation = -12f
+                    }
+                    button.addActor(ribbon)
+                    button.addAction(Actions.run {
+                        ribbon.setPosition(button.width - ribbon.width - 8f, button.height - ribbon.height * 0.65f)
+                    })
                 })
 
             add(getMenuButton("Guide", "OtherIcons/Quickstart", KeyboardBinding.None) {
