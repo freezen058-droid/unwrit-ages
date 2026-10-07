@@ -13,9 +13,11 @@ are Unciv's work. The art made for Unwrit Ages is not under the MPL - see
 
 ## Hackathon source and security evidence
 
-The submitted Android APK is pinned to [v1.0.3-hackathon-20261007](https://github.com/freezen058-droid/unwrit-ages/tree/v1.0.3-hackathon-20261007). A later [security source update](https://github.com/freezen058-droid/unwrit-ages/tree/v1.0.3-security-20261007) adds strict finalized SKR transfer/memo binding, author verification and Android entry-point/network hardening. It passed 859 regression tests (0 failures, 16 skips), including 21 tip-verifier cases. On the Seeker, fresh wallet authorization and private-save message signing, decryption and actual game restoration were manually verified. New paid candidate transactions and cancellation recovery remain untested; the candidate has not replaced the public APK.
+The current Android 1.0.3 release is pinned to [v1.0.3-challenges-20261008](https://github.com/freezen058-droid/unwrit-ages/tree/v1.0.3-challenges-20261008). It includes strict finalized SKR transfer/memo binding, author verification, Android network/entry-point hardening, player-authored chapters, signed data-only challenge packs and matching Guide introductions. Regression: 873 tests, zero failures/errors, 16 skips, including 21 tip-verifier cases. Seeker checks cover wallet authorization, private restore, 1-SKR save cancellation/retry and the final Guide/goal editor. These manual checks do not change the earlier automated audit coverage.
 
-See the [product deck and technical appendix](https://unwritages.pages.dev/hackathon/deck.pdf) and [file-by-file evidence with validation boundaries](https://unwritages.pages.dev/hackathon/source-evidence). These checks are not an independent security audit or evidence of player retention. The default branch also contains development work outside the submitted APK; use the pinned tags to review each scope.
+[Download APK](https://unwritages.pages.dev/download/unwrit-ages-1.0.3.apk). SHA-256: `e749255f3c58651c46d9dd03faa53d5eb063537e40dbc05bbf7cfe679879fc86`.
+
+See the [product deck and technical appendix](https://unwritages.pages.dev/hackathon/deck.pdf) and [file-by-file evidence with validation boundaries](https://unwritages.pages.dev/hackathon/source-evidence). These checks are not an independent security audit or evidence of player retention. The default branch contains development work outside the submitted APK; use the pinned release tag to review the submitted scope. Council, strategic chapter branches and result tiers remain future work.
 
 ## What this fork adds
 
