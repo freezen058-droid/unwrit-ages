@@ -21,6 +21,7 @@ class SharedScenario : IsPartOfGameInfoSerialization {
     var holdCityName = ""
     var militaryGoals: ScenarioMilitaryGoals? = null
     var goalOrder = ArrayList<String>()
+    var challengeGoals = ArrayList<ChallengeGoal>()
     var captureTurn = -1
     var musterTurn = -1
     /** A locally authored definition can be revised into a new challenge. */
@@ -72,6 +73,8 @@ class SharedScenario : IsPartOfGameInfoSerialization {
                 technology = plan.technology; building = plan.building; cityId = plan.cityId; cityName = plan.cityName
                 optionalGoals = plan.optionalGoals; holdCityId = plan.holdCityId; holdCityName = plan.holdCityName
                 militaryGoals = plan.militaryGoals?.copy(); goalOrder = ArrayList(plan.goalOrder)
+                challengeGoals = ArrayList(plan.challengeGoals.map { it.copy().apply { reset() } })
+                version = if (challengeGoals.isNotEmpty() || duration > 100) 2 else 1
                 opponent = this@SharedScenario.opponent
                 if (civ.cities.any { it.id == cityId && it.cityConstructions.isBuilt(building) }) constructionTurn = game.turns
             }
@@ -112,7 +115,7 @@ class SharedScenario : IsPartOfGameInfoSerialization {
         return (deadline - turn).takeIf { it > 0 }
     }
     val goalCount get() = if (!optionalGoals) 3 else
-        listOf(technology.isNotBlank(), building.isNotBlank(), holdCityId.isNotBlank()).count { it } + (militaryGoals?.goalCount ?: 0)
+        listOf(technology.isNotBlank(), building.isNotBlank(), holdCityId.isNotBlank()).count { it } + (militaryGoals?.goalCount ?: 0) + challengeGoals.size
     val currentGoalCount get() = authoredChapter?.goalCount ?: (if (navalCampaign?.active != null || chapter != null) 3 else goalCount)
     val completedCount get() = listOf(
         researchTurn.takeIf { !optionalGoals || technology.isNotBlank() } ?: -1,
@@ -120,11 +123,12 @@ class SharedScenario : IsPartOfGameInfoSerialization {
         holdTurn.takeIf { !optionalGoals || holdCityId.isNotBlank() } ?: -1,
         captureTurn.takeIf { optionalGoals && militaryGoals?.captureCityId?.isNotBlank() == true } ?: -1,
         musterTurn.takeIf { optionalGoals && militaryGoals?.musterCityId?.isNotBlank() == true } ?: -1
-    ).count { it >= 0 }
-    val supported get() = version == 1 && id.isNotBlank() && civilization.isNotBlank() &&
-        (if (optionalGoals) goalCount in 1..3 && (building.isBlank() || cityId.isNotBlank()) && militaryGoals?.supported != false
-            else cityId.isNotBlank() && technology.isNotBlank() && building.isNotBlank()) &&
-        duration in 1..100 && startTurn in 0..(Int.MAX_VALUE - duration) &&
+    ).count { it >= 0 } + challengeGoals.count { it.completedTurn >= 0 }
+    val supported get() = version in 1..2 && (version == 2 || challengeGoals.isEmpty() && nextChapterPlans.all { it.challengeGoals.isEmpty() && it.duration <= 100 }) && id.isNotBlank() && civilization.isNotBlank() &&
+        (if (optionalGoals) goalCount in 1..3 && (building.isBlank() || cityId.isNotBlank()) && militaryGoals?.supported != false &&
+                challengeGoals.all { it.supported } && challengeGoals.map { it.id }.distinct().size == challengeGoals.size
+            else cityId.isNotBlank() && technology.isNotBlank() && building.isNotBlank() && challengeGoals.isEmpty()) &&
+        duration in 1..(if (version == 2) 300 else 100) && startTurn in 0..(Int.MAX_VALUE - duration) &&
         nextChapterPlans.size <= 2 && nextChapterPlans.all { it.supported } &&
         authoredChapterHistory.size <= nextChapterPlans.size
 
@@ -135,11 +139,13 @@ class SharedScenario : IsPartOfGameInfoSerialization {
         (if (optionalGoals) listOf("optional-goals-v1", holdCityId) else emptyList()) +
         (militaryGoals?.definitionParts() ?: emptyList()) +
         (if (goalOrder.isNotEmpty()) listOf("goal-order-v1") + goalOrder else emptyList()) +
+        challengeGoals.flatMap { it.definitionParts() } +
         (navalCampaign?.let { listOf("naval-campaign-v2", it.enemyPortId, "25", "35", "3-warships-at-home-deadline", "4", "2", "war-locked") } ?: emptyList()) +
         nextChapterPlans.flatMap { listOf("author-chapter-v1", it.technology, it.building, it.cityId, it.duration.toString()) +
             (if (it.optionalGoals) listOf("optional-goals-v1", it.holdCityId) else emptyList()) +
             (it.militaryGoals?.definitionParts() ?: emptyList()) +
-            (if (it.goalOrder.isNotEmpty()) listOf("goal-order-v1") + it.goalOrder else emptyList()) }))
+            (if (it.goalOrder.isNotEmpty()) listOf("goal-order-v1") + it.goalOrder else emptyList()) +
+            it.challengeGoals.flatMap { goal -> goal.definitionParts() } }))
 
     fun copy(): SharedScenario = SharedScenario().also {
         it.version = version; it.id = id; it.title = title; it.description = description; it.civilization = civilization
@@ -147,6 +153,7 @@ class SharedScenario : IsPartOfGameInfoSerialization {
         it.cityId = cityId; it.cityName = cityName; it.building = building; it.opponent = opponent
         it.optionalGoals = optionalGoals; it.holdCityId = holdCityId; it.holdCityName = holdCityName; it.authorDraft = authorDraft
         it.militaryGoals = militaryGoals?.copy(); it.goalOrder = ArrayList(goalOrder)
+        it.challengeGoals = ArrayList(challengeGoals.map { goal -> goal.copy() })
         it.captureTurn = captureTurn; it.musterTurn = musterTurn
         it.researchTurn = researchTurn; it.constructionTurn = constructionTurn; it.holdTurn = holdTurn
         it.outcome = outcome; it.finalGold = finalGold; it.finalCities = finalCities
@@ -166,6 +173,10 @@ class SharedScenario : IsPartOfGameInfoSerialization {
         authoredChapter?.observe(game)
         if (outcome.isNotEmpty()) return
         val civ = game.civilizations.firstOrNull { it.civID == civilization } ?: return
+        if (challengeGoals.isNotEmpty() && !civ.isDefeated()) {
+            val values = ChallengeGoal.snapshot(game, civilization)
+            challengeGoals.forEach { it.observe(game.turns, startTurn, deadline, values) }
+        }
         evaluate(game.turns, technology in civ.tech.techsResearched,
             civ.cities.any { it.id == (if (optionalGoals) holdCityId else cityId) }, civ.isDefeated(), civ.gold, civ.cities.size,
             civ.diplomacy[opponent]?.diplomaticStatus?.name == "War",

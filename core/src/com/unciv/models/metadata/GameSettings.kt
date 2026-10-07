@@ -214,6 +214,8 @@ class GameSettings {
     /** Last introduction seen for this fork; old installs default to zero and see new features. */
     var unwritAgesFeaturesVersion = 0
 
+    var seenChallengePacks = HashMap<String, Int>()
+
     /** Whether the Guide has pointed at its "Start a tutorial game" button (first open only) */
     var guideTourShown = false
 

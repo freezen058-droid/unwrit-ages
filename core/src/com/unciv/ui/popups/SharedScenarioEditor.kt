@@ -72,7 +72,7 @@ class SharedScenarioEditor(screen: BaseScreen, game: GameInfo, current: SharedSc
                 } else {
                     activeGoalTable = null
                     val goals = optionalScenarioGoalTexts(plan.technology, plan.building, plan.cityName,
-                        plan.holdCityName, plan.duration, plan.militaryGoals, plan.goalOrder)
+                        plan.holdCityName, plan.duration, plan.militaryGoals, plan.goalOrder, plan.challengeGoals)
                     if (goals.isEmpty()) form.add("No goals".toLabel()).colspan(2).left().row()
                     for ((goalIndex, text) in goals.withIndex()) {
                         val goal = text.tr().toTextButton().apply {
@@ -81,7 +81,7 @@ class SharedScenarioEditor(screen: BaseScreen, game: GameInfo, current: SharedSc
                         }
                         form.add(goal).colspan(2).width(450f).minHeight(48f).padBottom(4f).row()
                     }
-                    picker("Scenario length", "ChapterDuration", listOf("10", "15", "20", "25", "30"), plan.duration.toString(), rebuild = true) {
+                    picker("Chapter length", "ChapterDuration", (listOf("10", "15", "20", "25", "30", "40", "60", "80", "100", "150", "200", "300") + plan.duration.toString()).distinct(), plan.duration.toString(), rebuild = true) {
                         plan.duration = it.toInt()
                     }
                 }
@@ -129,6 +129,8 @@ class SharedScenarioEditor(screen: BaseScreen, game: GameInfo, current: SharedSc
                     error.setText("Choose a different technology for each chapter.".tr())
                 } else if (built.distinct().size != built.size) {
                     error.setText("Choose a different building or city for each chapter.".tr())
+                } else if (active.any { !it.supported }) {
+                    error.setText("Choose a chapter length that fits its sustained goals.".tr())
                 } else { onSelected(ScenarioAuthoring.draft(game, current, chapters)); close() }
             }.actor
             addButton("No goals") {

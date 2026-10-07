@@ -157,6 +157,7 @@ class UnwritAgesFeaturesPopup(stage: Stage, onDismiss: () -> Unit = {}) : Popup(
                 if (index == 0) addSharedSaveGuide(table, textWidth)
                 else addPageContent(table, feature, textWidth)
             }
+            table.add(ChallengePacksPopup.guideCards(textWidth)).width(textWidth).row()
             return table
         }
 

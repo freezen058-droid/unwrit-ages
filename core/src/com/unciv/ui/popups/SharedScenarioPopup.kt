@@ -213,9 +213,10 @@ fun scenarioGoalLines(s: SharedScenario): List<String> {
         if (s.holdCityId.isNotBlank()) turns["Hold city"] = s.holdTurn
         if (s.militaryGoals?.captureCityId?.isNotBlank() == true) turns["Capture city"] = s.captureTurn
         if (s.militaryGoals?.musterCityId?.isNotBlank() == true) turns["Assemble troops"] = s.musterTurn
+        s.challengeGoals.forEach { turns[it.id] = it.completedTurn }
         val orderedTurns = (s.goalOrder + turns.keys).distinct().mapNotNull { turns[it] }
         return optionalScenarioGoalTexts(s.technology, s.building, s.cityName, s.holdCityName, s.duration,
-            s.militaryGoals, s.goalOrder)
+            s.militaryGoals, s.goalOrder, s.challengeGoals)
             .mapIndexed { index, text -> (if (orderedTurns[index] >= 0) "☑ " else "☐ ") + text.tr() }
     }
     fun mark(turn: Int) = if (turn >= 0) "✓  " else "□  "

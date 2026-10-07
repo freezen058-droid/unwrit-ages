@@ -191,6 +191,8 @@ open class UncivGame(val isConsoleMode: Boolean = false) : Game(), PlatformSpeci
      * @param autoPlay pass in the old WorldScreen AutoPlay to retain the state throughout turns. Otherwise leave it is the default.
      */
     suspend fun loadGame(newGameInfo: GameInfo, autoPlay: AutoPlay = AutoPlay(settings.autoPlay), callFromLoadScreen: Boolean = false): WorldScreen = withThreadPoolContext toplevel@{
+        if (newGameInfo.sharedScenario?.let { !it.supported && !it.freePlay } == true)
+            throw UncivShowableException("This save needs a compatible app version to run its challenge.")
         val prevGameInfo = gameInfo
         gameInfo = newGameInfo
 

@@ -10,6 +10,7 @@ object ScenarioAuthoring {
 
     fun plans(scenario: SharedScenario): List<ScenarioChapterPlan> = listOf(ScenarioChapterPlan().apply {
         technology = scenario.technology; building = scenario.building; cityId = scenario.cityId; cityName = scenario.cityName
+        challengeGoals = ArrayList(scenario.challengeGoals.map { it.copy().apply { reset() } })
         duration = scenario.duration; optionalGoals = true
         militaryGoals = scenario.militaryGoals?.copy(); goalOrder = ArrayList(scenario.goalOrder)
         holdCityId = if (scenario.optionalGoals) scenario.holdCityId else scenario.cityId
@@ -28,7 +29,7 @@ object ScenarioAuthoring {
         require(active.size <= 3 && active.all { it.supported })
         fun signatures(items: List<ScenarioChapterPlan>) = items.map {
             listOf(it.technology, it.building, it.cityId, it.holdCityId, it.duration.toString()) +
-                (it.militaryGoals?.definitionParts() ?: emptyList()) + it.goalOrder
+                (it.militaryGoals?.definitionParts() ?: emptyList()) + it.goalOrder + it.challengeGoals.flatMap { goal -> goal.definitionParts() }
         }
         if (current?.authorDraft == true && signatures(ScenarioAuthoring.plans(current)) == signatures(active)) return current.copy()
         val civ = game.getCurrentPlayerCivilization()
@@ -40,6 +41,10 @@ object ScenarioAuthoring {
             technology = first.technology; building = first.building; cityId = first.cityId; cityName = first.cityName
             optionalGoals = true; holdCityId = first.holdCityId; holdCityName = first.holdCityName; authorDraft = true
             militaryGoals = first.militaryGoals?.copy(); goalOrder = ArrayList(first.goalOrder)
+            challengeGoals = ArrayList(first.challengeGoals.map { it.copy().apply { reset() } })
+            val values = ChallengeGoal.snapshot(game, civilization)
+            challengeGoals.forEach { it.initialize(values) }
+            version = if (active.any { it.challengeGoals.isNotEmpty() || it.duration > 100 }) 2 else 1
             nextChapterPlans = ArrayList(active.drop(1).map { it.copy() })
         }
     }

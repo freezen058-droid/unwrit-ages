@@ -1,5 +1,6 @@
 ﻿package com.unciv.ui.screens.mainmenuscreen
 
+import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.Touchable
 import com.badlogic.gdx.scenes.scene2d.actions.Actions
@@ -12,6 +13,7 @@ import com.unciv.UncivGame
 import com.unciv.logic.GameInfo
 import com.unciv.logic.GameStarter
 import com.unciv.logic.chain.ChainWallet
+import com.unciv.logic.chain.ChallengePacks
 import com.unciv.logic.HolidayDates
 import com.unciv.logic.UncivShowableException
 import com.unciv.logic.map.MapParameters
@@ -45,6 +47,7 @@ import com.unciv.ui.components.widgets.AutoScrollPane
 import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.images.padTopDescent
 import com.unciv.ui.popups.ConfirmPopup
+import com.unciv.ui.popups.ChallengePacksPopup
 import com.unciv.ui.popups.Popup
 import com.unciv.ui.popups.ToastPopup
 import com.unciv.ui.popups.TutorialGuidePopup
@@ -182,9 +185,7 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
                     val ribbon = Table(skin).apply {
                         isTransform = true
                         touchable = Touchable.disabled
-                        setBackground(skinStrings.getUiBackground(
-                            "MainMenuScreen/MenuButton", skinStrings.roundedEdgeRectangleShape,
-                            Color.valueOf("d3ac6c")))
+                        setBackground(ImageGetter.getWhiteDotDrawable().tint(Color.valueOf("d3ac6c")))
                         add("Try it!".toLabel(Color.valueOf("40271f"), 12)).pad(2f, 6f, 2f, 6f)
                         pack()
                         rotation = -12f
@@ -276,6 +277,20 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
             stage.addAction(Actions.delay(0.4f, Actions.run {
                 if (game.screen === this@MainMenuScreen) showFeatureTour()
             }))
+        ChallengePacks.refresh {
+            stage.addAction(Actions.delay(0.5f, Actions.run { showChallengePackGuide() }))
+        }
+    }
+
+    private fun showChallengePackGuide() {
+        if (game.screen !== this || hasOpenPopups() || !game.settings.mainMenuTourShown ||
+            game.settings.unwritAgesFeaturesVersion < UnwritAgesFeaturesPopup.CURRENT_VERSION) return
+        val packs = ChallengePacks.unseen(game.settings.seenChallengePacks)
+        if (packs.isEmpty()) return
+        ChallengePacksPopup(this, packs) {
+            packs.forEach { game.settings.seenChallengePacks[it.id] = it.revision }
+            game.settings.save()
+        }.open()
     }
 
     /** Shown once, on the first main menu after install; see [MainMenuTour]. Started after a short
@@ -299,10 +314,13 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
     }
 
     private fun showFeatureTour() {
-        if (game.settings.unwritAgesFeaturesVersion >= UnwritAgesFeaturesPopup.CURRENT_VERSION) return
+        if (game.settings.unwritAgesFeaturesVersion >= UnwritAgesFeaturesPopup.CURRENT_VERSION) {
+            showChallengePackGuide(); return
+        }
         UnwritAgesFeaturesPopup(stage) {
             game.settings.unwritAgesFeaturesVersion = UnwritAgesFeaturesPopup.CURRENT_VERSION
             game.settings.save()
+            Gdx.app.postRunnable { showChallengePackGuide() }
         }.open()
     }
 
