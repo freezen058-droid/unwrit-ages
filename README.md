@@ -11,6 +11,12 @@ release, unchanged; every commit after it is ours. The game rules, map, AI and m
 are Unciv's work. The art made for Unwrit Ages is not under the MPL - see
 [ART-NOTICE.md](ART-NOTICE.md).
 
+## Hackathon source and security evidence
+
+The submitted Android APK is pinned to [v1.0.3-hackathon-20261007](https://github.com/freezen058-droid/unwrit-ages/tree/v1.0.3-hackathon-20261007). A later [security source update](https://github.com/freezen058-droid/unwrit-ages/tree/v1.0.3-security-20261007) adds strict finalized SKR transfer/memo binding, author verification and Android entry-point/network hardening. It passed 859 regression tests (0 failures, 16 skips), including 21 tip-verifier cases. The candidate APK still awaits successful wallet authorization acceptance and has not replaced the public APK.
+
+See the [product deck and technical appendix](https://unwritages.pages.dev/hackathon/deck.pdf) and [file-by-file evidence with validation boundaries](https://unwritages.pages.dev/hackathon/source-evidence). These checks are not an independent security audit or evidence of player retention. The default branch also contains development work outside the submitted APK; use the pinned tags to review each scope.
+
 ## What this fork adds
 
 On Solana, through the Mobile Wallet Adapter (`core/src/com/unciv/logic/chain/`,
