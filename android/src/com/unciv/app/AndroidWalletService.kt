@@ -1469,7 +1469,7 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
         val treasuryAccount = skrAccount(treasuryKey)
         val balance = skrBalance(playerAccount)
         check(balance >= amount) {
-            "This wallet has ${balance / 1_000_000} SKR; the certificate costs ${amount / 1_000_000} SKR"
+            "This wallet has ${balance / 1_000_000} SKR; the payment requires ${amount / 1_000_000} SKR"
         }
         Log.debug("Victory certificate: fee %d SKR (%d US cents)", amount / 1_000_000, CERTIFICATE_FEE_USD_CENTS)
         val create = if (accountExists(treasuryAccount)) emptyList() else listOf(

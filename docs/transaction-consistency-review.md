@@ -112,6 +112,14 @@ The journal is scoped by payer and exact named snapshot, serializes save-payment
 
 **Disposition:** open. Check final serialized save-transaction size before upload/payment approval and report an actionable error. This scenario has not been reproduced on the phone; no successful debit is inferred from an oversized rejected payload.
 
+### TX-11 · Nominal USD price and final token charge may differ · Medium
+
+**Scenario:** a player reads US$0.90 in the Guide while the SOL pricing path uses a fixed fallback rate or clamp after an oracle problem; SKR payment rounds up to a whole token. The final wallet-approved token amount may therefore not equal exactly US$0.90 at current market prices.
+
+**Evidence:** `certificateFeeLamports` validates Pyth owner/feed/time and bounds its result, but falls back to a fixed SOL/USD value. `certificateFeeSkr` rounds upward. The SKR HTTP quote parser checks a sanity band, not a quote timestamp. The wallet displays the actual transfer before authorization.
+
+**Disposition:** open. Clearly distinguish a target price from the final quote; show the exact token amount and fallback status before approval, and enforce quote age. No incorrect-price payment was reproduced in this review.
+
 ## Existing safeguards and their boundaries
 
 For saves, the SKR transfer and memo share one transaction; for certificates, fee transfer and Metaplex Core creation share one transaction. Thus an instruction failure cannot settle the application fee while omitting the paired on-chain record/asset. This atomicity does not synchronize app UI, guarantee external storage availability, or refund network fees.
@@ -143,6 +151,8 @@ Confirm the sign-only wallet flow on Seeker; inject loss of network response aft
 - [android/src/com/unciv/app/AndroidWalletService.kt: override fun tipSaveAuthor, line 1308](https://github.com/freezen058-droid/unwrit-ages/blob/079209afbbb15b9bbf710c62302151ba9f3c48dd/android/src/com/unciv/app/AndroidWalletService.kt#L1308)
 - [android/src/com/unciv/app/AndroidWalletService.kt: override fun recordSaveHash, line 1481](https://github.com/freezen058-droid/unwrit-ages/blob/079209afbbb15b9bbf710c62302151ba9f3c48dd/android/src/com/unciv/app/AndroidWalletService.kt#L1481)
 - [android/src/com/unciv/app/AndroidWalletService.kt: private fun sendMemoWithSkrFee, line 1503](https://github.com/freezen058-droid/unwrit-ages/blob/079209afbbb15b9bbf710c62302151ba9f3c48dd/android/src/com/unciv/app/AndroidWalletService.kt#L1503)
+- [android/src/com/unciv/app/AndroidWalletService.kt: private suspend fun certificateFeeLamports, line 364](https://github.com/freezen058-droid/unwrit-ages/blob/079209afbbb15b9bbf710c62302151ba9f3c48dd/android/src/com/unciv/app/AndroidWalletService.kt#L364)
+- [android/src/com/unciv/app/AndroidWalletService.kt: private suspend fun certificateFeeSkr, line 1441](https://github.com/freezen058-droid/unwrit-ages/blob/079209afbbb15b9bbf710c62302151ba9f3c48dd/android/src/com/unciv/app/AndroidWalletService.kt#L1441)
 - [core/src/com/unciv/logic/files/UncivFiles.kt: private fun recordSaveHashOnChainIfEnabled, line 206](https://github.com/freezen058-droid/unwrit-ages/blob/079209afbbb15b9bbf710c62302151ba9f3c48dd/core/src/com/unciv/logic/files/UncivFiles.kt#L206)
 - [core/src/com/unciv/logic/chain/VictoryCertificateService.kt: fun alreadyMintedUpload, line 23](https://github.com/freezen058-droid/unwrit-ages/blob/079209afbbb15b9bbf710c62302151ba9f3c48dd/core/src/com/unciv/logic/chain/VictoryCertificateService.kt#L23)
 - [core/src/com/unciv/logic/chain/VictoryCertificateService.kt: private fun mintConnected, line 63](https://github.com/freezen058-droid/unwrit-ages/blob/079209afbbb15b9bbf710c62302151ba9f3c48dd/core/src/com/unciv/logic/chain/VictoryCertificateService.kt#L63)
