@@ -36,7 +36,8 @@ import kotlin.math.roundToInt
  * anyone loads it. No server: the records and the tips are read from the chain
  * ([com.unciv.logic.chain.PlatformWalletService.listSaveRecords], [com.unciv.logic.chain.PlatformWalletService.listSaveTips]).
  */
-class SaveGalleryPopup(private val screen: BaseScreen) : Popup(screen) {
+class SaveGalleryPopup(private val screen: BaseScreen, private val initialSaveSignature: String? = null) : Popup(screen) {
+    private var initialSaveOpened = false
 
     private companion object {
         const val ALL_CIVS = "All civilizations"
@@ -98,6 +99,12 @@ class SaveGalleryPopup(private val screen: BaseScreen) : Popup(screen) {
         val wallet = ChainWallet.service
         wallet.listSaveRecords(true, onError = ::failed, onSuccess = { shared ->
             records = shared
+            if (!initialSaveOpened && initialSaveSignature != null) {
+                initialSaveOpened = true
+                val selected = records.firstOrNull { it.signature == initialSaveSignature }
+                if (selected != null) openDetails(selected)
+                else status.setText("Could not find the shared save.".tr())
+            }
             // A gallery without its tips still lists every save, by date
             val authors = shared.mapNotNull { r -> r.meta?.author?.let { r.signature to it } }.toMap()
             fetchTips(authors)

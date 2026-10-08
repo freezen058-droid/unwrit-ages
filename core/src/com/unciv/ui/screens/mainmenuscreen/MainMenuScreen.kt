@@ -51,7 +51,7 @@ import com.unciv.ui.popups.ChallengePacksPopup
 import com.unciv.ui.popups.Popup
 import com.unciv.ui.popups.ToastPopup
 import com.unciv.ui.popups.TutorialGuidePopup
-import com.unciv.ui.popups.UnwritAgesFeaturesPopup
+import com.unciv.ui.popups.SharedSavesIntroPopup
 import com.unciv.ui.popups.WalletPopup
 import com.unciv.ui.popups.closeAllPopups
 import com.unciv.ui.popups.hasOpenPopups
@@ -186,7 +186,7 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
                         isTransform = true
                         touchable = Touchable.disabled
                         setBackground(ImageGetter.getWhiteDotDrawable().tint(Color.valueOf("d3ac6c")))
-                        add("Try it!".toLabel(Color.valueOf("40271f"), 12)).pad(2f, 6f, 2f, 6f)
+                        add("Try it!".toLabel(Color.valueOf("40271f"), 15)).pad(3f, 7f, 3f, 7f)
                         pack()
                         rotation = -12f
                     }
@@ -273,7 +273,7 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
         stage.addActor(versionTable)
 
         if (!game.settings.mainMenuTourShown) startTour(guideButton, newGameButton, walletButton)
-        else if (game.settings.unwritAgesFeaturesVersion < UnwritAgesFeaturesPopup.CURRENT_VERSION)
+        else if (game.settings.sharedSavesIntroVersion < SharedSavesIntroPopup.VERSION)
             stage.addAction(Actions.delay(0.4f, Actions.run {
                 if (game.screen === this@MainMenuScreen) showFeatureTour()
             }))
@@ -284,7 +284,7 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
 
     private fun showChallengePackGuide() {
         if (game.screen !== this || hasOpenPopups() || !game.settings.mainMenuTourShown ||
-            game.settings.unwritAgesFeaturesVersion < UnwritAgesFeaturesPopup.CURRENT_VERSION) return
+            game.settings.sharedSavesIntroVersion < SharedSavesIntroPopup.VERSION) return
         val packs = ChallengePacks.unseen(game.settings.seenChallengePacks)
         if (packs.isEmpty()) return
         ChallengePacksPopup(this, packs) {
@@ -314,11 +314,11 @@ class MainMenuScreen: BaseScreen(), RecreateOnResize {
     }
 
     private fun showFeatureTour() {
-        if (game.settings.unwritAgesFeaturesVersion >= UnwritAgesFeaturesPopup.CURRENT_VERSION) {
+        if (game.settings.sharedSavesIntroVersion >= SharedSavesIntroPopup.VERSION) {
             showChallengePackGuide(); return
         }
-        UnwritAgesFeaturesPopup(stage) {
-            game.settings.unwritAgesFeaturesVersion = UnwritAgesFeaturesPopup.CURRENT_VERSION
+        SharedSavesIntroPopup(this) {
+            game.settings.sharedSavesIntroVersion = SharedSavesIntroPopup.VERSION
             game.settings.save()
             Gdx.app.postRunnable { showChallengePackGuide() }
         }.open()

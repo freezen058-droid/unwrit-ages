@@ -19,6 +19,8 @@ class ChallengePack {
     var titleTw = ""
     var titleCn = ""
     var icon = "Resume"
+    /** Published example linked by its actual chain receipt, never by a display title. */
+    var exampleSaveSignature = ""
     var guide = ArrayList<String>()
     var guideTw = ArrayList<String>()
     var guideCn = ArrayList<String>()
@@ -26,6 +28,7 @@ class ChallengePack {
     val supported get() = id.matches(Regex("[a-z0-9-]{1,64}")) && revision in 1..1000000 &&
         listOf(title, titleTw, titleCn).all { it.length in 1..160 } &&
         icon in listOf("Resume", "Load", "Cities", "Capital", "Shield", "Link", "Checkmark") &&
+        (exampleSaveSignature.isEmpty() || exampleSaveSignature.matches(Regex("[1-9A-HJ-NP-Za-km-z]{64,88}"))) &&
         listOf(guide, guideTw, guideCn).all { it.size in 1..4 && it.all { line -> line.length in 1..300 } } &&
         goals.size in 1..12 && goals.all { it.supported && it.packId == id && it.packRevision == revision &&
             listOf(it.labelTw, it.labelCn, it.titleTw, it.titleCn).all { text -> text.isNotBlank() } &&
@@ -86,7 +89,8 @@ object ChallengePacks {
     fun enabled() = current().packs.filter { it.enabled }
     fun availableGoals() = enabled().flatMap { it.goals }
     fun goal(id: String) = availableGoals().firstOrNull { it.id == id }
-    fun unseen(seen: Map<String, Int>) = enabled().filter { it.revision > (seen[it.id] ?: 0) }
+    fun unseen(seen: Map<String, Int>, packs: List<ChallengePack> = enabled()) =
+        packs.filter { it.enabled && it.revision > (seen[it.id] ?: 0) }
     fun refresh(onReady: () -> Unit) {
         current()
         if (requested) { onReady(); return }

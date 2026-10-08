@@ -213,7 +213,10 @@ class GameSettings {
 
     /** Last introduction seen for this fork; old installs default to zero and see new features. */
     var unwritAgesFeaturesVersion = 0
+    /** Kept separate from the optional four-page overview and challenge-pack revisions. */
+    var sharedSavesIntroVersion = 0
 
+    /** Pack-specific revisions already introduced; old guides are never replayed. */
     var seenChallengePacks = HashMap<String, Int>()
 
     /** Whether the Guide has pointed at its "Start a tutorial game" button (first open only) */

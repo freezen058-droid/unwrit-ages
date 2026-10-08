@@ -41,6 +41,7 @@ class TutorialGuidePopup(
      *  teaching game - no other game has any, and an empty checklist would read as a promise. */
     private val gameInfo: GameInfo? = null
 ) : Popup(stageToShowOn, scrollable = Scrollability.None) {
+    private val guideTextures = ArrayList<com.badlogic.gdx.graphics.Texture>()
 
     private companion object {
         /** The gold of the menu tour's highlight, the store art and the certificate. */
@@ -76,6 +77,7 @@ class TutorialGuidePopup(
     private var playButton: Table? = null
 
     init {
+        closeListeners.add { guideTextures.forEach { it.dispose() }; guideTextures.clear() }
         clickBehindToClose = true
         innerTable.pad(0f)
 
@@ -97,10 +99,10 @@ class TutorialGuidePopup(
             val page = chapterPage(tutorialNames, tabMaxWidth, withPlayButton = index == 0)
             if (page == null) continue
             tabs.addPage(title, page, ImageGetter.getImage("OtherIcons/Quickstart"), 24f)
+            if (index == 0)
+                tabs.addPage("Your journey", UnwritAgesFeaturesPopup.guidePage(tabMaxWidth) { guideTextures.add(it) },
+                    ImageGetter.getImage("OtherIcons/Quickstart"), 24f)
         }
-
-        tabs.addPage("Sharing & keepsakes", UnwritAgesFeaturesPopup.guidePage(tabMaxWidth),
-            ImageGetter.getImage("OtherIcons/Quickstart"), 24f)
 
         // Last tab: the whole list with what is done and what each undone one is waiting for.
         // The chapters say how the game works; this says where the player is in learning it.

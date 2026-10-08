@@ -26,7 +26,7 @@ class UnwritAgesFeaturesPopup(stage: Stage, onDismiss: () -> Unit = {}) : Popup(
     private val skipButton = "Skip".toTextButton().apply {
         onClick {
             close()
-            ToastPopup("Explore anytime: Guide > Sharing & keepsakes.".tr(), stage, 4000)
+            ToastPopup("Explore anytime: Guide > Your journey.".tr(), stage, 4000)
         }
         keyShortcuts.add(KeyCharAndCode.BACK)
     }
@@ -65,7 +65,7 @@ class UnwritAgesFeaturesPopup(stage: Stage, onDismiss: () -> Unit = {}) : Popup(
     }
 
     private fun addAnchorComparison() {
-        content.add("Anchor for a gilded certificate".toLabel(accent, 28)).width(textWidth).row()
+        content.add("Mark your civilization's beginning".toLabel(accent, 28)).width(textWidth).row()
         val body = Table(BaseScreen.skin)
         val comparison = Table(BaseScreen.skin)
         val cardWidth = textWidth * 0.36f / 2f - 8f
@@ -85,13 +85,16 @@ class UnwritAgesFeaturesPopup(stage: Stage, onDismiss: () -> Unit = {}) : Popup(
         body.add(comparison).width(textWidth * 0.36f).top()
         val explanation = Table(BaseScreen.skin)
         val width = textWidth * 0.64f - 20f
-        for (point in listOf("Mark the beginning of your civilization on-chain.",
-            "Only SOL network fees.", "Win and mint with the same wallet.")) {
+        for (point in listOf("Anchor your civilization's beginning on-chain: SOL network fee only.",
+            "After victory, mint your certificate as an NFT: US$0.90 in SOL or SKR + network fee.")) {
             explanation.add("•".toLabel(accent, 20)).top().padRight(8f).padBottom(5f)
             explanation.add(point.toLabel(fontSize = 20).apply { wrap = true }).width(width - 20f).padBottom(5f).row()
         }
         body.add(explanation).width(width).top()
         content.add(body).width(textWidth).row()
+        content.add("Gilded: anchor, win and mint with the same wallet. Autorun turns are recorded.".toLabel(Color.LIGHT_GRAY, 18).apply {
+            wrap = true
+        }).width(textWidth).row()
         content.add("Route: New game > Anchor the start on-chain.".toLabel(Color.LIGHT_GRAY, 18).apply {
             wrap = true
         }).width(textWidth).row()
@@ -100,6 +103,7 @@ class UnwritAgesFeaturesPopup(stage: Stage, onDismiss: () -> Unit = {}) : Popup(
     companion object {
         /** Independent of the app version: upgrades see new feature introductions once. */
         const val CURRENT_VERSION = 1
+        private const val GUIDE_NOTE_SIZE = 21
         private val accent = Color.valueOf("d3ac6c")
         private class Feature(val title: String, val body: String, val location: String)
         private class Intro(val icons: List<Pair<String, String>>, val points: List<String>)
@@ -118,14 +122,14 @@ class UnwritAgesFeaturesPopup(stage: Stage, onDismiss: () -> Unit = {}) : Popup(
                 "Route: Shared saves > View continuations.")),
             Intro(listOf("New" to "New game", "Link" to "Approve", "Checkmark" to "Start record"), listOf(
                 "Mark the beginning of your civilization on-chain.",
-                "Only the SOL network fee.",
+                "Anchor: SOL network fee only.",
                 "Route: New game > Anchor the start on-chain.")),
             Intro(listOf("Capital" to "Win", "Banner" to "Certificate", "Link" to "Your wallet"), listOf(
-                "Collect your victory certificate as an NFT.",
+                "After victory, mint your certificate as an NFT.",
                 "US$0.90 in SOL or SKR + network fee.",
-                "Mint your certificate after winning."))
+                "Standard or gilded: the same minting price."))
         )
-        private val pages = listOf(
+        private val allFeatures = listOf(
             Feature("Lead your civilization",
                 "Play the full game offline without a wallet. Use Fortify all, Repeat and automatic city production to spend fewer taps on routine work.",
                 "The Guide teaches the basics; the following pages introduce optional sharing and keepsakes."),
@@ -137,28 +141,97 @@ class UnwritAgesFeaturesPopup(stage: Stage, onDismiss: () -> Unit = {}) : Popup(
                 "Open Shared saves from the main menu. View continuations shows saves continued from the one you selected. Sharing costs 1 SKR plus the SOL network fee; shared saves are public."),
             Feature("Mark your civilization's beginning",
                 "Mark your civilization's beginning with your wallet. Win and mint with the same wallet for a gilded certificate. The start record links your wallet to the starting map; it does not verify every turn or prevent cheating. Continuing another player's save uses a standard certificate.",
-                "When starting a new game, choose Anchor the start on-chain. You approve a wallet transaction and pay the SOL network fee."),
+                "When starting a new game, choose Anchor the start on-chain. Anchor costs only the SOL network fee. Certificate minting is a separate purchase after victory."),
             Feature("Make your victory a keepsake",
                 "After winning, you can mint a painted victory certificate to your wallet. It is an optional keepsake, priced at US$0.90 in SOL or SKR, plus the SOL network fee.",
                 "Choose whether to mint on the victory screen. You can also finish the game without minting anything.")
         )
 
+        private val pages = allFeatures.take(4)
+
         /** Optional sharing and keepsakes stay available without repeating the basic gameplay chapter. */
-        fun guidePage(width: Float): Table {
+        fun guidePage(width: Float, onTextureCreated: (Texture) -> Unit): Table {
             val table = Table(BaseScreen.skin)
             table.pad(10f)
             table.defaults().pad(8f).fillX()
             val textWidth = width - 60f
-            table.add("Discover what awaits".toTextButton().apply {
-                onClick { stage?.let { UnwritAgesFeaturesPopup(it).open(true) } }
-            }).width(textWidth).padBottom(12f).row()
-            for ((index, feature) in listOf(pages[2], pages[1], pages[3], pages[4]).withIndex()) {
-                if (index > 0) table.addSeparator(Color.GRAY).padTop(12f).padBottom(12f)
-                if (index == 0) addSharedSaveGuide(table, textWidth)
-                else addPageContent(table, feature, textWidth)
+            val enabledPacks = com.unciv.logic.chain.ChallengePacks.enabled()
+            if (enabledPacks.isNotEmpty()) {
+                val entry = "New goals unlocked!".toTextButton().apply {
+                    name = "GuideNewGoals"
+                    style = com.badlogic.gdx.scenes.scene2d.ui.TextButton.TextButtonStyle(style).apply {
+                        up = BaseScreen.skinStrings.getUiBackground(
+                            "TutorialGuide/PlayButton", BaseScreen.skinStrings.roundedEdgeRectangleShape, accent)
+                        down = BaseScreen.skinStrings.getUiBackground(
+                            "TutorialGuide/PlayButton", BaseScreen.skinStrings.roundedEdgeRectangleShape,
+                            accent.cpy().mul(0.85f).apply { a = 1f })
+                        over = down
+                    }
+                    clearChildren()
+                    pad(14f, 36f, 14f, 36f)
+                    add(ImageGetter.getImage("OtherIcons/Quickstart").apply { color = Color.BLACK })
+                        .size(34f).padRight(12f)
+                    add("New goals unlocked!".toLabel(Color.BLACK, 30))
+                    onClick {
+                        val screen = com.unciv.UncivGame.Current.getScreen() ?: return@onClick
+                        ChallengePacksPopup(screen, enabledPacks) {}.open(true)
+                    }
+                }
+                table.add(entry).width(minOf(textWidth, 500f)).minHeight(64f).padBottom(8f).row()
+                val language = com.unciv.UncivGame.Current.settings.language
+                table.add(enabledPacks.flatMap { it.goals }.joinToString(" · ") { it.displayLabel(language) }
+                    .toLabel(Color.LIGHT_GRAY, GUIDE_NOTE_SIZE).apply { wrap = true }).width(textWidth).left().row()
+                table.addSeparator(Color.GRAY).padTop(12f).padBottom(12f)
             }
-            table.add(ChallengePacksPopup.guideCards(textWidth)).width(textWidth).row()
+            addSharedSaveGuide(table, textWidth)
+            table.addSeparator(Color.GRAY).padTop(12f).padBottom(12f)
+            addGuideSection(table, textWidth, "Load", "Carry your civilization with you", listOf(
+                "Private saves: encrypted for your wallet.",
+                "Save: Wallet > Enable on-chain saves > Save game.",
+                "Restore: Load game > Restore from the chain. Use the same wallet.",
+                "1 SKR per save + SOL network fee."))
+            table.addSeparator(Color.GRAY).padTop(12f).padBottom(12f)
+            addGuideSection(table, textWidth, "Banner", "Mark your civilization's beginning", listOf(
+                "Anchor your civilization's beginning on-chain: SOL network fee only.",
+                "After victory, mint your certificate as an NFT: US$0.90 in SOL or SKR + network fee.",
+                "Route: New game > Anchor the start on-chain.")) { destination, contentWidth ->
+                addCertificateComparison(destination, contentWidth, onTextureCreated)
+            }
+            table.add("Gilded: anchor, win and mint with the same wallet. Autorun turns are recorded."
+                .toLabel(Color.LIGHT_GRAY, GUIDE_NOTE_SIZE).apply { wrap = true }).width(textWidth).row()
             return table
+        }
+
+        private fun addCertificateComparison(table: Table, width: Float, onTextureCreated: (Texture) -> Unit) {
+            val comparison = Table(BaseScreen.skin)
+            val imageSize = minOf(140f, (width - 32f) / 2f)
+            for ((file, caption) in listOf("stele.jpg" to "Standard certificate", "stele_anchored.jpg" to "Gilded certificate")) {
+                val texture = Texture(Gdx.files.internal("certificate/$file")).apply {
+                    setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear)
+                }
+                onTextureCreated(texture)
+                val item = Table(BaseScreen.skin)
+                item.add(Image(texture)).size(imageSize).row()
+                item.add(caption.toLabel(if (file == "stele_anchored.jpg") accent else Color.LIGHT_GRAY, GUIDE_NOTE_SIZE)
+                    .apply { wrap = true; setAlignment(Align.center) }).width(imageSize + 12f).padTop(8f)
+                comparison.add(item).pad(0f, 8f, 0f, 8f).top()
+            }
+            table.add(comparison).width(width).padBottom(12f).row()
+        }
+
+        private fun addGuideSection(table: Table, width: Float, icon: String, title: String, points: List<String>,
+                                    visual: ((Table, Float) -> Unit)? = null) {
+            val header = Table(BaseScreen.skin)
+            header.add(ImageGetter.getImage("OtherIcons/$icon").apply { color = accent }).size(34f).padRight(14f).top()
+            header.add(title.toLabel(accent, 28).apply { wrap = true }).width(width - 58f).left()
+            table.add(header).width(width).padBottom(8f).row()
+            visual?.invoke(table, width)
+            for (point in points) {
+                val line = Table(BaseScreen.skin)
+                line.add("\u2022".toLabel(accent, 22)).top().padRight(10f)
+                line.add(point.toLabel(fontSize = 22).apply { wrap = true }).width(width - 24f).left()
+                table.add(line).width(width).padBottom(6f).row()
+            }
         }
 
         /** Three visual steps, kept in the existing sharing tab. */
@@ -190,20 +263,12 @@ class UnwritAgesFeaturesPopup(stage: Stage, onDismiss: () -> Unit = {}) : Popup(
                 "If the challenge ends, retry or Continue playing your civilization."))
             step("Link", "Create a challenge for the next leader", listOf(
                 "Save game > Set goals for the next player.",
-                "Choose a goal, press OK, then + Goal or Add chapter.",
-                "Up to 3 chapters, with up to 3 goals each: research, build, defend, capture or muster.",
-                "Every chapter needs a goal. A single empty chapter becomes an ordinary save.",
+                "Up to 3 chapters, 3 goals each. Use + Goal and Add chapter.",
                 "Select Share this save, then save and approve in your wallet."))
-            table.add("Sharing: 1 SKR + SOL network fee. Shared saves are public.".toLabel(Color.LIGHT_GRAY, 21)
+            table.add("Sharing: 1 SKR + SOL network fee. Shared saves are public.".toLabel(Color.LIGHT_GRAY, GUIDE_NOTE_SIZE)
                 .apply { wrap = true }).width(width).padTop(10f).row()
-            table.add("View continuations follows the next leaders in this world's story.".toLabel(Color.LIGHT_GRAY, 21)
+            table.add("View continuations follows the next leaders in this world's story.".toLabel(Color.LIGHT_GRAY, GUIDE_NOTE_SIZE)
                 .apply { wrap = true }).width(width).row()
-        }
-
-        private fun addPageContent(table: Table, feature: Feature, width: Float) {
-            table.add(feature.title.toLabel(accent, 30).apply { wrap = true }).width(width).row()
-            table.add(feature.body.toLabel(fontSize = 24).apply { wrap = true }).width(width).row()
-            table.add(feature.location.toLabel(Color.LIGHT_GRAY, 21).apply { wrap = true }).width(width).row()
         }
 
         /** A glanceable overview; the Guide retains the detailed instructions above. */

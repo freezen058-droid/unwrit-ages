@@ -24,10 +24,10 @@ class ChallengePackTests {
         val publicKey = Base64.getEncoder().encodeToString(key.public.encoded)
         return runCatching { ChallengePacks.verify(json().toJson(envelope), publicKey) }.isSuccess
     }
-    @Test fun bundledFeedContainsFiveOrderedPacksAndOnlyExpeditionIsInitiallyOpen() {
+    @Test fun bundledFeedContainsFiveOrderedPacksAndNoneIsInitiallyOpen() {
         val m = ChallengePacks.verify(bundled())
         assertEquals(listOf("expedition", "revival", "last-stand", "golden-age", "peaceful-rise"), m.packs.map { it.id })
-        assertEquals(listOf("expedition"), m.packs.filter { it.enabled }.map { it.id })
+        assertTrue(m.packs.none { it.enabled })
         assertEquals(2, m.packs.first().goals.size)
         assertTrue(m.packs.all { it.guideTw.isNotEmpty() && it.guideCn.isNotEmpty() })
     }
@@ -37,6 +37,15 @@ class ChallengePackTests {
         assertTrue(runCatching { ChallengePacks.verify(json().toJson(envelope)) }.isFailure)
         envelope.signature = Base64.getEncoder().encodeToString(ByteArray(384))
         assertTrue(runCatching { ChallengePacks.verify(json().toJson(envelope)) }.isFailure)
+    }
+    @Test fun exampleLinksAcceptOnlyChainReceipts() {
+        val pack = ChallengePacks.verify(bundled()).packs.first()
+        pack.exampleSaveSignature = "https://malicious.example/save"
+        assertFalse(pack.supported)
+        pack.exampleSaveSignature = "1".repeat(88)
+        assertTrue(pack.supported)
+        pack.exampleSaveSignature = "1".repeat(89)
+        assertFalse(pack.supported)
     }
     @Test fun validSignatureDoesNotPermitUnknownEngineMetricsOrExecutableTypeHints() {
         assertTrue(checkSigned(payload()))
@@ -51,9 +60,13 @@ class ChallengePackTests {
         assertFalse(checkSigned(payload().replace("\"mode\":\"milestone\"", "\"outcomeBranches\":[\"chapter-2\"],\"mode\":\"milestone\"")))
     }
     @Test fun onlyUnseenEnabledPackRevisionsAreIntroduced() {
-        assertEquals(listOf("expedition"), ChallengePacks.unseen(emptyMap()).map { it.id })
-        assertTrue(ChallengePacks.unseen(mapOf("expedition" to 1)).isEmpty())
-        assertTrue(ChallengePacks.unseen(mapOf("expedition" to 2)).isEmpty())
+        val packs = ChallengePacks.verify(bundled()).packs
+        assertTrue(packs.none { it.enabled })
+        assertTrue(ChallengePacks.unseen(emptyMap(), packs).isEmpty())
+        packs.first().apply { enabled = true; revision = 2 }
+        assertEquals(listOf("expedition"), ChallengePacks.unseen(emptyMap(), packs).map { it.id })
+        assertEquals(listOf("expedition"), ChallengePacks.unseen(mapOf("expedition" to 1), packs).map { it.id })
+        assertTrue(ChallengePacks.unseen(mapOf("expedition" to 2), packs).isEmpty())
     }
     @Test fun authoredChaptersStartFreshBaselinesAndKeepRulesAfterSerialization() {
         val test = com.unciv.testing.TestGame()
