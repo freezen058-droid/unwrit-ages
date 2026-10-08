@@ -225,7 +225,9 @@ class UncivFiles(
             // wallet or the network and may itself contain brackets, which would confuse the
             // translation lookup.
             reportOnChainResult(
-                "Could not record [$saveName] on the blockchain. The game is saved on this device either way."
+                (if (ex is com.unciv.logic.chain.SavePaymentPendingException)
+                    "A save payment is still being checked. Your local save is safe."
+                else "Could not record [$saveName] on the blockchain. The game is saved on this device either way.")
                     .tr() + "\n" + (ex.message ?: ex.javaClass.simpleName)
             )
         }

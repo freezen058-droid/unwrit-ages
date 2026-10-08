@@ -29,6 +29,8 @@ import com.unciv.logic.chain.CertificatePayment
 import com.unciv.logic.chain.CloudSave
 import com.unciv.logic.chain.PlatformWalletService
 import com.unciv.logic.chain.StartAnchor
+import com.unciv.logic.chain.SavePaymentJournal
+import com.unciv.logic.chain.SavePaymentPendingException
 import com.unciv.logic.chain.VictoryCertificate
 import com.unciv.utils.Concurrency
 import com.unciv.utils.Log
@@ -78,6 +80,7 @@ import java.security.SecureRandom
 class AndroidWalletService(private val activity: Activity) : PlatformWalletService {
 
     companion object {
+        private val savePaymentMutex = kotlinx.coroutines.sync.Mutex()
         // Mainnet. MobileWalletAdapter's own `blockchain`/`rpcCluster` (which cluster the wallet
         // app authorizes and signs against) are a separate setting from RPC_ENDPOINT and default to
         // devnet whatever RPC_ENDPOINT says - the `walletAdapter` property below sets both from
@@ -245,7 +248,7 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
     )
 
     @Serializable
-    private data class BlockhashValue(val blockhash: String)
+    private data class BlockhashValue(val blockhash: String, val lastValidBlockHeight: Long = 0)
 
     @Serializable
     private data class BlockhashResult(val value: BlockhashValue)
@@ -274,12 +277,14 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
         }
     }
 
-    private suspend fun fetchLatestBlockhash(): String {
+    private suspend fun fetchLatestBlockhash(): String = fetchBlockhashLease().blockhash
+
+    private suspend fun fetchBlockhashLease(): BlockhashValue {
         val response: BlockhashRpcResponse = httpClient.post(RPC_ENDPOINT) {
             contentType(ContentType.Application.Json)
             setBody(BlockhashRpcRequest())
         }.body()
-        return response.result?.value?.blockhash
+        return response.result?.value
             ?: throw IllegalStateException("Failed to fetch a recent blockhash: ${response.error?.message}")
     }
 
@@ -1489,7 +1494,149 @@ class AndroidWalletService(private val activity: Activity) : PlatformWalletServi
         // late-game save stays a few hundred bytes (CloudSave.Record.memo)
         val memoText = record.memo()
         if (memoText.length >= 900) return onError(IllegalStateException("This save is too large to record in one transaction"))
-        sendMemoWithSkrFee(memoText, "WalletRecordSaveHash", onSuccess, onError)
+        val payer = _connectedAddress
+        if (payer == null || authToken == null) return onError(IllegalStateException("No wallet connected"))
+        val operation = listOf(record.gameId, CloudSave.safeName(record.name), record.hashHex,
+            record.visibility, record.keyFingerprint).joinToString(":")
+        Concurrency.run("WalletRecordSaveHash") {
+            try {
+                savePaymentMutex.lock()
+                val signature = try { recoverOrPaySave(payer, operation, memoText) }
+                finally { savePaymentMutex.unlock() }
+                launchOnGLThread { onSuccess(signature) }
+            } catch (ex: Exception) {
+                Log.error("Save payment requires checking", ex)
+                val unresolved = runCatching { savePayments.pending(payer) != null }.getOrDefault(true)
+                val error = if (unresolved) SavePaymentPendingException(
+                    "The payment result is not known yet. Try Save again to check it before paying.") else ex
+                launchOnGLThread { onError(error) }
+            }
+        }
+    }
+
+    private val savePayments by lazy {
+        val preferences = activity.getSharedPreferences("save-payment-recovery-v1", Activity.MODE_PRIVATE)
+        SavePaymentJournal(object : SavePaymentJournal.Store {
+            override fun read(): String? = preferences.getString("journal", null)
+            override fun write(value: String) {
+                check(preferences.edit().putString("journal", value).commit()) {
+                    "Could not keep the payment receipt safely; no new payment was sent"
+                }
+            }
+        })
+    }
+
+    private suspend fun recoveryRpc(method: String, params: kotlinx.serialization.json.JsonArray): JsonObject {
+        val response: JsonObject = httpClient.post(RPC_ENDPOINT) {
+            contentType(ContentType.Application.Json)
+            setBody(kotlinx.serialization.json.buildJsonObject {
+                put("jsonrpc", kotlinx.serialization.json.JsonPrimitive("2.0"))
+                put("id", kotlinx.serialization.json.JsonPrimitive(1))
+                put("method", kotlinx.serialization.json.JsonPrimitive(method)); put("params", params)
+            })
+        }.body()
+        check(response["error"] == null) { "The payment status could not be checked. Try again to check; do not pay again." }
+        return response
+    }
+
+    private suspend fun checkSavePayment(entry: SavePaymentJournal.Entry): SavePaymentJournal.Outcome {
+        // Read finalized height before historical status. Missing recent-cache data is not failure.
+        val heightResponse = recoveryRpc("getBlockHeight", kotlinx.serialization.json.buildJsonArray {
+            add(kotlinx.serialization.json.buildJsonObject {
+                put("commitment", kotlinx.serialization.json.JsonPrimitive("finalized"))
+            })
+        })
+        val height = heightResponse["result"]?.jsonPrimitive?.content?.toLongOrNull()
+            ?: throw IllegalStateException("The finalized chain height could not be checked")
+        val statusResponse = recoveryRpc("getSignatureStatuses", kotlinx.serialization.json.buildJsonArray {
+            add(kotlinx.serialization.json.buildJsonArray { add(kotlinx.serialization.json.JsonPrimitive(entry.signature)) })
+            add(kotlinx.serialization.json.buildJsonObject {
+                put("searchTransactionHistory", kotlinx.serialization.json.JsonPrimitive(true))
+            })
+        })
+        val values = statusResponse["result"]?.jsonObject?.get("value") as? kotlinx.serialization.json.JsonArray
+            ?: throw IllegalStateException("The payment status response is incomplete")
+        check(values.size == 1) { "The payment status response is incomplete" }
+        check(values[0] is JsonObject || values[0] is kotlinx.serialization.json.JsonNull) {
+            "The payment status response is invalid"
+        }
+        val status = values[0] as? JsonObject
+        val level = status?.get("confirmationStatus")?.jsonPrimitive?.content
+        check(status == null || level != null) { "The payment confirmation level is missing" }
+        check(status == null || status.containsKey("err")) { "The payment execution result is missing" }
+        val err = status?.get("err")
+        return SavePaymentJournal.outcome(level, err != null && err !is kotlinx.serialization.json.JsonNull,
+            height, entry.lastValidBlockHeight)
+    }
+
+    private suspend fun recoverOrPaySave(payer: String, operation: String, memo: String): String {
+        savePayments.receipt(payer, operation)?.let { return it.signature }
+        savePayments.pending(payer)?.let { pending ->
+            val outcome = checkSavePayment(pending)
+            if (outcome == SavePaymentJournal.Outcome.UNKNOWN) {
+                // Same signed bytes retain the same signature; resubmission cannot be a second fee.
+                // Never submit another snapshot while the previous payment remains uncertain.
+                if (pending.operation == operation) {
+                    try { sendSignedTransaction(Base64.decode(pending.signedTransaction, Base64.NO_WRAP)) }
+                    catch (_: Exception) { /* Keep the original receipt for later checks. */ }
+                    val checked = checkSavePayment(pending)
+                    if (checked == SavePaymentJournal.Outcome.FINALIZED) {
+                        savePayments.resolve(pending.signature, checked)
+                        return pending.signature
+                    }
+                }
+                throw IllegalStateException("A previous save payment is still being checked. Try Save again to check its status; no new payment was sent.")
+            }
+            savePayments.resolve(pending.signature, outcome)
+            if (outcome == SavePaymentJournal.Outcome.FINALIZED && pending.operation == operation)
+                return pending.signature
+        }
+        check(_connectedAddress == payer && authToken != null) { "Reconnect the same wallet before saving" }
+        val lease = fetchBlockhashLease()
+        check(lease.lastValidBlockHeight > 0) { "The payment expiry could not be checked; no payment was sent" }
+        val owner = SolanaPublicKey.from(payer)
+        val message = Message.Builder().apply {
+            skrFeeInstructions(owner, SKR_FEE_AMOUNT).forEach { addInstruction(it) }
+        }.addInstruction(TransactionInstruction(memoProgramId,
+            listOf(AccountMeta(owner, isSigner = true, isWritable = false)), memo.encodeToByteArray()))
+            .setRecentBlockhash(lease.blockhash).build()
+        val unsigned = Transaction(message).serialize()
+        val result = withWakeLock {
+            withBridge { sender -> walletAdapter.transact(sender) { signTransactions(arrayOf(unsigned)) } }
+        }
+        val signed = when (result) {
+            is TransactionResult.Success -> result.successPayload?.signedPayloads?.firstOrNull()
+                ?: throw IllegalStateException("The wallet returned no signed payment; no payment was sent")
+            is TransactionResult.NoWalletFound -> throw IllegalStateException("No MWA-compatible wallet app found")
+            is TransactionResult.Failure -> throw result.e
+        }
+        check(unsigned[0].toInt() == 1 && signed.size == unsigned.size && signed[0].toInt() == 1 &&
+            signed.copyOfRange(65, signed.size).contentEquals(unsigned.copyOfRange(65, unsigned.size))) {
+            "The wallet changed the save payment; no payment was sent"
+        }
+        val signatureBytes = signed.copyOfRange(1, 65)
+        check(signatureBytes.any { it != 0.toByte() }) { "The wallet did not sign the save payment" }
+        val pending = SavePaymentJournal.Entry().apply {
+            this.payer = payer; this.operation = operation; this.memo = memo
+            signature = base58Encode(signatureBytes)
+            signedTransaction = Base64.encodeToString(signed, Base64.NO_WRAP)
+            lastValidBlockHeight = lease.lastValidBlockHeight
+        }
+        // Durable commit BEFORE first broadcast. Signing alone does not pay.
+        savePayments.prepare(pending)
+        try { check(sendSignedTransaction(signed) == pending.signature) { "Unexpected payment response" } }
+        catch (ex: Exception) { Log.debug("Save submission response unavailable: %s", ex.javaClass.simpleName) }
+        val deadline = System.currentTimeMillis() + 45_000
+        do {
+            val outcome = checkSavePayment(pending)
+            if (outcome != SavePaymentJournal.Outcome.UNKNOWN) {
+                savePayments.resolve(pending.signature, outcome)
+                if (outcome == SavePaymentJournal.Outcome.FINALIZED) return pending.signature
+                throw IllegalStateException("The save payment did not complete. You can retry; a failed on-chain attempt may still cost a SOL network fee.")
+            }
+            kotlinx.coroutines.delay(1_500)
+        } while (System.currentTimeMillis() < deadline)
+        throw IllegalStateException("The save payment result is not known yet. Try Save again to check its status; no new payment will be requested while it is pending.")
     }
 
     override fun postBounty(bounty: CloudSave.Bounty, onSuccess: (txSignature: String) -> Unit, onError: (Exception) -> Unit) {

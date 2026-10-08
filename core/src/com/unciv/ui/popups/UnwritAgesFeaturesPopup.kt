@@ -189,7 +189,8 @@ class UnwritAgesFeaturesPopup(stage: Stage, onDismiss: () -> Unit = {}) : Popup(
                 "Private saves: encrypted for your wallet.",
                 "Save: Wallet > Enable on-chain saves > Save game.",
                 "Restore: Load game > Restore from the chain. Use the same wallet.",
-                "1 SKR per save + SOL network fee."))
+                "1 SKR per save + SOL network fee.",
+                "Payment interrupted? Save the same named snapshot again to check its status before paying."))
             table.addSeparator(Color.GRAY).padTop(12f).padBottom(12f)
             addGuideSection(table, textWidth, "Banner", "Mark your civilization's beginning", listOf(
                 "Anchor your civilization's beginning on-chain: SOL network fee only.",
