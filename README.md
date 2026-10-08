@@ -13,9 +13,9 @@ are Unciv's work. The art made for Unwrit Ages is not under the MPL - see
 
 ## Hackathon source and security evidence
 
-The current Android 1.0.3 release is pinned to [v1.0.3-challenges-20261008](https://github.com/freezen058-droid/unwrit-ages/tree/v1.0.3-challenges-20261008). It includes strict finalized SKR transfer/memo binding, author verification, Android network/entry-point hardening, player-authored chapters, signed data-only challenge packs and matching Guide introductions. Regression: 873 tests, zero failures/errors, 16 skips, including 21 tip-verifier cases. Seeker checks cover wallet authorization, private restore, 1-SKR save cancellation/retry and the final Guide/goal editor. These manual checks do not change the earlier automated audit coverage.
+The current Android 1.0.3 release is pinned to [v1.0.3-final-20261008](https://github.com/freezen058-droid/unwrit-ages/tree/v1.0.3-final-20261008). It includes strict finalized SKR transfer/memo binding, author verification, Android network/entry-point hardening, player-authored chapters, signed data-only challenge packs and matching Guide introductions. Behavioral regression: 874 tests, zero failures/errors, 16 skips. The 21 tip-verifier fixture cases were freshly rerun on October 8 and all passed; final UI changes were separately checked in the APK and on Seeker. Seeker checks cover wallet authorization, private restore, 1-SKR save cancellation/retry and the final Guide/goal editor. All challenge packs are initially disabled; shared saves and author-created chapters are available now. These manual checks do not change the earlier automated audit coverage.
 
-[Download APK](https://unwritages.pages.dev/download/unwrit-ages-1.0.3.apk). SHA-256: `e749255f3c58651c46d9dd03faa53d5eb063537e40dbc05bbf7cfe679879fc86`.
+[Download APK](https://unwritages.pages.dev/download/unwrit-ages-1.0.3.apk). SHA-256: `9080a31b28e17d299fff4b61e5bad63a971b20f17392ea3d9d94d53ad469fe24`.
 
 See the [product deck and technical appendix](https://unwritages.pages.dev/hackathon/deck.pdf) and [file-by-file evidence with validation boundaries](https://unwritages.pages.dev/hackathon/source-evidence). These checks are not an independent security audit or evidence of player retention. The default branch contains development work outside the submitted APK; use the pinned release tag to review the submitted scope. Council, strategic chapter branches and result tiers remain future work.
 
@@ -29,11 +29,11 @@ On Solana, through the Mobile Wallet Adapter (`core/src/com/unciv/logic/chain/`,
   stored on Arweave. The fee (US$0.90) is paid in the same transaction, in SOL at the Pyth price or
   in SKR at the market price - the player picks the token before the wallet opens. Its lettering is
   drawn as outlines, so a phone's accessibility settings cannot restyle a permanent record.
-- **Anchored start** - opt in, and a free signed memo transaction seeds the map, so anyone can check
-  the game was played from turn 1 on the map that signature produced.
+- **Anchored start** - opt in, and a signed memo transaction seeds the map and links its starting point to the wallet.
+  Anchor incurs the SOL network fee and records provenance; it does not prove the subsequent play was cheat-free.
 - **Cloud saves (1 SKR each)** - record a save on-chain: it is uploaded to Arweave and named in a memo.
   Private saves are AES-256-GCM encrypted with a key derived from a wallet signature, so the same
-  wallet restores them on any phone and nothing secret is stored. Shared saves let anyone continue
+  wallet can derive the key for restoration. Private-save data and cached wallet signatures require protection; wallet private keys remain in the wallet. Shared saves let anyone continue
   the game; a victory won from one says "Continued from turn N" on its certificate.
 - **Shared-save gallery** - every shared save in one place, with no server: the records are read from
   the transactions that paid their 1 SKR, and each carries its civ, map, era and turn. Sort by what
@@ -43,8 +43,6 @@ On Solana, through the Mobile Wallet Adapter (`core/src/com/unciv/logic/chain/`,
   shared is marked Genesis.
   A game taken over from a shared save and shared again names its parent, so the gallery shows each
   save's line of players ("relayed N times"), and a certificate won from a shared save names it.
-  Authors can post a bounty on their save - SKR for the first victory won from it within N turns,
-  without AutoPlay - paid by hand on seeing the winner's certificate.
   Saves shared from a Seeker are marked: the author's wallet holds a Seeker Genesis Token (checked
   from public chain data, as Solana Mobile's docs describe).
 
